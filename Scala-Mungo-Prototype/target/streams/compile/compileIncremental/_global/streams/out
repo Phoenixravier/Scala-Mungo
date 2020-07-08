@@ -1,0 +1,28 @@
+[debug] 
+[debug] Initial source changes: 
+[debug] 	removed:Set()
+[debug] 	added: Set()
+[debug] 	modified: Set(C:\Year five\Project\Scala-Mungo-Prototype\src\main\scala\mammal.scala)
+[debug] Invalidated products: Set()
+[debug] External API changes: API Changes: Set()
+[debug] Modified binary dependencies: Set()
+[debug] Initial directly invalidated classes: Set(Platypus, mammal, Main)
+[debug] 
+[debug] Sources indirectly invalidated by:
+[debug] 	product: Set()
+[debug] 	binary dep: Set()
+[debug] 	external source: Set()
+[debug] All sources are invalidated.
+[debug] Initial set of included nodes: Platypus, mammal, Main
+[debug] Recompiling all sources: number of invalidated sources > 50.0% of all sources
+[info] Compiling 1 Scala source to C:\Year five\Project\Scala-Mungo-Prototype\target\scala-2.13\classes ...
+[debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
+[debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
+[debug] [zinc] Running cached compiler 23bac460 for Scala compiler version 2.13.3
+[debug] [zinc] The Scala compiler is invoked with:
+[debug] 	-bootclasspath
+[debug] 	C:\Program Files\Java\jdk1.8.0_60\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\rt.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_60\jre\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-library\2.13.3\scala-library-2.13.3.jar
+[debug] 	-classpath
+[debug] 	C:\Year five\Project\Scala-Mungo-Prototype\target\scala-2.13\classes
+[debug] Compilation failed (CompilerInterface)
+[error] (Compile / compileIncremental) Compilation failed

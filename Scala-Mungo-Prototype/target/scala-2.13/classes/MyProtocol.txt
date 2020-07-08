@@ -1,0 +1,28 @@
+typestate CatProtocol {
+	State0 = {
+		void walk(): State1
+		void comeAlive(): State0
+		void rest() : State4
+	}
+	State1 = {
+		void run(): State2,
+		void walk(): State1,
+		void rest(): State4
+	}
+	State2 = {
+	    void die(): State3,
+	    void walk(): State1
+	    void run(): State2
+	}
+	State3 = {
+    	void die(): State3
+    }
+    State4 = {
+        void sleep(): State5
+        void walk(): State1
+        void rest(): State4
+    }
+    State5 = {
+        void sleep(): State5
+    }
+}

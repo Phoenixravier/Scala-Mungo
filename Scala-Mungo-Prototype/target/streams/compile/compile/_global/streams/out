@@ -1,0 +1,9 @@
+[debug] Acquiring lock on file C:\Year five\Project\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock ...
+[error] C:\Year five\Project\Scala-Mungo-Prototype\src\main\scala\mammal.scala:2:22: object runtime is not a member of package reflect
+[error] import scala.reflect.runtime.{universe => u}
+[error]                      ^
+[error] C:\Year five\Project\Scala-Mungo-Prototype\src\main\scala\mammal.scala:16:22: not found: value u
+[error]   val platypusType = u.typeOf[Platypus]
+[error]                      ^
+[error] two errors found
+[debug] Releasing lock on file C:\Year five\Project\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock.
