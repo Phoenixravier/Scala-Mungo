@@ -1,10 +1,13 @@
 package compilerPlugin
 
+import java.io.{FileNotFoundException, IOException}
+
 import scala.tools.nsc
 import nsc.Global
 import nsc.Phase
 import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
+import scala.io.BufferedSource
 import scala.io.Source._
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
@@ -23,12 +26,18 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       override def name: String = GetFileFromAnnotation.this.name
 
-      def printFile(filename: String): Unit ={ //put try around this
+      def printFile(filename: String): Unit ={
         val source = fromFile(filename)
-        val it = source.getLines
-        while (it.hasNext)
-          println(it.next())
-        source.close
+        try {
+          val it = source.getLines()
+          while (it.hasNext)
+            println(it.next())
+        }
+        catch{
+          case e: IOException => println(s"Had an IOException trying to use file $filename")
+        } finally {
+          source.close
+        }
       }
 
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
@@ -47,12 +56,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               case Some(filename) => printFile(filename)
               case None => println("Not a Typestate annotation")
             }
-
           }
         }
-
       }
-
     }
   }
 }

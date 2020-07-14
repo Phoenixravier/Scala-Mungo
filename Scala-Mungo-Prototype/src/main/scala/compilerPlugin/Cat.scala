@@ -5,7 +5,7 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
-@Typestate(filename="MyProtocol.txt")
+@Typestate(filenam="src\\main\\scala\\MyProtocol.txt")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
   def run(): Unit = println("Running")
@@ -15,7 +15,7 @@ class Cat{
   def die(): Unit = println("The cat is dead")
 }
 
-@Typestate(filenam="Lol.txt")
+@Typestate(filename="Lol.txt")
 class Doggo{
   def sleep(): Unit = println("shleep")
 }
