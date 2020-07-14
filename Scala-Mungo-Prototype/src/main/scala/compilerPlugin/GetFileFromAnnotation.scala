@@ -6,9 +6,6 @@ import nsc.Phase
 import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
 import scala.io.Source._
-import scala.collection.mutable.ListBuffer
-//import scala.meta.tokens.Token.Colon
-//import scala.meta._
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -26,39 +23,32 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       override def name: String = GetFileFromAnnotation.this.name
 
-      def printFile(filename: String): Unit ={
-        val source = fromFile(filename).getLines
-        while (source.hasNext)
-          println(source.next())
+      def printFile(filename: String): Unit ={ //put try around this
+        val source = fromFile(filename)
+        val it = source.getLines
+        while (it.hasNext)
+          println(it.next())
+        source.close
+      }
+
+      def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
+        annotation match{
+          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(NamedArg(Ident(TermName("filename")), Literal(Constant(filename))))) => Some(filename.toString)
+          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(Literal(Constant(filename)))) => Some(filename.toString)
+          case _ => None
+        }
       }
 
       def apply(unit: CompilationUnit): Unit = {
-
-
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
-          //global.reporter.echo(tree.pos, s"mods.annotations=${mods.annotations}")
           val annotations = mods.annotations
-          annotations.foreach({ a => println(a.toString().contains("Typestate")) })
-
-          val typestateAnnotation = annotations.filter(_.toString().contains("Typestate"))
-
-          println(typestateAnnotation)
-
-          if(typestateAnnotation.size > 0){  //there is almost certainly a better way of writing this but it works <3
-            for(annotation@Apply(arg1, arg2) <- typestateAnnotation){
-              for(file@q"filename = $filename" <- annotation){
-                println("filename is "+filename)
-                var value = ""
-                filename match {
-                  case Literal(Constant(value)) => printFile(value.toString)
-                  case _ => println("failed")
-                }
-                //global.reporter.echo(tree.pos, s"$filename")
-              }
+          for(annotation@Apply(arg1,arg2) <- annotations){
+            getFilenameFromAnnotation(annotation) match{
+              case Some(filename) => printFile(filename)
+              case None => println("Not a Typestate annotation")
             }
-          }
 
-          //global.reporter.echo(tree.pos, tree.symbol.annotations.mkString(", "))
+          }
         }
 
       }

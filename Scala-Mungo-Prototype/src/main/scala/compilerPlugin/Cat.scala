@@ -3,7 +3,9 @@ package compilerPlugin
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
-@Typestate(filename = "MyProtocol.txt")
+class Mammal(filename:String) extends scala.annotation.StaticAnnotation
+
+@Typestate(filename="MyProtocol.txt")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
   def run(): Unit = println("Running")
@@ -11,6 +13,11 @@ class Cat{
   def walk(): Unit = println("Walking")
   def sleep(): Unit = println("Sleeping")
   def die(): Unit = println("The cat is dead")
+}
+
+@Typestate(filenam="Lol.txt")
+class Doggo{
+  def sleep(): Unit = println("shleep")
 }
 
 object Main extends App {
