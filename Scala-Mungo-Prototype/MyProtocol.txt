@@ -1,8 +1,8 @@
 typestate CatProtocol {
 	State0 = {
-		void walk(): State1
-		void comeAlive(): State0
-		void rest() : State4
+		walk(): Unit => State1
+		comeAlive(): Unit => State0
+		rest() : Unit => State4
 	}
 	State1 = {
 		void run(): State2,

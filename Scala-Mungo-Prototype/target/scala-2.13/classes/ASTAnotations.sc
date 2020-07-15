@@ -1,3 +1,5 @@
+import compilerPlugin.Typestate
+
 import scala.reflect.runtime.universe._
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
