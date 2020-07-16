@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: antlr:antlr:2.7.7:jar" level="project" />
     <orderEntry type="library" name="sbt: com.google.protobuf:protobuf-java:3.11.4:jar" level="project" />
     <orderEntry type="library" name="sbt: com.lihaoyi:fastparse_2.13:2.3.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.lihaoyi:geny_2.13:0.6.0:jar" level="project" />
@@ -18,6 +19,8 @@
     <orderEntry type="library" name="sbt: com.thesamet.scalapb:lenses_2.13:0.10.3:jar" level="project" />
     <orderEntry type="library" name="sbt: com.thesamet.scalapb:scalapb-runtime_2.13:0.10.3:jar" level="project" />
     <orderEntry type="library" name="sbt: net.java.dev.jna:jna:5.3.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.antlr:antlr4-runtime:4.8:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.antlr:stringtemplate:3.2:jar" level="project" />
     <orderEntry type="library" name="sbt: org.jline:jline:3.15.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-collection-compat_2.13:2.1.6:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-parser-combinators_2.13:1.1.2:jar" level="project" />

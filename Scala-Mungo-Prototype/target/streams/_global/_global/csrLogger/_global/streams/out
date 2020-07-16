@@ -1,12 +1,5 @@
-[debug] downloaded https://repo1.maven.org/maven2/org/scalatest/scalatest_2.13/3.0.8/scalatest_2.13-3.0.8.pom
-[debug] downloaded https://repo1.maven.org/maven2/org/scalactic/scalactic_2.13/3.0.8/scalactic_2.13-3.0.8.pom
-[debug] downloaded https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.13/1.2.0/scala-xml_2.13-1.2.0.pom
-[debug] downloaded https://repo1.maven.org/maven2/org/scalactic/scalactic_2.13/3.0.8/scalactic_2.13-3.0.8.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.13/1.2.0/scala-xml_2.13-1.2.0.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scalatest/scalatest_2.13/3.0.8/scalatest_2.13-3.0.8.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.13/1.2.0/scala-xml_2.13-1.2.0-sources.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scalactic/scalactic_2.13/3.0.8/scalactic_2.13-3.0.8-sources.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scalatest/scalatest_2.13/3.0.8/scalatest_2.13-3.0.8-sources.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scalactic/scalactic_2.13/3.0.8/scalactic_2.13-3.0.8-javadoc.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.13/1.2.0/scala-xml_2.13-1.2.0-javadoc.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/scalatest/scalatest_2.13/3.0.8/scalatest_2.13-3.0.8-javadoc.jar
+[debug] downloaded https://repo1.maven.org/maven2/org/antlr/antlr4-runtime/4.8/antlr4-runtime-4.8.pom
+[debug] downloaded https://repo1.maven.org/maven2/org/antlr/antlr4-master/4.8/antlr4-master-4.8.pom
+[debug] downloaded https://repo1.maven.org/maven2/org/antlr/antlr4-runtime/4.8/antlr4-runtime-4.8.jar
+[debug] downloaded https://repo1.maven.org/maven2/org/antlr/antlr4-runtime/4.8/antlr4-runtime-4.8-sources.jar
+[debug] downloaded https://repo1.maven.org/maven2/org/antlr/antlr4-runtime/4.8/antlr4-runtime-4.8-javadoc.jar

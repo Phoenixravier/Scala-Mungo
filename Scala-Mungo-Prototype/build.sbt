@@ -13,3 +13,11 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 libraryDependencies += "org.scalameta" %% "scalameta" % "4.3.18"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
+
+libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.8"
+
+libraryDependencies += "org.antlr" % "stringtemplate" % "3.2"
+
+//libraryDependencies += "antlr" % "antlr" % "2.7.7"
+
+//libraryDependencies += "com.simplytyped" % "sbt-antlr4" % "0.8.2"

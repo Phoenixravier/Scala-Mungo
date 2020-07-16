@@ -12,7 +12,10 @@ class Cat{
   def rest(): Unit = println("Resting")
   def walk(): Unit = println("Walking")
   def sleep(): Unit = println("Sleeping")
-  def die(): Unit = println("The cat is dead")
+  def die(): Boolean = {
+    println("The cat is dead")
+    true
+  }
 }
 
 @Typestate(filename="Lol.txt")

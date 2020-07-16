@@ -1,5 +1,5 @@
 call scalac -d classes src\main\scala\compilerPlugin\GetFileFromAnnotation.scala
-call scalac -d classes src\main\scala\compilerPlugin\Typestate.scala
+
 cd classes
 jar cf ..\getfile.jar .
 cd..

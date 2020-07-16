@@ -1,28 +1,28 @@
 typestate CatProtocol {
 	State0 = {
-		walk(): Unit => State1
-		comeAlive(): Unit => State0
+		walk(): Unit => State1,
+		comeAlive(): Unit => State0,
 		rest() : Unit => State4
 	}
 	State1 = {
-		void run(): State2,
-		void walk(): State1,
-		void rest(): State4
+		run(): Unit => State2,
+		walk(): Unit => State1,
+		rest(): Unit => State4
 	}
 	State2 = {
-	    void die(): State3,
-	    void walk(): State1
-	    void run(): State2
+	    die(): Boolean => <True => State3, False => State2>,
+	    walk(): Unit => State1,
+	    run(): Unit => State2
 	}
 	State3 = {
-    	void die(): State3
+    	die(): Boolean => <True => State3, False => State2>
     }
     State4 = {
-        void sleep(): State5
-        void walk(): State1
-        void rest(): State4
+        sleep(): Unit => State5,
+        walk(): Unit => State1,
+        rest(): Unit => State4
     }
     State5 = {
-        void sleep(): State5
+        sleep(): Unit => State5
     }
 }
