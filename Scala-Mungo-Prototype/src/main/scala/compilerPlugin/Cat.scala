@@ -1,8 +1,5 @@
 package compilerPlugin
 
-
-class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate(filename="src\\main\\scala\\MyProtocol.txt")

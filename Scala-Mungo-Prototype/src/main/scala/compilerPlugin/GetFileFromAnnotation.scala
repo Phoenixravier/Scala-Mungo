@@ -49,12 +49,14 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       def apply(unit: CompilationUnit): Unit = {
+        println("in apply")
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
           val annotations = mods.annotations
+          println(annotations)
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => printFile(filename)
-              case None => println("Not a Typestate annotation")
+              case None => println("Not a sfef compilerPlugin.Typestate annotation")
             }
           }
         }

@@ -1,0 +1,31 @@
+[0m[[0m[0mdebug[0m] [0m[0mPackaging C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\scala-mungo-prototype_2.13-0.2-sources.jar ...[0m
+[0m[[0m[0mdebug[0m] [0m[0mInput file mappings:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	compilerPlugin\AnnotationFinderTest.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\AnnotationFinderTest.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	compilerPlugin\Cat.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\Cat.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	compilerPlugin\GetFileFromAnnotation.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\GetFileFromAnnotation.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	compilerPlugin\Oravat.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\Oravat.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	compilerPlugin\Typestate.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\Typestate.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\Launch.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\Launch.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\MyVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\MyVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateBaseListener.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateBaseListener.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateBaseVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateBaseVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateLexer.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateLexer.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateListener.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateListener.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateParser.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateParser.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ProtocolParse\TypestateVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolParse\TypestateVisitor.java[0m
+[0m[[0m[0mdebug[0m] [0m[0m	TestTest\CubeCalculator.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\TestTest\CubeCalculator.scala[0m
+[0m[[0m[0mdebug[0m] [0m[0mDone packaging.[0m

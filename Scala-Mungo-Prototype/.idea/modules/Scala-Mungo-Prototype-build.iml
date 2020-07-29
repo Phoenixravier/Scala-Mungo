@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id="Scala-Mungo-Prototype-build" external.linked.project.path="$MODULE_DIR$/../../project" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" sbt.imports="_root_.sbt.Keys._, _root_.sbt.ScriptedPlugin.autoImport._, _root_.sbt._, _root_.sbt.nio.Keys._, _root_.sbt.plugins.IvyPlugin, _root_.sbt.plugins.JvmPlugin, _root_.sbt.plugins.CorePlugin, _root_.sbt.ScriptedPlugin, _root_.sbt.plugins.SbtPlugin, _root_.sbt.plugins.SemanticdbPlugin, _root_.sbt.plugins.JUnitXmlReportPlugin, _root_.sbt.plugins.Giter8TemplatePlugin, _root_.scala.xml.{TopScope=&amp;gt;SUB:DOLLARscope}" sbt.resolvers="file:/$USER_HOME$/.sbt/preloaded|maven|local-preloaded, https://repo1.maven.org/maven2/|maven|public, C:\Users\Alice\.ivy2\cache|ivy|Local cache" type="SBT_MODULE" version="4">
+<module external.linked.project.id="Scala-Mungo-Prototype-build" external.linked.project.path="$MODULE_DIR$/../../project" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" sbt.imports="_root_.sbt.Keys._, _root_.sbt.ScriptedPlugin.autoImport._, _root_.bintray.BintrayPlugin.autoImport._, _root_.sbt._, _root_.sbt.nio.Keys._, _root_.sbt.plugins.IvyPlugin, _root_.sbt.plugins.JvmPlugin, _root_.sbt.plugins.CorePlugin, _root_.sbt.ScriptedPlugin, _root_.sbt.plugins.SbtPlugin, _root_.sbt.plugins.SemanticdbPlugin, _root_.sbt.plugins.JUnitXmlReportPlugin, _root_.sbt.plugins.Giter8TemplatePlugin, _root_.bintray.BintrayPlugin, _root_.scala.xml.{TopScope=&amp;gt;SUB:DOLLARscope}" sbt.resolvers="file:/$USER_HOME$/.sbt/preloaded|maven|local-preloaded, https://repo1.maven.org/maven2/|maven|public, https://dl.bintray.com/realmrealslkgfmqorigmqoerignoiergoirgnoiarmgksmfmrgnakrealm/maven/|maven|bintray-realmrealslkgfmqorigmqoerignoiergoirgnoiarmgksmfmrgnakrealm-maven, C:\Users\Alice\.ivy2\cache|ivy|Local cache" type="SBT_MODULE" version="4">
   <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/../../project/target/idea-classes" />
     <output-test url="file://$MODULE_DIR$/../../project/target/idea-test-classes" />
@@ -101,9 +101,24 @@
           <root url="jar://$USER_HOME$/.sbt/boot/scala-2.12.10/org.scala-sbt/sbt/1.3.13/zinc-lm-integration_2.12-1.3.13.jar!/" />
           <root url="jar://$USER_HOME$/.sbt/boot/scala-2.12.10/org.scala-sbt/sbt/1.3.13/zinc-persist_2.12-1.3.5.jar!/" />
           <root url="jar://$USER_HOME$/.sbt/boot/scala-2.12.10/org.scala-sbt/sbt/1.3.13/zinc_2.12-1.3.5.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo.scala-sbt.org/scalasbt/sbt-plugin-releases/org.foundweekends/sbt-bintray/scala_2.12/sbt_1.0/0.5.2/jars/sbt-bintray.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/ning/async-http-client/1.9.11/async-http-client-1.9.11.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/thoughtworks/paranamer/paranamer/2.8/paranamer-2.8.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/io/netty/netty/3.10.0.Final/netty-3.10.0.Final.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/databinder/dispatch/dispatch-core_2.12/0.12.0/dispatch-core_2.12-0.12.0.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/databinder/dispatch/dispatch-json4s-native_2.12/0.12.0/dispatch-json4s-native_2.12-0.12.0.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/foundweekends/bintry_2.12/0.5.1/bintry_2.12-0.5.1.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-ast_2.12/3.4.2/json4s-ast_2.12-3.4.2.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-core_2.12/3.4.2/json4s-core_2.12-3.4.2.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-native_2.12/3.4.2/json4s-native_2.12-3.4.2.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-scalap_2.12/3.4.2/json4s-scalap_2.12-3.4.2.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.12/1.3.0/scala-xml_2.12-1.3.0.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.26/slf4j-api-1.7.26.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-nop/1.7.7/slf4j-nop-1.7.7.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo.scala-sbt.org/scalasbt/sbt-plugin-releases/org.foundweekends/sbt-bintray/scala_2.12/sbt_1.0/0.5.2/srcs/sbt-bintray-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/eed3si9n/gigahorse-core_2.12/0.5.0/gigahorse-core_2.12-0.5.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/eed3si9n/gigahorse-okhttp_2.12/0.5.0/gigahorse-okhttp_2.12-0.5.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/eed3si9n/shaded-scalajson_2.12/1.0.0-M4/shaded-scalajson_2.12-1.0.0-M4-sources.jar!/" />
@@ -119,21 +134,31 @@
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/lihaoyi/fastparse_2.12/0.4.2/fastparse_2.12-0.4.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.12/0.1.3/sourcecode_2.12-0.1.3-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/lmax/disruptor/3.4.2/disruptor-3.4.2-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/ning/async-http-client/1.9.11/async-http-client-1.9.11-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/squareup/okhttp3/okhttp-urlconnection/3.7.0/okhttp-urlconnection-3.7.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/3.14.2/okhttp-3.14.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/squareup/okio/okio/1.17.2/okio-1.17.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/swoval/file-tree-views/2.1.3/file-tree-views-2.1.3-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/thoughtworks/paranamer/paranamer/2.8/paranamer-2.8-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/trueaccord/lenses/lenses_2.12/0.4.12/lenses_2.12-0.4.12-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/trueaccord/scalapb/scalapb-runtime_2.12/0.6.0/scalapb-runtime_2.12-0.6.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.3.3/config-1.3.3-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.12/0.4.0/ssl-config-core_2.12-0.4.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/io/get-coursier/lm-coursier-shaded_2.12/2.0.0-RC6-4/lm-coursier-shaded_2.12-2.0.0-RC6-4-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/io/netty/netty/3.10.0.Final/netty-3.10.0.Final-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/jline/jline/2.14.6/jline-2.14.6-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/databinder/dispatch/dispatch-core_2.12/0.12.0/dispatch-core_2.12-0.12.0-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/databinder/dispatch/dispatch-json4s-native_2.12/0.12.0/dispatch-json4s-native_2.12-0.12.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna-platform/5.5.0/jna-platform-5.5.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna/5.5.0/jna-5.5.0-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/2.11.2/log4j-api-2.11.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.11.2/log4j-core-2.11.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/apache/logging/log4j/log4j-slf4j-impl/2.11.2/log4j-slf4j-impl-2.11.2-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/foundweekends/bintry_2.12/0.5.1/bintry_2.12-0.5.1-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-ast_2.12/3.4.2/json4s-ast_2.12-3.4.2-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-core_2.12/3.4.2/json4s-core_2.12-3.4.2-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-native_2.12/3.4.2/json4s-native_2.12-3.4.2-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/json4s/json4s-scalap_2.12/3.4.2/json4s-scalap_2.12-3.4.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.2/reactive-streams-1.0.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.12/1.1.2/scala-parser-combinators_2.12-1.1.2-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_2.12/1.3.0/scala-xml_2.12-1.3.0-sources.jar!/" />
@@ -186,6 +211,7 @@
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-sbt/zinc-persist_2.12/1.3.5/zinc-persist_2.12-1.3.5-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/scala-sbt/zinc_2.12/1.3.5/zinc_2.12-1.3.5-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.26/slf4j-api-1.7.26-sources.jar!/" />
+          <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-nop/1.7.7/slf4j-nop-1.7.7-sources.jar!/" />
           <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/org/spire-math/jawn-parser_2.12/0.10.4/jawn-parser_2.12-0.10.4-sources.jar!/" />
         </SOURCES>
       </library>
@@ -193,6 +219,6 @@
   </component>
   <component name="SbtModule">
     <option name="buildForURI" value="file:/$MODULE_DIR$/../../../../../../Year%20five/Project/Scala-Mungo/Scala-Mungo-Prototype/" />
-    <option name="imports" value="_root_.sbt.Keys._, _root_.sbt.ScriptedPlugin.autoImport._, _root_.sbt._, _root_.sbt.nio.Keys._, _root_.sbt.plugins.IvyPlugin, _root_.sbt.plugins.JvmPlugin, _root_.sbt.plugins.CorePlugin, _root_.sbt.ScriptedPlugin, _root_.sbt.plugins.SbtPlugin, _root_.sbt.plugins.SemanticdbPlugin, _root_.sbt.plugins.JUnitXmlReportPlugin, _root_.sbt.plugins.Giter8TemplatePlugin, _root_.scala.xml.{TopScope=&gt;SUB:DOLLARscope}" />
+    <option name="imports" value="_root_.sbt.Keys._, _root_.sbt.ScriptedPlugin.autoImport._, _root_.bintray.BintrayPlugin.autoImport._, _root_.sbt._, _root_.sbt.nio.Keys._, _root_.sbt.plugins.IvyPlugin, _root_.sbt.plugins.JvmPlugin, _root_.sbt.plugins.CorePlugin, _root_.sbt.ScriptedPlugin, _root_.sbt.plugins.SbtPlugin, _root_.sbt.plugins.SemanticdbPlugin, _root_.sbt.plugins.JUnitXmlReportPlugin, _root_.sbt.plugins.Giter8TemplatePlugin, _root_.bintray.BintrayPlugin, _root_.scala.xml.{TopScope=&gt;SUB:DOLLARscope}" />
   </component>
 </module>

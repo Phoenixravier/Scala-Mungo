@@ -1,4 +1,4 @@
-// Generated from C:/Year five/Project/Scala-Mungo/Scala-Mungo-Prototype/src/main/scala\Typestate.g4 by ANTLR 4.8
+// Generated from C:/Year five/Project/Scala-Mungo/Scala-Mungo-Prototype/src/main/scala\compilerPlugin.Typestate.g4 by ANTLR 4.8
 package ProtocolParse;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
