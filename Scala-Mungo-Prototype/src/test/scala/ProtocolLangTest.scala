@@ -8,8 +8,9 @@ class ProtocolLangTest extends FlatSpec with Matchers{
       def main(args:Array[String]) = {
       }
       assert (Test.stateIndexCounter === 0)
-      assert (Test.methodIndexCounter === 0)
+      assert (Test.returnValueIndexCounter === 0)
       assert (Test.currentState === null)
+      assert (Test.currentMethod === null)
     }
   }
 
@@ -88,7 +89,13 @@ class ProtocolLangTest extends FlatSpec with Matchers{
         in("State0")
         when("walk(): Unit") goto "State0"
       }
-      assert (Test.transitions.contains(Transition(State("State0", 0), Method("walk(): Unit", 0), "State0"))  === true)
+      assert (Test.transitions.contains(
+        Transition(
+          State("State0", 0),
+          Method("walk(): Unit", null),
+          ReturnValue(Method("walk(): Unit", null), null, 0),
+            "State0")
+      )  === true)
     }
   }
 
@@ -103,17 +110,6 @@ class ProtocolLangTest extends FlatSpec with Matchers{
     }
   }
 
-  "using when" should "create a correct entry in the methodsMap" in {
-    object Test extends ProtocolLang{
-      def main(args:Array[String]) = {
-        in("State0")
-        when("walk(): Unit") goto "State0"
-        end
-      }
-      assert(Test.methodsMap("walk(): Unit") === 0 )
-    }
-  }
-
   "using or" should "create a correct entry in the transitions list" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
@@ -121,7 +117,26 @@ class ProtocolLangTest extends FlatSpec with Matchers{
         when("walk(): Boolean") goto "State0" at "True" or "State1" at "False"
         end
       }
-      assert(Test.methodsMap("walk(): Unit") === 0 )
+      assert(Test.transitions.contains(
+        Transition(
+          State("State0", 0),
+          Method("walk(): Boolean", Set(0,1)),
+          ReturnValue(Method("walk(): Boolean", Set(0,1)), "True", 0),
+          "State0"
+        )
+      ))
+    }
+  }
+
+  "using or" should "create a correct entry in the matrix list" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in("State0")
+        when("walk(): Boolean") goto "State0" at "True" or "State1" at "False"
+        in ("State1")
+        end
+      }
+      assert(Test.arrayOfStates(0)(1) === State("State1", 1))
     }
   }
 }
