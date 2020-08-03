@@ -1,6 +1,6 @@
 package ProtocolDSL
 
-import scala.language.postfixOps
+import compilerPlugin.ProtocolLang
 
 
 object Example extends ProtocolLang{
@@ -18,15 +18,5 @@ object Example extends ProtocolLang{
     in ("State2")
     in ("State1")
     end
-
   }
-  def walk(): Unit ={
-
-  }
-
 }
-
-
-
-
-

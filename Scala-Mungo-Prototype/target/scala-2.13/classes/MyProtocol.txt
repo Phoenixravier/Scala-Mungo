@@ -1,10 +1,25 @@
 in ("State0")
-when ("walk(String)") goto "State1"
+when ("walk(String)") goto "State3"
 when ("comeAlive()") goto "State0"
-when ("rest()") goto "State4"
 
 in ("State3")
-when ("die(): Boolean") goto "State3" at "True" or "State2" at "False"
+when ("die(): Boolean") goto "State3" at "True" or "State0" at "False"
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 in ("State1")
 when ("run()") goto "State2"

@@ -7,8 +7,8 @@ import nsc.Global
 import nsc.Phase
 import nsc.plugins.Plugin
 import nsc.plugins.PluginComponent
-import scala.io.BufferedSource
 import scala.io.Source._
+import scala.sys.process.Process
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -26,6 +26,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       override def name: String = GetFileFromAnnotation.this.name
 
+
       def printFile(filename: String): Unit ={
         val source = fromFile(filename)
         try {
@@ -40,6 +41,10 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
+      def executeFile(filename: String): Unit ={
+        Process("echo \"hello\"")
+      }
+
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
         annotation match{
           case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(NamedArg(Ident(TermName("filename")), Literal(Constant(filename))))) => Some(filename.toString)
@@ -49,14 +54,15 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       def apply(unit: CompilationUnit): Unit = {
-        println("in apply")
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
           val annotations = mods.annotations
-          println(annotations)
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
-              case Some(filename) => printFile(filename)
-              case None => println("Not a sfef compilerPlugin.Typestate annotation")
+              case Some(filename) => {
+                printFile(filename)
+                executeFile(filename)
+              }
+              case None => println("Not a compilerPlugin.Typestate annotation")
             }
           }
         }

@@ -4,3 +4,8 @@ package compilerPlugin
 class Oravat {
 
 }
+
+
+object main extends App{
+  println("it worked")
+}

@@ -1,8 +1,13 @@
 package compilerPlugin
 
+import scala.sys.process._
+import scala.language.postfixOps
+
+import java.io.File
+
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
-@Typestate(filename="src\\main\\scala\\MyProtocol.txt")
+@Typestate(filename="src\\main\\scala\\ProtocolDSL\\Example.scala")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
   def run(): Unit = println("Running")
@@ -15,15 +20,14 @@ class Cat{
   }
 }
 
-@Typestate(filename="Lol.txt")
-class Doggo{
-  def sleep(): Unit = println("shleep")
-}
 
-object Main extends App {
+object main2 extends App {
   System.getProperty("java.class.path")
   val cat = new Cat()
   cat.comeAlive()
   cat.run()
+
+  "test.bat".!
+
 
 }

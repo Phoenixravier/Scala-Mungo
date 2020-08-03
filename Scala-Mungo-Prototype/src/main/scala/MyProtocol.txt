@@ -6,6 +6,21 @@ in ("State3")
 when ("die(): Boolean") goto "State3" at "True" or "State0" at "False"
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 in ("State1")
 when ("run()") goto "State2"
     walk(): Unit => State1,
