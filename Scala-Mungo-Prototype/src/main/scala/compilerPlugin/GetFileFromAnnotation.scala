@@ -1,14 +1,12 @@
 package compilerPlugin
 
-import java.io.{FileNotFoundException, IOException}
+import java.io.IOException
 
-import scala.tools.nsc
-import nsc.Global
-import nsc.Phase
-import nsc.plugins.Plugin
-import nsc.plugins.PluginComponent
 import scala.io.Source._
 import scala.sys.process.Process
+import scala.tools.nsc
+import scala.tools.nsc.{Global, Phase}
+import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._

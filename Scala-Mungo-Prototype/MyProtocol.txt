@@ -1,1 +1,8 @@
-This is a test
+in ("State0")
+when ("walk(String)") goto "State3"
+when ("comeAlive()") goto "State0"
+
+in ("State3")
+when ("die(): Boolean") goto "State3" at "True" or "State0" at "False"
+
+end
