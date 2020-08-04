@@ -81,6 +81,5 @@ class PluginTest extends FlatSpec with Matchers {
     }
     bw.close()
   }
-
 }
 

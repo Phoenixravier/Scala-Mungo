@@ -1,5 +1,7 @@
 package ProtocolDSL
 
+import compilerPlugin.ProtocolLang
+
 
 object Example extends ProtocolLang{
   def main(args:Array[String]) = {

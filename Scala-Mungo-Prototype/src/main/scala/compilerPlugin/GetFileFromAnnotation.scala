@@ -1,11 +1,14 @@
 package compilerPlugin
 
-import java.io.IOException
+import java.io.{FileInputStream, IOException, ObjectInputStream}
+import java.nio.ByteBuffer
+import java.nio.file.{Files, Paths}
+
 import scala.io.Source._
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
-
+import ProtocolDSL.State
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -13,6 +16,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
   val description = "gets file from typestate annotation"
   val components: List[PluginComponent] = List[PluginComponent](Component)
+  var stateArray: Array[Array[State]] = _
 
   private object Component extends PluginComponent {
     val global: GetFileFromAnnotation.this.global.type = GetFileFromAnnotation.this.global
@@ -37,18 +41,15 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
-      def getArrayFromFile(filename: String): Unit ={
-        val source = fromFile(filename)
-        try {
-          val it = source.getLines()
-          while (it.hasNext)
-            println(it.next())
-        }
-        catch{
-          case e: IOException => println(s"Had an IOException trying to use file $filename")
-        } finally {
-          source.close
-        }
+      def executeFile(filename:String): Unit ={
+        "test.bat".!
+      }
+
+      def getArrayFromFile(filename: String): Array[Array[State]] ={
+        val ois = new ObjectInputStream(new FileInputStream(filename))
+        val stock = ois.readObject.asInstanceOf[Array[Array[State]]]
+        ois.close
+        stock
       }
 
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
@@ -66,11 +67,15 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => {
                 printFile(filename)
+                executeFile(filename)
+                stateArray = getArrayFromFile("protocolDir\\EncodedArray.ser")
+                println("Decoded array ", stateArray)
               }
               case None => println("Not a compilerPlugin.Typestate annotation")
             }
           }
         }
+        
       }
     }
   }

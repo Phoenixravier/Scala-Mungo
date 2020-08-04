@@ -1,9 +1,9 @@
 package compilerPlugin
 
-import scala.sys.process._
 import scala.language.postfixOps
+import scala.sys.process._
 
-import java.io.File
+class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
@@ -22,12 +22,10 @@ class Cat{
 
 
 object main2 extends App {
-  System.getProperty("java.class.path")
   val cat = new Cat()
   cat.comeAlive()
   cat.run()
 
-  "test.bat".!
-
-
+  "justEcho.bat".!
+  println("executed after batch file")
 }

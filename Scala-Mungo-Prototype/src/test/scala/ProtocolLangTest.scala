@@ -1,5 +1,4 @@
-import ProtocolDSL.Example2.{in, when}
-import ProtocolDSL.ProtocolLang
+import ProtocolDSL.{ProtocolLang, State}
 import org.scalatest.{FlatSpec, Matchers}
 
 class ProtocolLangTest extends FlatSpec with Matchers{
