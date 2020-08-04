@@ -7,7 +7,7 @@ import java.io.File
 
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
-@Typestate(filename="src\\main\\scala\\ProtocolDSL\\Example.scala")
+@Typestate(filename="src\\main\\scala\\ProtocolDSL\\Example2.scala")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
   def run(): Unit = println("Running")

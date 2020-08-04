@@ -1,8 +1,6 @@
 package ProtocolDSL
 
-import compilerPlugin.ProtocolLang
-
-class Example extends ProtocolLang{
+object Example extends ProtocolLang{
   def main(args:Array[String]) = {
     in ("State0")
     when ("walk()") goto "State3"

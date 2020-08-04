@@ -1,6 +1,6 @@
 organization := "com.example"
 
-name := "Scala-Mungo-Prototype"
+name := "Scala-Mungo-Prototype2"
 
 version := "0.2"
 

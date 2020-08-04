@@ -28,15 +28,19 @@ packageBin in Compile := file(s"${name.value}_${scalaBinaryVersion.value}.jar")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.13.3"
+libraryDependencies += "io.suzaku" %% "boopickle" % "1.3.2"
+
+libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
-
-libraryDependencies += "org.scalameta" %% "scalameta" % "4.3.18"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
 
 libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.8"
 
 libraryDependencies += "org.antlr" % "stringtemplate" % "3.2"
+
+
+
+
 

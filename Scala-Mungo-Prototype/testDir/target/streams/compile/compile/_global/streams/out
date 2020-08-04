@@ -1,28 +1,4 @@
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:3:24: not found: type ProtocolLang[0m
-[0m[[0m[31merror[0m] [0m[0mobject Example extends ProtocolLang{[0m
-[0m[[0m[31merror[0m] [0m[0m                       ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:5:5: not found: value in[0m
-[0m[[0m[31merror[0m] [0m[0m    in ("State0")[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:6:5: not found: value when[0m
-[0m[[0m[31merror[0m] [0m[0m    when ("walk()") goto "State3"[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:7:5: not found: value when[0m
-[0m[[0m[31merror[0m] [0m[0m    when ("comeAlive()") goto "State0"[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:8:5: not found: value when[0m
-[0m[[0m[31merror[0m] [0m[0m    when ("die()") goto[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:14:5: not found: value in[0m
-[0m[[0m[31merror[0m] [0m[0m    in ("State3")[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:15:5: not found: value in[0m
-[0m[[0m[31merror[0m] [0m[0m    in ("State2")[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:16:5: not found: value in[0m
-[0m[[0m[31merror[0m] [0m[0m    in ("State1")[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\testDir\src\main\scala\ProtocolDSL\Example.scala:17:5: not found: value end[0m
-[0m[[0m[31merror[0m] [0m[0m    end[0m
-[0m[[0m[31merror[0m] [0m[0m    ^[0m
-[0m[[0m[31merror[0m] [0m[0m9 errors found[0m
+[0m[[0m[33mwarn[0m] [0m[0m3 deprecations (since 2.13.0)[0m
+[0m[[0m[33mwarn[0m] [0m[0m1 deprecation (since 2.13.3)[0m
+[0m[[0m[33mwarn[0m] [0m[0m4 deprecations in total; re-run with -deprecation for details[0m
+[0m[[0m[33mwarn[0m] [0m[0mthree warnings found[0m

@@ -1,7 +1,5 @@
 package ProtocolDSL
 
-import compilerPlugin.ProtocolLang
-
 object Example extends ProtocolLang{
   def main(args:Array[String]) = {
     in ("State0")
@@ -16,6 +14,7 @@ object Example extends ProtocolLang{
     in ("State3")
     in ("State2")
     in ("State1")
-    end
+    end()
+    println("done")
   }
 }

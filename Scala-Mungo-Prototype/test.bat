@@ -1,11 +1,8 @@
-echo "hello, runnning test"
 IF NOT EXIST testDir mkdir testDir
 
-call copy src\main\scala\ProtocolDSL\Example.scala testDir\ProtocolDSL
-call scalac -d testDir src\main\scala\ProtocolDSL\ProtocolLang.scala
+call copy Example.scala testDir\src\main\scala\ProtocolDSL\
+call copy ProtocolLang.scala testDir\src\main\scala\ProtocolDSL
 
 cd testDir
-jar cf ..\testJar .
-cd..
+sbt run
 
-call scalac testJar

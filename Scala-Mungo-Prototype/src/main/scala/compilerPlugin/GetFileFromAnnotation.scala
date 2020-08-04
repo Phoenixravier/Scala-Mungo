@@ -1,12 +1,11 @@
 package compilerPlugin
 
 import java.io.IOException
-
 import scala.io.Source._
-import scala.sys.process.Process
-import scala.tools.nsc
+import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
+
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -24,7 +23,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       override def name: String = GetFileFromAnnotation.this.name
 
-
       def printFile(filename: String): Unit ={
         val source = fromFile(filename)
         try {
@@ -39,8 +37,18 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
-      def executeFile(filename: String): Unit ={
-        Process("echo \"hello\"")
+      def getArrayFromFile(filename: String): Unit ={
+        val source = fromFile(filename)
+        try {
+          val it = source.getLines()
+          while (it.hasNext)
+            println(it.next())
+        }
+        catch{
+          case e: IOException => println(s"Had an IOException trying to use file $filename")
+        } finally {
+          source.close
+        }
       }
 
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
@@ -58,7 +66,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => {
                 printFile(filename)
-                executeFile(filename)
               }
               case None => println("Not a compilerPlugin.Typestate annotation")
             }

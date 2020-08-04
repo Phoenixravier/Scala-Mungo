@@ -1,7 +1,7 @@
 
 import java.io.{BufferedWriter, ByteArrayOutputStream, File, FileWriter}
 
-import compilerPlugin.{GetFileFromAnnotation, ProtocolLang}
+import compilerPlugin.GetFileFromAnnotation
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.VirtualDirectory
@@ -12,21 +12,35 @@ import org.scalatest._
 class PluginTest extends FlatSpec with Matchers {
     "at init object" should "have correct values" in {
       val protocolText =
-        """|in ("State0")
-          |when ("walk(String)") goto "State3"
-          |when ("comeAlive()") goto "State0"
+        """package ProtocolDSL
           |
-          |in ("State3")
-          |when ("die(): Boolean") goto "State3" at "True" or "State0" at "False"
+          |import compilerPlugin.ProtocolLang
           |
-          |end""".stripMargin
+          |
+          |object Example extends ProtocolLang{
+          |  def main(args:Array[String]) = {
+          |    in ("State0")
+          |    when ("walk()") goto "State3"
+          |    when ("comeAlive()") goto "State0"
+          |    when ("die()") goto
+          |      "State1" at "True" or
+          |      "State2" at "False" or
+          |      "State3" at "Maybe" or
+          |      "State1" at null
+          |
+          |    in ("State3")
+          |    in ("State2")
+          |    in ("State1")
+          |    end
+          |  }
+          |}""".stripMargin
 
-      writeFile("MyProtocol.txt", Seq(protocolText))
+      writeFile("MyProtocol.scala", Seq(protocolText))
 
       val userCode = """
                |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
                |
-               |@Typestate(filename = "MyProtocol.txt")
+               |@Typestate(filename = "MyProtocol.scala")
                |class Cat{
                |  def comeAlive(): Unit = println("The cat is alive")
                |}
