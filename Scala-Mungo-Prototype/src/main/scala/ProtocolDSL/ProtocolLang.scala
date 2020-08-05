@@ -2,15 +2,10 @@ package ProtocolDSL
 
 
 import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
-import java.nio.ByteBuffer
-import java.nio.file.{Files, Paths}
-
-import boopickle.Default._
-import boopickle.UnpickleImpl
-
 import scala.collection.SortedSet
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ArrayBuffer
+
 
 class ProtocolLang {
   var stateIndexCounter:Int = 0
@@ -19,24 +14,14 @@ class ProtocolLang {
   var currentMethod:Method = _
   var arrayOfStates:Array[Array[State]] = _
 
-
   var states: Set[State] = Set()
   var statesMap: HashMap[String, State] = HashMap()
 
-  case class Method(name: String, var indices:Set[Int] = Set())
   var methods: Set[Method] = Set()
 
   case class Transition(startState:State, var method:Method, var returnValue:ReturnValue, nextState:String)
   var transitions: ArrayBuffer[Transition] = ArrayBuffer()
 
-  case class ReturnValue(parentMethod:Method, var valueName:String, index:Int) extends Ordered[ReturnValue]{
-    override def compare(that:ReturnValue) ={
-      this.index compare that.index
-    }
-    override def toString()={
-      parentMethod.name + ":"+ valueName
-    }
-  }
   var returnValues: Set[ReturnValue] = Set()
 
   def in(stateName: String) = new In(stateName)
@@ -101,15 +86,13 @@ class ProtocolLang {
     }
     println(arrayOfStates)
     printNicely(arrayOfStates)
-    sendDataToFile(arrayOfStates, "EncodedArray.ser")
+    sendDataToFile((arrayOfStates, states, returnValues), "EncodedData.ser")
   }
-
 
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
     SortedSet.empty[A] ++ unsortedSet
 
-
-  def sendDataToFile(data: Array[Array[State]], filename:String): Unit ={
+  def sendDataToFile(data: (Array[Array[State]], Set[State], Set[ReturnValue]), filename:String): Unit ={
     val oos = new ObjectOutputStream(new FileOutputStream(filename))
     oos.writeObject(data)
     oos.close

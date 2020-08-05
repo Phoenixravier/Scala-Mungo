@@ -3,7 +3,7 @@ package compilerPlugin
 import scala.language.postfixOps
 import scala.sys.process._
 
-class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+//class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 class Mammal(filename:String) extends scala.annotation.StaticAnnotation
 
@@ -25,7 +25,4 @@ object main2 extends App {
   val cat = new Cat()
   cat.comeAlive()
   cat.run()
-
-  "justEcho.bat".!
-  println("executed after batch file")
 }

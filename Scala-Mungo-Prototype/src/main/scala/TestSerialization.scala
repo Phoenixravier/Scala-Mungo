@@ -31,7 +31,7 @@ object main3 extends App {
   arrayOfArray(0) = arrayOfstate
   arrayOfArray(1) = Array.ofDim[TestState](3)
   println("hello")
-  state.sendDataToFile(arrayOfArray, "file.seq")
-  state.getDataFromFile("file.seq")
+  state.sendDataToFile(arrayOfArray, "file.ser")
+  state.getDataFromFile("file.ser")
 }
 

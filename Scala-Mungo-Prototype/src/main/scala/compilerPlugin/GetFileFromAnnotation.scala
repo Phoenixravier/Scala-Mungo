@@ -1,14 +1,11 @@
 package compilerPlugin
 
 import java.io.{FileInputStream, IOException, ObjectInputStream}
-import java.nio.ByteBuffer
-import java.nio.file.{Files, Paths}
-
 import scala.io.Source._
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
-import ProtocolDSL.State
+import ProtocolDSL.{ReturnValue, State}
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -16,7 +13,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
   val description = "gets file from typestate annotation"
   val components: List[PluginComponent] = List[PluginComponent](Component)
-  var stateArray: Array[Array[State]] = _
+  var data: (Array[Array[State]], Set[State], Set[ReturnValue]) = _
 
   private object Component extends PluginComponent {
     val global: GetFileFromAnnotation.this.global.type = GetFileFromAnnotation.this.global
@@ -26,6 +23,37 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       override def name: String = GetFileFromAnnotation.this.name
+
+      def apply(unit: CompilationUnit): Unit = {
+        for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
+          val annotations = mods.annotations
+          for(annotation@Apply(arg1,arg2) <- annotations){
+            getFilenameFromAnnotation(annotation) match{
+              case Some(filename) => {
+                printFile(filename)
+                executeFile(filename)
+                println("after execution")
+                data = getDataFromFile("protocolDir\\EncodedData.ser")
+                println("Decoded array ", data)
+              }
+              case None => println("Not a compilerPlugin.Typestate annotation")
+            }
+          }
+        }
+        data match{
+          case null => return
+          case _ =>
+        }
+        println("Keep going with the program here")
+      }
+
+      def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
+        annotation match{
+          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(NamedArg(Ident(TermName("filename")), Literal(Constant(filename))))) => Some(filename.toString)
+          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(Literal(Constant(filename)))) => Some(filename.toString)
+          case _ => None
+        }
+      }
 
       def printFile(filename: String): Unit ={
         val source = fromFile(filename)
@@ -42,41 +70,19 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       def executeFile(filename:String): Unit ={
-        "test.bat".!
+        "executeUserProtocol.bat".!
       }
 
-      def getArrayFromFile(filename: String): Array[Array[State]] ={
+      def getDataFromFile(filename: String): (Array[Array[State]], Set[State], Set[ReturnValue]) ={
+        println("in getData function")
         val ois = new ObjectInputStream(new FileInputStream(filename))
-        val stock = ois.readObject.asInstanceOf[Array[Array[State]]]
+        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Set[State], Set[ReturnValue])] //ERRORS HERE
         ois.close
+        println("after data is read")
         stock
       }
 
-      def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
-        annotation match{
-          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(NamedArg(Ident(TermName("filename")), Literal(Constant(filename))))) => Some(filename.toString)
-          case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(Literal(Constant(filename)))) => Some(filename.toString)
-          case _ => None
-        }
-      }
 
-      def apply(unit: CompilationUnit): Unit = {
-        for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
-          val annotations = mods.annotations
-          for(annotation@Apply(arg1,arg2) <- annotations){
-            getFilenameFromAnnotation(annotation) match{
-              case Some(filename) => {
-                printFile(filename)
-                executeFile(filename)
-                stateArray = getArrayFromFile("protocolDir\\EncodedArray.ser")
-                println("Decoded array ", stateArray)
-              }
-              case None => println("Not a compilerPlugin.Typestate annotation")
-            }
-          }
-        }
-        
-      }
     }
   }
 }
