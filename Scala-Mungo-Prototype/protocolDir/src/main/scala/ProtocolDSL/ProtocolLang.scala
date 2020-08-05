@@ -1,9 +1,7 @@
 package ProtocolDSL
 
-
-import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
-
-import scala.collection.{SortedSet, mutable}
+import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import scala.collection.SortedSet
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 
@@ -85,18 +83,10 @@ class ProtocolLang {
         case None => throw new Exception(s"ERROR, state ${transition.nextState} isn't defined")
       }
     }
-    println(arrayOfStates)
     printNicely(arrayOfStates)
-    val meth = Method("walk()", Set(0))
-    val methtwo = Method("die()", Set(2,3,4,5))
-    val me = Method("die()", Set(2,3,4,5))
-    val met = Method("die()", Set(2,3,4,5))
-    val m = Method("die()", Set(2,3,4,5))
-    val metho = Method("comeAlive()", Set(1))
     val returnValuesArray = returnValues.toArray
     val statesArray:Array[State] = states.toArray
     sendDataToFile((arrayOfStates, statesArray, returnValuesArray), "EncodedData.ser")
-    //val stock = getDataFromFile("EncodedData.ser")
   }
 
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
@@ -109,11 +99,9 @@ class ProtocolLang {
   }
 
   def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    println("in getData function")
     val ois = new ObjectInputStream(new FileInputStream(filename))
     val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
     ois.close
-    println(stock)
     stock
   }
 

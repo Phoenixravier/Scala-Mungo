@@ -8,9 +8,6 @@ import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{Method, ReturnValue, State}
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
 
@@ -34,9 +31,11 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => {
+                //print the contents of the file out to the console
                 printFile(filename)
+                //execute the DSL in the protocol file and serialize the data into a file
                 executeFile(filename)
-                println("after execution")
+                //retrieve the serialized data
                 data = getDataFromFile("protocolDir\\EncodedData.ser")
                 println("Decoded array ", data)
               }
@@ -48,6 +47,10 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           case null => return
           case _ =>
         }
+        val (transitionsArray, statesArray, returnValuesArray) = data
+        println(transitionsArray)
+        println(statesArray)
+        println(returnValuesArray)
         println("Keep going with the program here")
       }
 
@@ -78,15 +81,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-        println("in getData function")
-        val myMeth = Method("meth", Set(1,2))
-        println(myMeth)
-        val ret = ReturnValue(myMeth, "true", 1)
-        println(ret)
         val ois = new ObjectInputStream(new FileInputStream(filename))
-        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])] //ERRORS HERE
+        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
         ois.close
-        println("after data is read")
         stock
       }
 

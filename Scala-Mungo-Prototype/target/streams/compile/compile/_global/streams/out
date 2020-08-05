@@ -1,4 +1,0 @@
-[0m[[0m[31merror[0m] [0m[0mC:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\MyProtocol.scala:6:8: Example is already defined as object Example[0m
-[0m[[0m[31merror[0m] [0m[0mobject Example extends ProtocolLang{[0m
-[0m[[0m[31merror[0m] [0m[0m       ^[0m
-[0m[[0m[31merror[0m] [0m[0mone error found[0m

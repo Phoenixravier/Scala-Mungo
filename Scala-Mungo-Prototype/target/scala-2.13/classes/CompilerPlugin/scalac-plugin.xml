@@ -1,4 +1,0 @@
-<plugin>
-    <name>GetFileFromAnnotation</name>
-    <classname>compilerPlugin.GetFileFromAnnotation</classname>
-</plugin>
