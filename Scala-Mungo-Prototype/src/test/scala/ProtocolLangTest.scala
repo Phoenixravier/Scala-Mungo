@@ -1,6 +1,6 @@
-import ProtocolDSL.{ProtocolLang, State}
+import ProtocolDSL.{ProtocolLang, State, Method, ReturnValue}
 import org.scalatest.{FlatSpec, Matchers}
-/*
+
 class ProtocolLangTest extends FlatSpec with Matchers{
   "at init object" should "have correct values" in {
     object Test extends ProtocolLang{
@@ -139,4 +139,3 @@ class ProtocolLangTest extends FlatSpec with Matchers{
     }
   }
 }
-*/

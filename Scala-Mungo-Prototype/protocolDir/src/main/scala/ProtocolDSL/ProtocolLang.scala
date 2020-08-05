@@ -2,7 +2,8 @@ package ProtocolDSL
 
 
 import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
-import scala.collection.SortedSet
+
+import scala.collection.{SortedSet, mutable}
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 
@@ -86,16 +87,34 @@ class ProtocolLang {
     }
     println(arrayOfStates)
     printNicely(arrayOfStates)
-    sendDataToFile((arrayOfStates, states, returnValues), "EncodedData.ser")
+    val meth = Method("walk()", Set(0))
+    val methtwo = Method("die()", Set(2,3,4,5))
+    val me = Method("die()", Set(2,3,4,5))
+    val met = Method("die()", Set(2,3,4,5))
+    val m = Method("die()", Set(2,3,4,5))
+    val metho = Method("comeAlive()", Set(1))
+    val returnValuesArray = returnValues.toArray
+    val statesArray:Array[State] = states.toArray
+    sendDataToFile((arrayOfStates, statesArray, returnValuesArray), "EncodedData.ser")
+    //val stock = getDataFromFile("EncodedData.ser")
   }
 
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
     SortedSet.empty[A] ++ unsortedSet
 
-  def sendDataToFile(data: (Array[Array[State]], Set[State], Set[ReturnValue]), filename:String): Unit ={
+  def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
     val oos = new ObjectOutputStream(new FileOutputStream(filename))
     oos.writeObject(data)
     oos.close
+  }
+
+  def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
+    println("in getData function")
+    val ois = new ObjectInputStream(new FileInputStream(filename))
+    val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
+    ois.close
+    println(stock)
+    stock
   }
 
   def printNicely(array: Array[Array[State]]): Unit ={

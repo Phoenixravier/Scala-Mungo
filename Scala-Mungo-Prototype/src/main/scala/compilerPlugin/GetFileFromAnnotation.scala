@@ -1,11 +1,15 @@
 package compilerPlugin
 
 import java.io.{FileInputStream, IOException, ObjectInputStream}
+
 import scala.io.Source._
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
-import ProtocolDSL.{ReturnValue, State}
+import ProtocolDSL.{Method, ReturnValue, State}
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -13,7 +17,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
   val description = "gets file from typestate annotation"
   val components: List[PluginComponent] = List[PluginComponent](Component)
-  var data: (Array[Array[State]], Set[State], Set[ReturnValue]) = _
+  var data: (Array[Array[State]], Array[State], Array[ReturnValue]) = _
 
   private object Component extends PluginComponent {
     val global: GetFileFromAnnotation.this.global.type = GetFileFromAnnotation.this.global
@@ -73,15 +77,18 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         "executeUserProtocol.bat".!
       }
 
-      def getDataFromFile(filename: String): (Array[Array[State]], Set[State], Set[ReturnValue]) ={
+      def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
         println("in getData function")
+        val myMeth = Method("meth", Set(1,2))
+        println(myMeth)
+        val ret = ReturnValue(myMeth, "true", 1)
+        println(ret)
         val ois = new ObjectInputStream(new FileInputStream(filename))
-        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Set[State], Set[ReturnValue])] //ERRORS HERE
+        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])] //ERRORS HERE
         ois.close
         println("after data is read")
         stock
       }
-
 
     }
   }

@@ -23,8 +23,7 @@ cd ..
 
 call copy src\main\scala\ProtocolDSL\Example2.scala protocolDir\src\main\scala\ProtocolDSL
 call copy src\main\scala\ProtocolDSL\ProtocolLang.scala protocolDir\src\main\scala\ProtocolDSL
-call copy src\main\scala\ProtocolDSL\State.scala protocolDir\src\main\scala\ProtocolDSL
-call copy src\main\scala\ProtocolDSL\Method.scala protocolDir\src\main\scala\ProtocolDSL
+call copy src\main\scala\ProtocolDSL\ReturnValue.scala protocolDir\src\main\scala\ProtocolDSL
 
 cd protocolDir
 
