@@ -1,4 +1,6 @@
-import ProtocolDSL.{ProtocolLang, State, Method, ReturnValue}
+import java.io.{FileInputStream, ObjectInputStream}
+
+import ProtocolDSL.{Method, ProtocolLang, ReturnValue, State}
 import org.scalatest.{FlatSpec, Matchers}
 
 class ProtocolLangTest extends FlatSpec with Matchers{
@@ -131,11 +133,33 @@ class ProtocolLangTest extends FlatSpec with Matchers{
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
         in("State0")
-        when("walk(): Boolean") goto "State0" at "True" or "State1" at "False"
+        when("walk()") goto "State0" at "True" or "State1" at "False"
         in ("State1")
         end
       }
       assert(Test.arrayOfStates(0)(1) === State("State1", 1))
     }
+  }
+
+  "using end" should "serialize the data into a file such that it can be decoded" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in("State0")
+        when("walk()") goto "State0" at "True" or "State1" at "False"
+        in ("State1")
+        end
+      }
+      val (stateMatrix, stateArray, returnValueArray) = getDataFromFile("EncodedData.ser")
+      assert(stateMatrix(0)(0) == State("State0", 0))
+      assert(stateArray(0) == State("State0", 0))
+      assert(returnValueArray(0) == ReturnValue(Method("walk()", Set(0,1)), "True", 0))
+    }
+  }
+
+  def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
+    val ois = new ObjectInputStream(new FileInputStream(filename))
+    val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
+    ois.close
+    stock
   }
 }

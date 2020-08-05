@@ -51,7 +51,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         println(transitionsArray)
         println(statesArray)
         println(returnValuesArray)
-        println("Keep going with the program here")
       }
 
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
@@ -77,7 +76,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       def executeFile(filename:String): Unit ={
-        "executeUserProtocol.bat".!
+        s"executeUserProtocol.bat $filename".!
       }
 
       def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={

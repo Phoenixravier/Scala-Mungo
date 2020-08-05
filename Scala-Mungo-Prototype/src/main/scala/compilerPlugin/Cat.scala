@@ -4,7 +4,7 @@ import scala.language.postfixOps
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
-@Typestate(filename="src\\main\\scala\\ProtocolDSL\\Example2.scala")
+@Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
   def run(): Unit = println("Running")

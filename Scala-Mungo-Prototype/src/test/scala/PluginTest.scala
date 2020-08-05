@@ -10,7 +10,7 @@ import scala.tools.nsc.{Global, Settings}
 import org.scalatest._
 
 class PluginTest extends FlatSpec with Matchers {
-    "at init object" should "have correct values" in {
+    "plugin" should "print out the file" in {
       val protocolText =
         """package ProtocolDSL
           |
@@ -54,8 +54,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
       val out = new ByteArrayOutputStream
       Console.withOut(out)(new compiler.Run() compileSources (sources))
-
-      assert(out.toString.trim == protocolText)
+      assert(out.toString.trim contains protocolText)
   }
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={

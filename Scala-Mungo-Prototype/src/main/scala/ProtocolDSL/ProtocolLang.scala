@@ -23,6 +23,9 @@ class ProtocolLang {
 
   var returnValues: Set[ReturnValue] = Set()
 
+  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
+    SortedSet.empty[A] ++ unsortedSet
+
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
     currentState = State(stateName, stateIndexCounter)
@@ -72,10 +75,13 @@ class ProtocolLang {
     }
   }
 
-  def end() = createArray()
+  def end() = {
+    val arrayOfStates = createArray()
+    printNicely(arrayOfStates)
+    sendDataToFile((arrayOfStates, states.toArray, returnValues.toArray), "EncodedData.ser")
+  }
 
-
-  def createArray() ={
+  def createArray():Array[Array[State]] ={
     arrayOfStates = Array.ofDim[State](stateIndexCounter, returnValueIndexCounter)
     for (transition <- transitions){
       getStateOrNone(transition.nextState) match{
@@ -83,26 +89,12 @@ class ProtocolLang {
         case None => throw new Exception(s"ERROR, state ${transition.nextState} isn't defined")
       }
     }
-    printNicely(arrayOfStates)
-    val returnValuesArray = returnValues.toArray
-    val statesArray:Array[State] = states.toArray
-    sendDataToFile((arrayOfStates, statesArray, returnValuesArray), "EncodedData.ser")
+    arrayOfStates
   }
 
-  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
-    SortedSet.empty[A] ++ unsortedSet
-
-  def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
-    val oos = new ObjectOutputStream(new FileOutputStream(filename))
-    oos.writeObject(data)
-    oos.close
-  }
-
-  def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    val ois = new ObjectInputStream(new FileInputStream(filename))
-    val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
-    ois.close
-    stock
+  def getStateOrNone(stateName: String): Option[State] ={
+    if(statesMap.contains(stateName)) Some(statesMap(stateName))
+    else None
   }
 
   def printNicely(array: Array[Array[State]]): Unit ={
@@ -118,9 +110,9 @@ class ProtocolLang {
     }
   }
 
-  def getStateOrNone(stateName: String): Option[State] ={
-    if(statesMap.contains(stateName)) Some(statesMap(stateName))
-    else None
+  def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
+    val oos = new ObjectOutputStream(new FileOutputStream(filename))
+    oos.writeObject(data)
+    oos.close
   }
-
 }

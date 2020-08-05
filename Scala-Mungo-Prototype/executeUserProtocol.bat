@@ -1,4 +1,4 @@
-REM create the directory structure for an sbt project
+REM creates the directory structure for an sbt project
 IF NOT EXIST protocolDir mkdir protocolDir
 cd protocolDir
 mkdir src
@@ -21,7 +21,7 @@ echo scalaVersion := "2.13.3" >> build.sbt
 echo libraryDependencies += "io.suzaku" %%%% "boopickle" %% "1.3.2" >> build.sbt
 cd ..
 
-call copy src\main\scala\ProtocolDSL\Example2.scala protocolDir\src\main\scala\ProtocolDSL
+call copy %1 protocolDir\src\main\scala\ProtocolDSL
 call copy src\main\scala\ProtocolDSL\ProtocolLang.scala protocolDir\src\main\scala\ProtocolDSL
 call copy src\main\scala\ProtocolDSL\ReturnValue.scala protocolDir\src\main\scala\ProtocolDSL
 

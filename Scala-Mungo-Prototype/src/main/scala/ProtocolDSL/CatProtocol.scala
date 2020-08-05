@@ -1,6 +1,6 @@
 package ProtocolDSL
 
-object Example2 extends ProtocolLang{
+object CatProtocol extends ProtocolLang{
   def main(args:Array[String]) = {
     in ("State0")
     when ("walk()") goto "State3"
