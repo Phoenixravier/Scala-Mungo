@@ -8,6 +8,11 @@ import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{Method, ReturnValue, State}
 
+import scala.::
+import scala.collection.mutable.ArrayBuffer
+import scala.reflect.api.Trees
+
+
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
 
@@ -30,27 +35,48 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           val annotations = mods.annotations
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
-              case Some(filename) => {
-                //print the contents of the file out to the console
-                printFile(filename)
+              case Some(filename) => { //a correct Typestate annotation is being used
                 //execute the DSL in the protocol file and serialize the data into a file
-                executeFile(filename)
+                //executeFile(filename) //UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
                 //retrieve the serialized data
-                data = getDataFromFile("protocolDir\\EncodedData.ser")
-                println("Decoded array ", data)
+                val (transitionsArray, statesArray, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
+                checkMethodsAreSubset(returnValuesArray, stats, tpname.toString(), filename)
+                checkClassIsUsedCorrectly(unit, transitionsArray, statesArray, returnValuesArray)
               }
               case None => println("Not a compilerPlugin.Typestate annotation")
             }
           }
         }
-        data match{
-          case null => return
-          case _ =>
+      }
+
+      def checkClassIsUsedCorrectly(unit:CompilationUnit, transitionsArray: Array[Array[State]], statesArray:Array[State], returnValuesArray:Array[ReturnValue]): Unit ={
+        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
+          for(parent <- parents){
+            if(parent.toString() == "App") println(body)
+          }
+          for (definition <- body){
+            definition match{
+              case q"$mods def main[..$tparams](args: Array[String]): $tpt = $expr" => println(showRaw(expr))
+              case _ =>
+            }
+          }
         }
-        val (transitionsArray, statesArray, returnValuesArray) = data
-        println(transitionsArray)
-        println(statesArray)
-        println(returnValuesArray)
+      }
+
+      def method(s:String): Unit ={
+        println("hi")
+      }
+
+      def checkMethodsAreSubset(returnValuesArray:Array[ReturnValue], stats: Seq[Trees#Tree], className:String, filename:String): Unit ={
+        val classMethodSignatures = getMethodNames(stats)
+        println(classMethodSignatures)
+        var protocolMethodSignatures: Set[String] = Set()
+        for(i <- returnValuesArray.indices){
+          protocolMethodSignatures += returnValuesArray(i).parentMethod.name.replaceAll("\\s", "")
+        }
+        println(protocolMethodSignatures)
+        if(!(protocolMethodSignatures subsetOf classMethodSignatures)) throw new Exception(
+          s"Methods $protocolMethodSignatures defined in $filename are not a subset of methods $classMethodSignatures defined in class $className")
       }
 
       def getFilenameFromAnnotation(annotation: Apply): Option[String] ={
@@ -58,6 +84,35 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(NamedArg(Ident(TermName("filename")), Literal(Constant(filename))))) => Some(filename.toString)
           case Apply(Select(New(Ident(TypeName("Typestate"))), con),List(Literal(Constant(filename)))) => Some(filename.toString)
           case _ => None
+        }
+      }
+
+      def getMethodNames(stats: Seq[Trees#Tree]): Set[String]={
+        var methodNames: Set[String] = Set()
+        for(method <- stats){
+          method match{
+            case DefDef(mod, TermName(methodName), tparams, vparams, Ident(TypeName(returnType)), commands) => {
+              val parameters = getParameters(vparams)
+              methodNames += methodName+s"($parameters):"+returnType
+            }
+            case _ => println("not matched")
+          }
+        }
+        methodNames
+      }
+
+      def getParameters(params:List[List[ValDef]]): String ={
+        params match{
+          case List(List()) => ""
+          case List(List(value)) => value.tpt.toString()
+          case List(values) => {
+            var parameters:ArrayBuffer[String] = ArrayBuffer()
+            for(elem <- values){
+              parameters += elem.tpt.toString
+            }
+            parameters.mkString(",")
+          }
+          case _ => ""
         }
       }
 
