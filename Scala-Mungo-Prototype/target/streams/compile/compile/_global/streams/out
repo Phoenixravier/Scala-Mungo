@@ -1,0 +1,6 @@
+[debug] Acquiring lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock ...
+[error] C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\MyProtocol.scala:3:8: object ProtocolLang is not a member of package compilerPlugin
+[error] import compilerPlugin.ProtocolLang
+[error]        ^
+[error] one error found
+[debug] Releasing lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock.
