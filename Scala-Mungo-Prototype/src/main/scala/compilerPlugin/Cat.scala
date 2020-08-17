@@ -43,7 +43,7 @@ object doThings extends App{
   var typedSomeCat:Cat = new Cat()
   val notACat:Int = 1
   var stillNotACat = "new Cat"
-  cat.comeAlive()
+  cat.walk()
   cat.run()
   println(cat.die())
   main(cat.die())

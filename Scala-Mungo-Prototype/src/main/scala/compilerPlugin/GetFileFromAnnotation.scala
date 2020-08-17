@@ -110,7 +110,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         instances.foreach(println)
       }
 
-      def updateStateIfNeeded(values: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToIndices:mutable.HashMap[String, Set[Int]]): Unit ={
+      def updateStateIfNeeded(values: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToStateIndices:mutable.HashMap[String, Set[Int]]): Unit ={
         line match{
           case app@Apply(fun, args) => traverser.traverse(app)
           case _ =>
@@ -119,16 +119,27 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         for(catCall <- catCalls){
           catCall match{
             case Select(Ident(TermName("cat")), TermName(methodName)) => {
-              var stateIndex:Int = -1
+              println("values before the loop "+values)
               for(value <- values){
-                if(value.name == "cat") stateIndex = value.currentState.index
+                println("values inside the loop "+ values)
+                if(value.name == "cat") {
+                  println("value name was equal to cat")
+                  val stateIndex = value.currentState.index
+                  val stateName = value.currentState.name
+                  println("state index " + stateIndex)
+                  println("method name " + methodName)
+                  if (methodToStateIndices.contains(methodName)) {
+                    val indiceSet = methodToStateIndices(methodName)
+                    println("indice set " + indiceSet)
+                    val state = transitionsArray(stateIndex)(indiceSet.head)
+                    if(state == null) throw new Exception(s"Invalid transition from state $stateName with method $methodName")
+                    println("state in the array " + state)
+                    value.updateCurrentState(state)
+                    println("state in the value " + value.currentState)
+                  }
+                }
               }
-              println(methodName)
-              if(methodToIndices.contains(methodName)) {
-                val indiceSet = methodToIndices(methodName)
 
-                println(transitionsArray(stateIndex)(indiceSet.head))
-              }
             }
             case _ =>
           }
@@ -160,11 +171,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
 
       def checkExpr(codeBlock:Any): Unit ={}
-
-      object Exe extends Enumeration{
-        type Exe = Value
-        val None, MainMethod, App = Value
-      }
 
 
       def ckType(s:String): Unit ={
