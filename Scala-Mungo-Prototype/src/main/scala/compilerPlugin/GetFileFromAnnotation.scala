@@ -6,12 +6,13 @@ import scala.io.Source._
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
-import ProtocolDSL.{Method, ReturnValue, State}
+import ProtocolDSL.{ReturnValue, State}
 
-import scala.::
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
+import java.io.File
+
 import scala.util.control.Breaks
 
 
@@ -33,19 +34,24 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       override def name: String = GetFileFromAnnotation.this.name
 
       def apply(unit: CompilationUnit): Unit = {
+        var setOfClassesWithProtocols: Set[String] = Set()
+        println(showRaw(unit.body))
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
           val annotations = mods.annotations
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => { //a correct Typestate annotation is being used
                 //execute the DSL in the protocol file and serialize the data into a file
-                //executeFile(filename) //UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
+                executeFile(filename) //UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
                 //retrieve the serialized data
+                val className = tpname.toString()
+                setOfClassesWithProtocols += className
+                println(setOfClassesWithProtocols)
                 val (transitionsArray, statesArray, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
-                checkMethodsAreSubset(returnValuesArray, stats, tpname.toString(), filename)
+                checkMethodsAreSubset(returnValuesArray, stats, className, filename)
                 val methodToIndices = createMethodToIndicesMap(returnValuesArray)
                 println(methodToIndices)
-                checkClassIsUsedCorrectly(unit, transitionsArray, statesArray, methodToIndices)
+                checkClassIsUsedCorrectly(className, unit, transitionsArray, statesArray, methodToIndices)
               }
               case None => println("Not a compilerPlugin.Typestate annotation")
             }
@@ -71,11 +77,11 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         methodToIndices
       }
 
-      def checkClassIsUsedCorrectly(unit:CompilationUnit, transitionsArray: Array[Array[State]], statesArray:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]]): Unit ={
+      def checkClassIsUsedCorrectly(className:String, unit:CompilationUnit, transitionsArray: Array[Array[State]], statesArray:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]]): Unit ={
         for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
           for(parent <- parents){
             if(parent.toString() == "App") {
-              checkBody(body, transitionsArray, statesArray, methodToIndices)
+              checkBody(className, body, transitionsArray, statesArray, methodToIndices)
             }
           }
           for (definition <- body){
@@ -89,74 +95,79 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
-      class InstanceWithState(var name:String, var currentState:State){
+      class InstanceWithState(var className: String, var name:String, var currentState:State){
         def updateCurrentState(state:State): Unit ={
           this.currentState = state
         }
         override def toString(): String={
-          this.name +" "+ this.currentState
+          this.className + " " + this.name +" "+ this.currentState
         }
       }
 
-      def checkBody(code:Seq[Trees#Tree], transitionsArray:Array[Array[State]], statesArray:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]]): Unit ={
+      def checkBody(className:String, code:Seq[Trees#Tree], transitionsArray:Array[Array[State]], statesArray:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]]): Unit ={
         var instances:Set[InstanceWithState] = Set()
+        statesArray.foreach(println)
         for(line <- code){
-          line match{
-            case q"$mods val $tname: $tpt = new Cat(...$exprss)" => instances += new InstanceWithState(tname.toString(), statesArray(0))
-            case q"$mods var $tname: $tpt = new Cat(...$exprss)" => instances += new InstanceWithState(tname.toString(), statesArray(0))
-            case _ => updateStateIfNeeded(instances, transitionsArray, line, methodToIndices)
+          line match {
+            case q"""$mods val $tname: $tpt = new $classNm(...$exprss)""" =>
+              if (classNm.toString() == className) {
+                instances += new InstanceWithState(className, tname.toString(), statesArray(0))
+              }
+            case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
+              if (classNm.toString() == className) {
+                instances += new InstanceWithState(className, tname.toString(), statesArray(0))
+              }
+            case _ => updateStateIfNeeded(className, instances, transitionsArray, line, methodToIndices)
           }
         }
         instances.foreach(println)
       }
 
-      def updateStateIfNeeded(values: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToStateIndices:mutable.HashMap[String, Set[Int]]): Unit ={
+      def updateStateIfNeeded(className:String, values: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToStateIndices:mutable.HashMap[String, Set[Int]]): Unit ={
         line match{
-          case app@Apply(fun, args) => traverser.traverse(app)
+          case app@Apply(fun, args) => exprTraverser.traverse(app)
           case _ =>
         }
-        val catCalls = traverser.catcalls
-        for(catCall <- catCalls){
-          catCall match{
-            case Select(Ident(TermName("cat")), TermName(methodName)) => {
-              println("values before the loop "+values)
+        val exprCalls = exprTraverser.exprcalls
+        for(exprCall <- exprCalls){
+          exprCall match{
+            case Select(Ident(TermName(instanceName)), TermName(methodName)) =>
               for(value <- values){
-                println("values inside the loop "+ values)
-                if(value.name == "cat") {
-                  println("value name was equal to cat")
+                if(value.name == instanceName) {
                   val stateIndex = value.currentState.index
                   val stateName = value.currentState.name
-                  println("state index " + stateIndex)
-                  println("method name " + methodName)
                   if (methodToStateIndices.contains(methodName)) {
                     val indiceSet = methodToStateIndices(methodName)
-                    println("indice set " + indiceSet)
                     val state = transitionsArray(stateIndex)(indiceSet.head)
-                    if(state == null) throw new Exception(s"Invalid transition from state $stateName with method $methodName")
-                    println("state in the array " + state)
+                    if(state == null) throw new Exception(s"Invalid transition in object $instanceName of type $className from state $stateName with method $methodName")
                     value.updateCurrentState(state)
-                    println("state in the value " + value.currentState)
                   }
                 }
               }
-
-            }
             case _ =>
           }
         }
         //reset the traverser's list to be empty
-        traverser.catcalls = ListBuffer[Trees#Tree]()
+        exprTraverser.exprcalls = ListBuffer[Trees#Tree]()
       }
 
-      object traverser extends Traverser {
-        var catcalls = ListBuffer[Trees#Tree]()
+      object constructorTraverser extends Traverser{
+        var constructors = ListBuffer[Trees#Tree]()
+
+        override def traverse(tree: Tree): Unit = {
+
+        }
+      }
+
+      object exprTraverser extends Traverser {
+        var exprcalls = ListBuffer[Trees#Tree]()
         override def traverse(tree: Tree): Unit = {
           tree match {
             case app@Apply(fun, args) =>
               app match {
                 case q"$expr(...$exprss)" =>
-                  expr.children match {
-                    case List(Ident(TermName("cat"))) => catcalls += expr
+                  expr match {
+                    case Select(Ident(TermName(name)), method) => exprcalls += expr
                     case _ =>
                   }
                 case _ =>
@@ -169,9 +180,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
-
       def checkExpr(codeBlock:Any): Unit ={}
-
 
       def ckType(s:String): Unit ={
         println("hi")
@@ -248,6 +257,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         val ois = new ObjectInputStream(new FileInputStream(filename))
         val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
         ois.close
+        val file = new File(filename)
+        file.delete
         stock
       }
 

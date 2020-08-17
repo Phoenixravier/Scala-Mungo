@@ -7,7 +7,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class ProtocolLang {
-  var stateIndexCounter:Int = 0
+  var stateIndexCounter:Int = 1
   var returnValueIndexCounter:Int = 0
   var currentState:State = _
   var currentMethod:Method = _
@@ -28,7 +28,12 @@ class ProtocolLang {
 
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
-    currentState = State(stateName, stateIndexCounter)
+    var stateIndex = stateIndexCounter
+    if(stateName == "init") {
+      stateIndex = 0
+      stateIndexCounter -= 1
+    }
+    currentState = State(stateName, stateIndex)
     states += currentState
     statesMap += (stateName -> currentState)
     stateIndexCounter += 1
@@ -78,7 +83,7 @@ class ProtocolLang {
   def end() = {
     val arrayOfStates = createArray()
     printNicely(arrayOfStates)
-    sendDataToFile((arrayOfStates, states.toArray, returnValues.toArray), "EncodedData.ser")
+    sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }
 
   def createArray():Array[Array[State]] ={

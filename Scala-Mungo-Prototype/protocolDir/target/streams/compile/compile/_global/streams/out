@@ -1,2 +1,4 @@
-[warn] 1 deprecation (since 2.13.3); re-run with -deprecation for details
-[warn] one warning found
+[warn] 3 deprecations (since 2.13.0)
+[warn] 1 deprecation (since 2.13.3)
+[warn] 4 deprecations in total; re-run with -deprecation for details
+[warn] three warnings found

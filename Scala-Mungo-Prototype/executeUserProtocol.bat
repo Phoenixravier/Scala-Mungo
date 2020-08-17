@@ -28,5 +28,8 @@ cd protocolDir
 
 call sbt run
 
+cd ..
+@RD /S /Q "protocolDir\src"
+
 
 

@@ -11,7 +11,10 @@ case class ReturnValue(parentMethod:Method, var valueName:String, index:Int) ext
 }
 
 @SerialVersionUID(123L)
-case class State(name: String, index: Int) extends Serializable{
+case class State(name: String, index: Int) extends Ordered[State] with Serializable{
+  override def compare(that:State) ={
+    this.index compare that.index
+  }
   override def toString() ={
     name
   }

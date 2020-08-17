@@ -9,5 +9,5 @@ cd classes
 jar cf ..\jarName .
 cd..
 
-call scalac -Xplugin:jarName src\main\scala\compilerPlugin\Cat.scala
+call scalac -Xplugin:jarName src\main\scala\compilerPlugin\Animals.scala
 

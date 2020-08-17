@@ -1,10 +1,10 @@
 package ProtocolDSL
 
 object CatProtocol extends ProtocolLang with App{
-    in ("State0")
+    in ("init")
     when ("walk(): Unit") goto "State3"
     when("comeAlive(): Unit") goto "State1"
-    when ("comeAlive(String, Int): String") goto "State0"
+    when ("comeAlive(String, Int): String") goto "init"
     when ("die(): DeathState") goto
       "State1" at "Dead" or
       "State2" at "Alive" or
