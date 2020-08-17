@@ -20,6 +20,7 @@ object doThings extends App{
   var stillNotACat = "new Cat"
   cat.walk()
   cat.run()
+  cat.createDog()
 
   typedCat.walk()
 
@@ -36,6 +37,9 @@ object doThings extends App{
   val koira = new Dog()
   koira.laze()
   koira.stayOnAlert(false)
+
+
+  //koira.stayOnAlert(true)
   //koira.walk()
 
   def donothing(): Unit ={
@@ -68,6 +72,10 @@ object doThings extends App{
     def this(s:String){
       this
     }
+
+    def createDog(): Unit ={
+      val doggo = new Dog()
+    }
   }
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
@@ -83,3 +91,7 @@ object doThings extends App{
   }
 
 }
+
+
+
+

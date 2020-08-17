@@ -31,18 +31,18 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
+
       override def name: String = GetFileFromAnnotation.this.name
 
       def apply(unit: CompilationUnit): Unit = {
         var setOfClassesWithProtocols: Set[String] = Set()
-        println(showRaw(unit.body))
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
           val annotations = mods.annotations
           for(annotation@Apply(arg1,arg2) <- annotations){
             getFilenameFromAnnotation(annotation) match{
               case Some(filename) => { //a correct Typestate annotation is being used
                 //execute the DSL in the protocol file and serialize the data into a file
-                executeFile(filename) //UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
+                executeFile(filename) //CANT DO THIS ANYMORE UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
                 //retrieve the serialized data
                 val className = tpname.toString()
                 setOfClassesWithProtocols += className
@@ -53,7 +53,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
                 println(methodToIndices)
                 checkClassIsUsedCorrectly(className, unit, transitionsArray, statesArray, methodToIndices)
               }
-              case None => println("Not a compilerPlugin.Typestate annotation")
+              case None =>
             }
           }
         }
@@ -113,7 +113,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               if (classNm.toString() == className) {
                 instances += new InstanceWithState(className, tname.toString(), statesArray(0))
               }
-            case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
+            case q"""$mods var $tname: $tpt = new $classNm(...$exprss)""" =>
               if (classNm.toString() == className) {
                 instances += new InstanceWithState(className, tname.toString(), statesArray(0))
               }
@@ -123,7 +123,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         instances.foreach(println)
       }
 
-      def updateStateIfNeeded(className:String, values: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToStateIndices:mutable.HashMap[String, Set[Int]]): Unit ={
+      def updateStateIfNeeded(className:String, instances: Set[GetFileFromAnnotationPhase.this.InstanceWithState], transitionsArray: Array[Array[State]], line:Trees#Tree, methodToStateIndices:mutable.HashMap[String, Set[Int]]): Unit ={
         line match{
           case app@Apply(fun, args) => exprTraverser.traverse(app)
           case _ =>
@@ -132,15 +132,15 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         for(exprCall <- exprCalls){
           exprCall match{
             case Select(Ident(TermName(instanceName)), TermName(methodName)) =>
-              for(value <- values){
-                if(value.name == instanceName) {
-                  val stateIndex = value.currentState.index
-                  val stateName = value.currentState.name
+              for(instance <- instances){
+                if(instance.name == instanceName) {
+                  val stateIndex = instance.currentState.index
+                  val stateName = instance.currentState.name
                   if (methodToStateIndices.contains(methodName)) {
                     val indiceSet = methodToStateIndices(methodName)
                     val state = transitionsArray(stateIndex)(indiceSet.head)
                     if(state == null) throw new Exception(s"Invalid transition in object $instanceName of type $className from state $stateName with method $methodName")
-                    value.updateCurrentState(state)
+                    instance.updateCurrentState(state)
                   }
                 }
               }
@@ -152,10 +152,32 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       object constructorTraverser extends Traverser{
-        var constructors = ListBuffer[Trees#Tree]()
-
+        var constructors = ListBuffer[ValDef]()
         override def traverse(tree: Tree): Unit = {
+          tree match {
+            case valdef@ValDef(mods, name, tpt, rhs) =>
+              println(show(valdef))
+              rhs match {
+                case app@Apply(fun, args) =>
+                  fun match {
+                    case select@Select(qualifier, name) =>
+                      name match {
+                        case termNames.CONSTRUCTOR => constructors += valdef
+                        case _ =>
+                      }
+                      super.traverse(qualifier)
+                    case _ =>
 
+                      super.traverse(fun)
+                  }
+                  super.traverseTrees(args)
+                case _ =>
+                  super.traverse(rhs)
+            }
+              super.traverse(tpt)
+            case _ =>
+              super.traverse(tree)
+          }
         }
       }
 
@@ -232,20 +254,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
             parameters.mkString(",")
           }
           case _ => ""
-        }
-      }
-
-      def printFile(filename: String): Unit ={
-        val source = fromFile(filename)
-        try {
-          val it = source.getLines()
-          while (it.hasNext)
-            println(it.next())
-        }
-        catch{
-          case e: IOException => println(s"Had an IOException trying to use file $filename")
-        } finally {
-          source.close
         }
       }
 
