@@ -1,9 +1,9 @@
 package ProtocolDSL
 
-import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
-import scala.collection.SortedSet
+import java.io.{FileOutputStream, ObjectOutputStream}
+
 import scala.collection.immutable.HashMap
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.{SortedSet, mutable}
 
 
 class ProtocolLang {
@@ -19,7 +19,7 @@ class ProtocolLang {
   var methods: Set[Method] = Set()
 
   case class Transition(startState:State, var method:Method, var returnValue:ReturnValue, nextState:String)
-  var transitions: ArrayBuffer[Transition] = ArrayBuffer()
+  var transitions: mutable.LinkedHashSet[Transition] = mutable.LinkedHashSet()
 
   var returnValues: Set[ReturnValue] = Set()
 
@@ -48,11 +48,22 @@ class ProtocolLang {
 
   class Goto(val methodSignature:String){
     currentMethod = Method(methodSignature)
+    if(methods.contains(currentMethod)) {
+      for(method <- methods){
+        if(method.name == currentMethod.name) currentMethod = method
+      }
+    }
     methods += currentMethod
 
     def goto(nextState:String) ={
       var returnValue = ReturnValue(currentMethod, null, returnValueIndexCounter)
-      currentMethod.indices += returnValueIndexCounter
+      for(rv <- returnValues){
+        if(rv.parentMethod.name == currentMethod.name) {
+          returnValue = rv
+          returnValueIndexCounter -=1
+        }
+      }
+      if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter)
       returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       returnValueIndexCounter +=1
@@ -62,9 +73,10 @@ class ProtocolLang {
 
   class At(){
     def at(returnValue:String)={
-      val lastTransition = transitions(transitions.length-1)
+      val lastTransition = transitions.last
       lastTransition.returnValue.valueName = returnValue
-      transitions(transitions.length-1) = lastTransition
+      transitions.dropRight(1)
+      transitions.add(lastTransition)
       new Or()
     }
   }
@@ -73,9 +85,9 @@ class ProtocolLang {
     def or(choiceState:String) ={
       var returnValue = ReturnValue(currentMethod, null, returnValueIndexCounter)
       currentMethod.indices += returnValueIndexCounter
+      returnValueIndexCounter +=1
       returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue,choiceState)
-      returnValueIndexCounter +=1
       new At()
     }
   }
@@ -87,7 +99,7 @@ class ProtocolLang {
   }
 
   def createArray():Array[Array[State]] ={
-    arrayOfStates = Array.ofDim[State](stateIndexCounter, returnValueIndexCounter)
+    arrayOfStates = Array.ofDim[State](states.size, returnValueIndexCounter)
     for (transition <- transitions){
       getStateOrNone(transition.nextState) match{
         case Some(state) => arrayOfStates(transition.startState.index)(transition.returnValue.index) = state
@@ -104,10 +116,10 @@ class ProtocolLang {
 
   def printNicely(array: Array[Array[State]]): Unit ={
     println()
-    sortSet(returnValues).foreach((value: ReturnValue) => print(value + " "))
+    sortSet(returnValues).foreach((value: ReturnValue) => print(value+ " "))
     println()
     for(i <- array.indices) {
-      print(states.filter(_.index == i).head +" ")
+      print(states.filter(_.index == i).head+" ")
       for(j <- array(i).indices) {
         print(array(i)(j)+ " ")
       }

@@ -5,13 +5,15 @@ import scala.util.Random
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
+class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
+
 sealed trait DeathState
 case object Dead extends DeathState
 case object Alive extends DeathState
 case object Unsure extends DeathState
 
 
-object doThings extends App{
+object doMainThings extends App{
   val cat = new Cat()
   val typedCat:Cat = new Cat("hi")
   var someCat = new Cat()
@@ -20,7 +22,7 @@ object doThings extends App{
   var stillNotACat = "new Cat"
   cat.walk()
   cat.run()
-  cat.createDog()
+  cat.createDog("wefdgf")
 
   typedCat.walk()
 
@@ -37,6 +39,8 @@ object doThings extends App{
   val koira = new Dog()
   koira.laze()
   koira.stayOnAlert(false)
+  val jump = "false"
+  koira.stayOnAlert(jump, 2)
 
 
   //koira.stayOnAlert(true)
@@ -69,13 +73,19 @@ object doThings extends App{
       else if(randomNumber < 0.75) Unsure
       else null
     }
-    def this(s:String){
+    def this(s:String)={
       this
     }
 
-    def createDog(): Unit ={
+    def createDog(str:String): Dog ={
       val doggo = new Dog()
+      doggo
     }
+  }
+
+  @Nonsense(filename="fox.txt")
+  class Rubish{
+
   }
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
@@ -88,7 +98,12 @@ object doThings extends App{
       if(intruderHere) bark()
       else laze()
     }
+    def stayOnAlert(str:String, nb:Int): Unit ={
+      println("on alert")
+    }
   }
+
+
 
 }
 

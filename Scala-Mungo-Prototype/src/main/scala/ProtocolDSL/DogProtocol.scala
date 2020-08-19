@@ -20,6 +20,6 @@ object DogProtocol extends ProtocolLang with App{
   in("onAlert")
   when("bark():Unit") goto "onAlert"
   when("laze():Unit") goto "lazing"
-  end
+  end()
 
 }

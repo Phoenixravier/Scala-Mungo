@@ -1,3 +1,4 @@
+@echo off
 REM creates the directory structure for an sbt project
 IF NOT EXIST protocolDir mkdir protocolDir
 cd protocolDir

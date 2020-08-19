@@ -1,3 +1,4 @@
+@echo off
 set jarName = Scala-Mungo-Prototype_2.13.jar
 
 mkdir classes
