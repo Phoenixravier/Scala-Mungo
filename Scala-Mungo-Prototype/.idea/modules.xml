@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Scala-Mungo-Prototype.iml" filepath="$PROJECT_DIR$/.idea/modules/Scala-Mungo-Prototype.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Scala-Mungo-Prototype-build.iml" filepath="$PROJECT_DIR$/.idea/modules/Scala-Mungo-Prototype-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MyJarProject.iml" filepath="$PROJECT_DIR$/.idea/modules/MyJarProject.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MyJarProject-build.iml" filepath="$PROJECT_DIR$/.idea/modules/MyJarProject-build.iml" />
     </modules>
   </component>
 </project>

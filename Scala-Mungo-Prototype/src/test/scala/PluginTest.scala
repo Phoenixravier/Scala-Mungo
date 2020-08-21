@@ -11,7 +11,7 @@ import org.scalatest._
 
 class PluginTest extends FlatSpec with Matchers {
     "plugin" should "print out the file" in {
-      val protocolText =
+      val protocolCode =
         """package ProtocolDSL
           |
           |import compilerPlugin.ProtocolLang
@@ -35,7 +35,7 @@ class PluginTest extends FlatSpec with Matchers {
           |  }
           |}""".stripMargin
 
-      writeFile("MyProtocol.scala", Seq(protocolText))
+      writeFile("MyProtocol.scala", Seq(protocolCode))
 
       val userCode = """
                |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
@@ -54,7 +54,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
       val out = new ByteArrayOutputStream
       Console.withOut(out)(new compiler.Run() compileSources (sources))
-      assert(out.toString.trim contains protocolText)
+      assert(out.toString.trim contains protocolCode)
   }
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={

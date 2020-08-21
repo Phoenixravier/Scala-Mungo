@@ -1,5 +1,4 @@
 import java.io.{FileInputStream, ObjectInputStream}
-
 import ProtocolDSL.{Method, ProtocolLang, ReturnValue, State}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -138,6 +137,183 @@ class ProtocolLangTest extends FlatSpec with Matchers{
         end
       }
       assert(Test.arrayOfStates(0)(1) === State("State1", 1))
+    }
+  }
+
+  "using the correct syntax" should "create an array of the right dimensions" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.arrayOfStates.size === 4)
+      assert(Test.arrayOfStates(0).size === 5)
+    }
+  }
+
+  "writing in a certain number of states" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.states.size === 5)
+    }
+  }
+
+  "writing in a certain number of methods" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.methods.size === 4)
+    }
+  }
+
+  "writing in a certain number of transitions" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.transitions.size === 8)
+    }
+  }
+
+  "writing in a certain number of return values" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.returnValues.size === 4)
+    }
+  }
+
+  "writing in a certain number of transitions with or statements" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when ("walk()") goto "State3"
+        when("comeAlive") goto "State1"
+        when ("comeAlive(String, Int): String") goto "init"
+        when ("die: DeathState") goto
+          "State1" at "Dead" or
+          "State2" at "Alive" or
+          "State3" at "Unsure" or
+          "State1" at null
+
+        in ("State3")
+        when("run(): Unit") goto "State2"
+        in ("State2")
+        in ("State1")
+        end()
+      }
+      assert(Test.transitions.size === 8)
+    }
+  }
+
+  "writing in a certain number of return values with or statements" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when ("walk()") goto "State3"
+        when("comeAlive") goto "State1"
+        when ("comeAlive(String, Int): String") goto "init"
+        when ("die: DeathState") goto
+          "State1" at "Dead" or
+          "State2" at "Alive" or
+          "State3" at "Unsure" or
+          "State1" at null
+
+        in ("State3")
+        when("run(): Unit") goto "State2"
+        in ("State2")
+        in ("State1")
+        end()
+      }
+      assert(Test.returnValues.size === 8)
     }
   }
 
