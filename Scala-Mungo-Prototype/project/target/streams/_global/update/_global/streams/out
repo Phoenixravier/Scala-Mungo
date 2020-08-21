@@ -1,4 +1,4 @@
-[0m[[0m[0mdebug[0m] [0m[0m"not up to date. inChanged = true, force = false[0m
-[0m[[0m[0mdebug[0m] [0m[0mUpdating ProjectRef(uri("file:/C:/Year%20five/Project/Scala-Mungo/Scala-Mungo-Prototype/project/"), "scala-mungo-prototype-build")...[0m
-[0m[[0m[0mdebug[0m] [0m[0mDone updating ProjectRef(uri("file:/C:/Year%20five/Project/Scala-Mungo/Scala-Mungo-Prototype/project/"), "scala-mungo-prototype-build")[0m
-[0m[[0m[33mwarn[0m] [0m[0mThere may be incompatibilities among your library dependencies; run 'evicted' to see detailed eviction warnings.[0m
+[debug] "not up to date. inChanged = true, force = false
+[debug] Updating ProjectRef(uri("file:/C:/Year%20five/Project/Scala-Mungo/Scala-Mungo-Prototype/project/"), "scala-mungo-prototype-build")...
+[debug] Done updating ProjectRef(uri("file:/C:/Year%20five/Project/Scala-Mungo/Scala-Mungo-Prototype/project/"), "scala-mungo-prototype-build")
+[warn] There may be incompatibilities among your library dependencies; run 'evicted' to see detailed eviction warnings.

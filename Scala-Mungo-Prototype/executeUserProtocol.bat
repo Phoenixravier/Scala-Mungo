@@ -2,21 +2,19 @@
 REM creates the directory structure for an sbt project
 IF NOT EXIST protocolDir mkdir protocolDir
 cd protocolDir
-IF NOT EXIST src mkdir src
+mkdir src
 cd src
-IF NOT EXIST main mkdir main
+mkdir main
 cd main
-IF NOT EXIST scala mkdir scala
+mkdir scala
 cd scala
-IF NOT EXIST ProtocolDSL mkdir ProtocolDSL
+mkdir ProtocolDSL
 cd..\..
-IF NOT EXIST test mkdir test
+mkdir test
 cd test
-IF NOT EXIST scala mkdir scala
+mkdir scala
 cd..\..
-IF NOT EXIST lib mkdir lib
-IF NOT EXIST project mkdir project
-IF NOT EXIST target mkdir target
+mkdir lib project target
 
 echo name := "MyProject" > build.sbt
 echo version := "1.0" >> build.sbt

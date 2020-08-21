@@ -3,10 +3,9 @@ package compilerPlugin
 import java.io.{File, FileInputStream, ObjectInputStream}
 
 import scala.sys.process._
-import scala.tools.nsc.Phase
+import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{ReturnValue, State}
-import sun.reflect.generics.tree.Tree
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -21,11 +20,7 @@ class InstanceWithState(var className: String, var name:String, var currentState
   }
 }
 
-case class ClassInfo(className:String, transitions:Array[Array[State]], states:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]], isObject:Boolean=false){
-  override def toString(): String={
-    this.className + " " + transitions.foreach(_.mkString(", ")) + " " + states.mkString(", ") + " " + methodToIndices + " " + isObject
-  }
-}
+case class ClassInfo(className:String, transitions:Array[Array[State]], states:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]])
 
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
@@ -46,39 +41,26 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
       def apply(unit: CompilationUnit): Unit = {
         var setOfClassesWithProtocols: Set[String] = Set()
-        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
-          checkElement(unit, body, tname.toString(), tree, true) match{
-            case Some(objectName) => setOfClassesWithProtocols += objectName
-            case None =>
-          }
-        }
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
-          checkElement(unit, stats, tpname.toString(), tree) match{
-            case Some(className) => setOfClassesWithProtocols += className
-            case None =>
-          }
-        }
-      }
-
-      def checkElement(unit:CompilationUnit, body:Seq[Trees#Tree], name:String, tree:Tree, isObject:Boolean=false): Option[String] ={
-        val annotations = tree.symbol.annotations
-        for(annotation@AnnotationInfo(arg1,arg2, arg3) <- annotations){
-          getFilenameFromTypestateAnnotation(annotation) match{
-            case Some(filename) => { //a correct Typestate annotation is being used
-              //execute the DSL in the protocol file and serialize the data into a file
-              executeFile(filename)
-              //retrieve the serialized data
-              val (transitions, states, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
-              checkMethodsAreSubset(returnValuesArray, body, name, filename)
-              val methodToIndices = createMethodToIndicesMap(returnValuesArray)
-              val classInfo = ClassInfo(name, transitions, states, methodToIndices, isObject)
-              checkClassIsUsedCorrectly(classInfo, unit)
-              Some(name)
+          val annotations = tree.symbol.annotations
+          for(annotation@AnnotationInfo(arg1,arg2, arg3) <- annotations){
+            getFilenameFromAnnotation(annotation) match{
+              case Some(filename) => { //a correct Typestate annotation is being used
+                //execute the DSL in the protocol file and serialize the data into a file
+                executeFile(filename) //CANT DO THIS ANYMORE, UNCOMMENT THIS TO GET NEW DATA FROM THE PROTOCOL FILE, COMMENT TO TEST MUCH FASTER
+                //retrieve the serialized data
+                val className = tpname.toString()
+                setOfClassesWithProtocols += className
+                val (transitions, states, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
+                checkMethodsAreSubset(returnValuesArray, stats, className, filename)
+                val methodToIndices = createMethodToIndicesMap(returnValuesArray)
+                val classInfo = ClassInfo(className, transitions, states, methodToIndices)
+                checkClassIsUsedCorrectly(classInfo, unit)
+              }
+              case None =>
             }
-            case None => None
           }
         }
-        None
       }
 
       /** Creates a hashmap from method names (e.g. "walk(String)")
@@ -90,7 +72,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       def createMethodToIndicesMap(returnValuesArray:Array[ReturnValue]): mutable.HashMap[String, Set[Int]] ={
         var methodToIndices:mutable.HashMap[String, Set[Int]] = mutable.HashMap()
         returnValuesArray.foreach((value: ReturnValue) => print(value+ " "))
-        println("")
         for(returnValue <- returnValuesArray){
           methodToIndices += (stripReturnValue(returnValue.parentMethod.name) -> returnValue.parentMethod.indices)
         }
@@ -115,8 +96,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           }
           for (definition <- body){
             definition match{
-              case q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
-                if(getParameters(paramss) == "Array[String]") checkExpr(classInfo, expr)
+              case q"$mods def main[..$tparams](args: Array[String]): $tpt = $expr" => {
+                checkExpr(expr)
+              }
               case _ =>
             }
           }
@@ -128,52 +110,26 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param classInfo
        * @param code
        */
-      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree]): Unit = {
-        var instances: Set[InstanceWithState] = Set()
-        if(classInfo.isObject) instances += new InstanceWithState(classInfo.className, classInfo.className, classInfo.states(0))
-        for (line <- code) {
-          processLine(line, instances, classInfo) match {
-            case Some(instance) => instances += instance
-            case None =>
-          }
-        }
-        println("\nInstances:")
-        instances.foreach(println)
-      }
-
-      def checkExpr(classInfo:ClassInfo, codeBlock:Trees#Tree): Unit ={
-        var instances: Set[InstanceWithState] = Set()
-        if(classInfo.isObject) instances += new InstanceWithState(classInfo.className, classInfo.className, classInfo.states(0))
-        for (line <- codeBlock) {
-          processLine(line, instances, classInfo) match {
-            case Some(instance) => instances += instance
-            case None =>
-          }
-        }
-        println("\nInstances:")
-        instances.foreach(println)
-      }
-
-      def processLine(line:Trees#Tree, instances: Set[InstanceWithState], classInfo:ClassInfo): Option[InstanceWithState] ={
+      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree]): Unit ={
         val className = classInfo.className
         val states = classInfo.states
-        line match {
-          case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
-            if (classNm.symbol.name.toString == className) {
-              Some(new InstanceWithState(className, tname.toString(), states(0)))
-            } else None
-          case q"""$mods var $tname: $tpt = new $classNm(...$exprss)""" =>
-            if (classNm.symbol.name.toString == className) {
-              Some(new InstanceWithState(className, tname.toString(), states(0)))
-            } else None
-          case _ => {
-            updateStateIfNeeded(classInfo, instances, line)
-            None
+        var instances:Set[InstanceWithState] = Set()
+        for(line <- code){
+          line match {
+            case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
+              if (classNm.symbol.name.toString == className) {
+                instances += new InstanceWithState(className, tname.toString(), states(0))
+              }
+            case q"""$mods var $tname: $tpt = new $classNm(...$exprss)""" =>
+              if (classNm.symbol.name.toString == className) {
+                instances += new InstanceWithState(className, tname.toString(), states(0))
+              }
+            case _ => updateStateIfNeeded(classInfo, instances, line)
           }
         }
+        println("printing instances at the end")
+        instances.foreach(println)
       }
-
-
 
       /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
        *
@@ -190,41 +146,45 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           }
           case _ =>
         }
-        val applies = applyTraverser.methodCallInfo
+        val applies = applyTraverser.applies
         for(apply <- applies){
             val methodName = apply(0)
             val objectName = apply(1)
+            println(objectName)
             for(instance <- instances){
               if(instance.name == objectName) {
                 val stateIndex = instance.currentState.index
-                if(stateIndex == -1) return
+                println(instance.currentState)
+                println(stateIndex)
                 val stateName = instance.currentState.name
+                println(methodName)
+                println(methodToStateIndices)
                 if (methodToStateIndices.contains(methodName)) {
+                  println(methodToStateIndices)
                   val indiceSet = methodToStateIndices(methodName)
                   val state = classInfo.transitions(stateIndex)(indiceSet.head)
                   if(state == null) throw new Exception(s"Invalid transition in object $objectName of type $className from state $stateName with method $methodName")
                   instance.updateCurrentState(state)
                 }
-                else instance.updateCurrentState(State("unknown", -1))
               }
           }
         }
         //reset the traverser's list to be empty
-        applyTraverser.methodCallInfo = ListBuffer[Array[String]]()
+        applyTraverser.applies = ListBuffer[Array[String]]()
       }
 
-      /** Traverses a tree and collects (methodName, objectName) from method apllication statements
+      /** Traverses a tree and collects Select statements inside "selects" list
        *
        */
       object applyTraverser extends Traverser {
-        var methodCallInfo = ListBuffer[Array[String]]()
+        var applies = ListBuffer[Array[String]]()
         override def traverse(tree: Tree): Unit = {
           tree match {
             case app@Apply(fun, args) =>
               app match {
                 case q"$expr(...$exprss)" =>
                   expr match {
-                    case select@Select(qualifier, name) => methodCallInfo +=
+                    case select@Select(qualifier, name) => applies +=
                       Array(name.toString().appendedAll(getParametersFromTree(exprss)),
                         qualifier.symbol.name.toString)
                     case _ =>
@@ -266,7 +226,10 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         println("------------------")
       }
 
-      /** Just a dummy function to check an object's type */
+
+
+      def checkExpr(codeBlock:Any): Unit ={}
+
       def ckType(s:String): Unit ={
         println("hi")
       }
@@ -280,7 +243,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        */
       def checkMethodsAreSubset(returnValuesArray:Array[ReturnValue], stats: Seq[Trees#Tree], className:String, filename:String): Unit ={
         val classMethodSignatures = getMethodNames(stats)
-        println(s"\n$classMethodSignatures")
+        println(classMethodSignatures)
         var protocolMethodSignatures: Set[String] = Set()
         for(i <- returnValuesArray.indices){
           protocolMethodSignatures += stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
@@ -303,7 +266,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param annotation
        * @return
        */
-      def getFilenameFromTypestateAnnotation(annotation: AnnotationInfo):Option[String] ={
+      def getFilenameFromAnnotation(annotation: AnnotationInfo):Option[String] ={
         annotation match{
           case AnnotationInfo(arg1, arg2, arg3) =>
             if(arg1.toString == "compilerPlugin.Typestate") {
@@ -398,6 +361,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           }
         }
       }
+
     }
   }
 }
