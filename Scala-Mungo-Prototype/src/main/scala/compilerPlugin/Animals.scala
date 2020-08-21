@@ -13,47 +13,47 @@ case object Alive extends DeathState
 case object Unsure extends DeathState
 
 
-object doMainThings extends App{
-  val cat = new Cat()
-  val typedCat:Cat = new Cat("hi")
-  var someCat = new Cat()
-  var typedSomeCat:Cat = new Cat()
-  val notACat:Int = 1
-  var stillNotACat = "new Cat"
-  cat.walk()
-  cat.run()
-  cat.createDog("wefdgf")
 
-  typedCat.walk()
+object doMainThings {
+  def main(args: Array[String]) {
+    val cat = new Cat()
+    val typedCat: Cat = new Cat("hi")
+    var someCat = new Cat()
+    var typedSomeCat: Cat = new Cat()
+    val notACat: Int = 1
+    var stillNotACat = "new Cat"
+
+    cat.walk()
+    cat.run()
+    cat.createDog("wefdgf")
+    cat.run()
+
+    typedCat.walk()
+
+    someCat.die()
+
+    //cat.die()
 
 
-  someCat.die()
-  /*
-  println(cat.die())
-  main(cat.die())
-  for(i <- 4 to 8){
-    cat.die()
+    Dog.laze()
+    Dog.stayOnAlert(false)
+    //koira.cry()
+
+
+    val jump = "false"
+    Dog.stayOnAlert(jump, 2)
+
+
+    def donothing(): Unit = {
+      println("noting")
+    }
+
+    def main(deathState: DeathState): Unit = {
+      println("dammit")
+    }
+
+    println("ha")
   }
-  */
-
-  val koira = new Dog()
-  koira.laze()
-  koira.stayOnAlert(false)
-  val jump = "false"
-  koira.stayOnAlert(jump, 2)
-
-
-  //koira.stayOnAlert(true)
-  //koira.walk()
-
-  def donothing(): Unit ={
-    println("noting")
-  }
-
-  def main(deathState: DeathState): Unit ={
-    println("dammit")
-  }
-  println("ha")
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
   class Cat{
@@ -77,8 +77,8 @@ object doMainThings extends App{
       this
     }
 
-    def createDog(str:String): Dog ={
-      val doggo = new Dog()
+    def createDog(str:String)={
+      val doggo = Dog
       doggo
     }
   }
@@ -89,7 +89,7 @@ object doMainThings extends App{
   }
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
-  class Dog{
+  object Dog extends Serializable{
     def walk():Unit = println("Yee kavelemme!")
     def cry():Unit = println("Itkeen :'(")
     def bark():Unit = println("hau hau")
