@@ -34,6 +34,7 @@ class ProtocolLang {
       stateIndexCounter -= 1
     }
     currentState = State(stateName, stateIndex)
+    if(states.exists(_.name == currentState.name)) throw new Exception(s"State $stateName defined multiple times, define a state only once")
     states += currentState
     statesMap += (stateName -> currentState)
     stateIndexCounter += 1

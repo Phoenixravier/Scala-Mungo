@@ -70,6 +70,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               executeFile(filename)
               //retrieve the serialized data
               val (transitions, states, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
+              cleanProject()
               checkMethodsAreSubset(returnValuesArray, body, name, filename)
               val methodToIndices = createMethodToIndicesMap(returnValuesArray)
               val classInfo = ClassInfo(name, transitions, states, methodToIndices, isObject)
@@ -186,7 +187,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.InstanceWithState], line:Trees#Tree): Unit ={
         val methodToStateIndices = classInfo.methodToIndices
         val className = classInfo.className
-        println("processing line "+line)
         line match{
           case app@Apply(fun, args) => {
             applyTraverser.traverse(app)
@@ -314,7 +314,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         annotation match{
           case AnnotationInfo(arg1, arg2, arg3) =>
             if(arg1.toString == "Typestate" || arg1.toString == "compilerPlugin.Typestate") {
-              println("found typestate annotation")
               Some(arg2.head.toString())
             }
             else None
@@ -365,6 +364,11 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       def executeFile(filename:String): Unit ={
         println(filename)
         s"executeUserProtocol.bat $filename".!
+      }
+
+      /** Removes protocolDir from the project */
+      def cleanProject(): Unit ={
+        s"cleanUp.bat".!
       }
 
       /** Returns protocol data from a file */
