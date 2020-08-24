@@ -93,6 +93,7 @@ class ProtocolLang {
   }
 
   def end() = {
+    if(!states.exists(_.index == 0)) throw new Exception("No init state found in the protocol, make sure one of your states is called \"init\"")
     val arrayOfStates = createArray()
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
@@ -118,6 +119,7 @@ class ProtocolLang {
     println()
     sortSet(returnValues).foreach((value: ReturnValue) => print(value+ " "))
     println()
+    println("states "+states)
     for(i <- array.indices) {
       print(states.filter(_.index == i).head+" ")
       for(j <- array(i).indices) {

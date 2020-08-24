@@ -1,4 +1,4 @@
-@echo off
+@echo on
 
 IF NOT EXIST classes mkdir classes
 
@@ -10,6 +10,6 @@ cd classes
 jar cf ..\Scala-Mungo-Prototype_2.13.jar .
 cd..
 
-call scalac -Xplugin:Scala-Mungo-Prototype_2.13.jar src\main\scala\compilerPlugin\Animals.scala
+call scalac -Xplugin:Scala-Mungo-Prototype_2.13.jar src\main\scala\compilerPlugin\testCat.scala
 
 

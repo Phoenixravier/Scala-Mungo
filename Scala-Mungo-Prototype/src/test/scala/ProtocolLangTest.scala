@@ -4,7 +4,7 @@ import ProtocolDSL.{Method, ProtocolLang, ReturnValue, State}
 import org.scalatest.{FlatSpec, Matchers}
 
 class ProtocolLangTest extends FlatSpec with Matchers{
-  "at init object" should "have correct values" in {
+  "at init, object Test" should "have correct values" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
       }
@@ -18,25 +18,25 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using in" should "create a state and add it to the statesMap" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
+        in("init")
       }
-      assert (Test.statesMap.contains("State0")  === true)
+      assert (Test.statesMap.contains("init")  === true)
     }
   }
 
   "using in" should "create a state and add it to the states set" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
+        in("init")
       }
-      assert (Test.states.contains(State("State0", 0))  === true)
+      assert (Test.states.contains(State("init", 0))  === true)
     }
   }
 
   "using in" should "increment the stateindexcounter" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
+        in("init")
       }
       assert (Test.stateIndexCounter  === 1)
     }
@@ -45,19 +45,19 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using in" should "give currentState a state" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
+        in("init")
       }
-      assert (Test.currentState  === State("State0", 0))
+      assert (Test.currentState  === State("init", 0))
     }
   }
 
   "using in twice" should "add both states to the states set" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
+        in("init")
         in("State1")
       }
-      assert (Test.states.contains(State("State0", 0))  === true)
+      assert (Test.states.contains(State("init", 0))  === true)
       assert (Test.states.contains(State("State1", 1))  === true)
     }
   }
@@ -66,8 +66,8 @@ class ProtocolLangTest extends FlatSpec with Matchers{
       object Test extends ProtocolLang {
         def main(args: Array[String]) = {
           a [Exception] should be thrownBy{
-          when("walk(): Unit") goto "State0"
-          in("State0")
+          when("walk(): Unit") goto "init"
+          in("init")
         }
       }
     }
@@ -77,7 +77,7 @@ class ProtocolLangTest extends FlatSpec with Matchers{
     object Test extends ProtocolLang {
       def main(args: Array[String]) = {
         a [Exception] should be thrownBy{
-          in("State0")
+          in("init")
           when("walk(): Unit") goto "State1"
         }
       }
@@ -87,15 +87,15 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using when" should "add the correct transition" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
-        when("walk(): Unit") goto "State0"
+        in("init")
+        when("walk(): Unit") goto "init"
       }
       assert (Test.transitions.contains(
         Transition(
-          State("State0", 0),
+          State("init", 0),
           Method("walk(): Unit", null),
           ReturnValue(Method("walk(): Unit", null), null, 0),
-            "State0")
+            "init")
       )  === true)
     }
   }
@@ -103,27 +103,27 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using end" should "create the matrix" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
-        when("walk(): Unit") goto "State0"
+        in("init")
+        when("walk(): Unit") goto "init"
         end
       }
-      assert(Test.arrayOfStates(0)(0) === State("State0", 0) )
+      assert(Test.arrayOfStates(0)(0) === State("init", 0) )
     }
   }
 
   "using or" should "create a correct entry in the transitions list" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
-        when("walk(): Boolean") goto "State0" at "True" or "State1" at "False"
+        in("init")
+        when("walk(): Boolean") goto "init" at "True" or "State1" at "False"
         end
       }
       assert(Test.transitions.contains(
         Transition(
-          State("State0", 0),
+          State("init", 0),
           Method("walk(): Boolean", Set(0,1)),
           ReturnValue(Method("walk(): Boolean", Set(0,1)), "True", 0),
-          "State0"
+          "init"
         )
       ))
     }
@@ -132,8 +132,8 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using or" should "create a correct entry in the matrix list" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
-        when("walk()") goto "State0" at "True" or "State1" at "False"
+        in("init")
+        when("walk()") goto "init" at "True" or "State1" at "False"
         in ("State1")
         end
       }
@@ -144,15 +144,205 @@ class ProtocolLangTest extends FlatSpec with Matchers{
   "using end" should "serialize the data into a file such that it can be decoded" in {
     object Test extends ProtocolLang{
       def main(args:Array[String]) = {
-        in("State0")
-        when("walk()") goto "State0" at "True" or "State1" at "False"
+        in("init")
+        when("walk()") goto "init" at "True" or "State1" at "False"
         in ("State1")
         end
       }
       val (stateMatrix, stateArray, returnValueArray) = getDataFromFile("EncodedData.ser")
-      assert(stateMatrix(0)(0) == State("State0", 0))
-      assert(stateArray(0) == State("State0", 0))
+      assert(stateMatrix(0)(0) == State("init", 0))
+      assert(stateArray(0) == State("init", 0))
       assert(returnValueArray(0) == ReturnValue(Method("walk()", Set(0,1)), "True", 0))
+    }
+  }
+
+  "using the correct syntax" should "create an array of the right dimensions" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.arrayOfStates.size === 4)
+      assert(Test.arrayOfStates(0).size === 5)
+    }
+  }
+
+  "writing in a certain number of states" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.states.size === 5)
+    }
+  }
+
+  "writing in a certain number of methods" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.methods.size === 4)
+    }
+  }
+
+  "writing in a certain number of transitions" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.transitions.size === 8)
+    }
+  }
+
+  "writing in a certain number of return values" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when("walk():Unit") goto "walking"
+        when("cry():Unit") goto "crying"
+        when("laze():Unit") goto "lazing"
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in ("walking")
+        when("cry():Unit") goto "crying"
+
+        in("crying")
+        when("laze():Unit") goto "lazing"
+
+        in("lazing")
+        when("stayOnAlert(Boolean):Unit") goto "onAlert"
+
+        in("onAlert")
+        when("laze():Unit") goto "lazing"
+        end()
+      }
+      assert(Test.returnValues.size === 4)
+    }
+  }
+
+  "writing in a certain number of transitions with or statements" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when ("walk()") goto "State3"
+        when("comeAlive") goto "State1"
+        when ("comeAlive(String, Int): String") goto "init"
+        when ("die: DeathState") goto
+          "State1" at "Dead" or
+          "State2" at "Alive" or
+          "State3" at "Unsure" or
+          "State1" at null
+
+        in ("State3")
+        when("run(): Unit") goto "State2"
+        in ("State2")
+        in ("State1")
+        end()
+      }
+      assert(Test.transitions.size === 8)
+    }
+  }
+
+  "writing in a certain number of return values with or statements" should "create a set of the right size" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        in ("init")
+        when ("walk()") goto "State3"
+        when("comeAlive") goto "State1"
+        when ("comeAlive(String, Int): String") goto "init"
+        when ("die: DeathState") goto
+          "State1" at "Dead" or
+          "State2" at "Alive" or
+          "State3" at "Unsure" or
+          "State1" at null
+
+        in ("State3")
+        when("run(): Unit") goto "State2"
+        in ("State2")
+        in ("State1")
+        end()
+      }
+      assert(Test.returnValues.size === 8)
+    }
+  }
+
+  "not defining an init state" should "throw an exception" in {
+    object Test extends ProtocolLang{
+      def main(args:Array[String]) = {
+        a [Exception] should be thrownBy {
+          in("State0")
+          when("walk()") goto "State0" at "True" or "State1" at "False"
+          in("State1")
+          end
+        }
+      }
     }
   }
 

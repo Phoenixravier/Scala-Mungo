@@ -313,7 +313,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       def getFilenameFromTypestateAnnotation(annotation: AnnotationInfo):Option[String] ={
         annotation match{
           case AnnotationInfo(arg1, arg2, arg3) =>
-            if(arg1.toString == "compilerPlugin.Typestate") {
+            if(arg1.toString == "Typestate" || arg1.toString == "compilerPlugin.Typestate") {
+              println("found typestate annotation")
               Some(arg2.head.toString())
             }
             else None
@@ -362,6 +363,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
       /** Creates an sbt project, copies in the dsl and the user protocol and executes it, giving serialized data in a the project folder*/
       def executeFile(filename:String): Unit ={
+        println(filename)
         s"executeUserProtocol.bat $filename".!
       }
 

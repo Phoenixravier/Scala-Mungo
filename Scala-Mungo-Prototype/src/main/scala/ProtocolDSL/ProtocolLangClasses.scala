@@ -34,7 +34,7 @@ case class State(name: String, index: Int) extends Ordered[State] with Serializa
     this.index compare that.index
   }
   override def toString() ={
-    name
+    name + " " + index
   }
 }
 
