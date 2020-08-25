@@ -32,7 +32,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
   import global._
 
   val name = "GetFileFromAnnotation"
-  val description = "gets file from typestate annotation"
+  val description = "Checks the protocol defined on a class or object with the Typestate annotation"
   val components: List[PluginComponent] = List[PluginComponent](Component)
   var data: (Array[Array[State]], Array[State], Array[ReturnValue]) = _
 

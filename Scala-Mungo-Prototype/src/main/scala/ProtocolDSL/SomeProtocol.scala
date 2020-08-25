@@ -4,16 +4,17 @@ package ProtocolDSL
 object SomeProtocol extends ProtocolLang with App{
     in ("init")
     when ("walk()") goto
-      "State2" at "undefined"
+      "State2" at ("True") or
+      "State3" at "True"
 
     in ("State3")
     when ("walk()") goto
-      "State3" at "False"
+      "State3"
 
     in ("State2")
 
     in ("State1")
     when("walk()") goto
-      "State2" at "False"
+      "State2"
     end()
 }

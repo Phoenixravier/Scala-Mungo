@@ -26,15 +26,9 @@ class ProtocolLang {
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
     checkStateNameIsValid(stateName)
-    var stateIndex: Int = stateIndexCounter
-    stateIndexCounter += 1
-    if(stateName == "init") {
-      stateIndex = 0 //init always gets 0 as index
-      stateIndexCounter -= 1 //haven't used the counter so decrement it back
-    }
-    currentState = State(stateName, stateIndex)
+    currentState = createNewState(stateName)
     checkForDuplicateState(currentState)
-    //update
+    //Update datastructures
     states += currentState
     statesMap += (stateName -> currentState)
   }
@@ -42,6 +36,16 @@ class ProtocolLang {
   def checkStateNameIsValid(stateName:String): Unit ={
     if(stateName == null) throw new Exception("You cannot call your state null")
     if(stateName == Undefined) throw new Exception(s"You cannot call a state $Undefined")
+  }
+
+  def createNewState(stateName:String):State={
+    var newState = State(stateName, stateIndexCounter)
+    stateIndexCounter += 1
+    if(stateName == "init") {
+      newState = State(stateName, 0) //init always gets 0 as index
+      stateIndexCounter -= 1 //haven't used the counter so decrement it back
+    }
+    newState
   }
 
   def checkForDuplicateState(state:State): Unit ={
@@ -69,37 +73,36 @@ class ProtocolLang {
     }
   }
 
+
   class Goto(val methodSignature:String){
-    //create a new method or fetch exiting one
-    currentMethod = Method(methodSignature, currentState)
-      for(method <- methods){
-        if(method.name == currentMethod.name) {
-          checkMethodIsOnlyDefinedOnceForTheCurrentState(method)
-          currentMethod = method
-          currentMethod.currentState = currentState
-        }
-      }
+    currentMethod = getOrCreateMethod(methodSignature)
     methods += currentMethod
-
     def goto(nextState:String) ={
-      //create a new return value or get an existing one
-      var returnValue = ReturnValue(currentMethod, Any, returnValueIndexCounter)
-      returnValueIndexCounter +=1
-      for(existingReturnValue <- returnValues){
-        if(existingReturnValue.parentMethod.name == currentMethod.name && existingReturnValue.valueName == Any) {
-          returnValue = existingReturnValue
-          returnValueIndexCounter -=1 //put counter back down since it is not used this time
-        }
-      }
-
+      var returnValue = getOrCreateReturnValue(Any)
       //Updates
       returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //initialise method set with index of its Any version (method:_Any_)
       if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter)
-
       new At()
     }
+  }
+
+  /** Create a new method or fetch an exiting one with the same signature
+   *
+   * @param methodSignature
+   * @return
+   */
+  def getOrCreateMethod(methodSignature:String):Method={
+    var newMethod = Method(methodSignature, currentState)
+    for(method <- methods){
+      if(method.name == newMethod.name) {
+        checkMethodIsOnlyDefinedOnceForTheCurrentState(method)
+        newMethod = method
+        newMethod.currentState = currentState
+      }
+    }
+    newMethod
   }
 
   def checkMethodIsOnlyDefinedOnceForTheCurrentState(method:Method): Unit ={
@@ -107,25 +110,38 @@ class ProtocolLang {
       throw new Exception(s"Defined method ${method.name} for state $currentState more than once")
   }
 
+
+  /** creates a new return value or gets an existing one
+   *
+   * @return
+   */
+  def getOrCreateReturnValue(returnValue:String):ReturnValue={
+    var newReturnValue = ReturnValue(currentMethod, returnValue, returnValueIndexCounter)
+    returnValueIndexCounter+=1
+    for(existingReturnValue <- returnValues){
+      if(existingReturnValue.parentMethod.name == currentMethod.name && existingReturnValue.valueName == returnValue) {
+        newReturnValue = existingReturnValue
+        returnValueIndexCounter -=1 //put counter back down since it is not used this time
+      }
+    }
+    newReturnValue
+  }
+
   class At(){
     def at(returnValue:String)={
       checkReturnValueIsValid(returnValue)
-      
+
       //corrects return value in transition just defined
       val lastTransition = transitions.last
-      if(lastTransition.returnValue.valueName == Any) {
-        var newReturnValue = ReturnValue(currentMethod, returnValue, returnValueIndexCounter)
-        for(rv <- returnValues){
-          if(rv.parentMethod.name == currentMethod.name && rv.valueName == returnValue) {
-            newReturnValue = rv
-            returnValueIndexCounter -=1
-          }
-        }
+      if(lastTransition.returnValue.valueName == Any) { //last transition was the first for this method
+        //gets or creates a new return value so as not to overwrite the Any one
+        var newReturnValue = getOrCreateReturnValue(returnValue)
         lastTransition.returnValue = newReturnValue
         returnValues += newReturnValue
-        returnValueIndexCounter+=1
       }
       else lastTransition.returnValue.valueName = returnValue
+
+      //replaces the transition with one with the correct return value
       transitions.dropRight(1)
       transitions.add(lastTransition)
       new Or()
@@ -148,41 +164,48 @@ class ProtocolLang {
   }
 
   class Or(){
-    def or(choiceState:String) ={
+    def or(nextState:String) ={
+      //create a new return value with undefined as the name and add a new Transition with it
       var returnValue = ReturnValue(currentMethod, Undefined, returnValueIndexCounter)
-      transitions += Transition(currentState, currentMethod, returnValue,choiceState)
+      returnValueIndexCounter +=1
+      transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //Updates
       currentMethod.indices += returnValueIndexCounter
-      returnValueIndexCounter +=1
       returnValues += returnValue
       new At()
     }
   }
 
   def end() = {
-    if(returnValues.exists(_.valueName == Undefined)) {
+    checkWholeProtocolIsWellFormed()
+    //create the array, print it and encode it into EncodedData.ser
+    val arrayOfStates = createArray()
+    printNicely(arrayOfStates)
+    sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
+  }
+
+  def checkWholeProtocolIsWellFormed(): Unit = {
+    if (returnValues.exists(_.valueName == Undefined)) {
       val problematicTransition = transitions.filter(_.returnValue.valueName == Undefined).head
       throw new Exception(
         s"Defined state ${problematicTransition.nextState} to move to " +
           s"in state ${problematicTransition.startState} without defining a return value. " +
           s"Add an at after the or keyword")
     }
-    if(!states.exists(_.index == 0))
+    if (!states.exists(_.index == 0))
       throw new Exception("No init state found in the protocol, make sure one of your states is called \"init\"")
-    val arrayOfStates = createArray()
-    printNicely(arrayOfStates)
-    sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
+
+    for (transition <- transitions) {
+      if (!statesMap.contains(transition.nextState))
+        throw new Exception(s"State ${transition.nextState}, " +
+          s"used in state ${transition.startState} with method ${transition.method.name}, isn't defined")
+    }
   }
 
   def createArray():Array[Array[State]] ={
     arrayOfStates = Array.fill(states.size, returnValues.size)(State(Undefined, -1))
-    //arrayOfStates = Array.ofDim[State](states.size, returnValues.size)
-    for (transition <- transitions){
-      if(statesMap.contains(transition.nextState))
-        arrayOfStates(transition.startState.index)(transition.returnValue.index) = statesMap(transition.nextState)
-      else throw new Exception(s"State ${transition.nextState}, " +
-        s"used in state ${transition.startState} with method ${transition.method.name}, isn't defined")
-    }
+    transitions.foreach((transition:Transition) =>
+      arrayOfStates(transition.startState.index)(transition.returnValue.index) = statesMap(transition.nextState))
     arrayOfStates
   }
 
