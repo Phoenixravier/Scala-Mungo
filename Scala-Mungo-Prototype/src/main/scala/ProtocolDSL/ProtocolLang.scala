@@ -21,81 +21,96 @@ class ProtocolLang {
   val Undefined = "_Undefined_"
   val Any = "_Any_"
 
-  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] =
-    SortedSet.empty[A] ++ unsortedSet
+  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
-    if(stateName == null) throw new Exception("You cannot call your state null")
-    if(stateName == Undefined) throw new Exception(s"You cannot call a state $Undefined")
-    var stateIndex = stateIndexCounter
+    checkStateNameIsValid(stateName)
+    var stateIndex: Int = stateIndexCounter
+    stateIndexCounter += 1
     if(stateName == "init") {
-      stateIndex = 0
-      stateIndexCounter -= 1
+      stateIndex = 0 //init always gets 0 as index
+      stateIndexCounter -= 1 //haven't used the counter so decrement it back
     }
     currentState = State(stateName, stateIndex)
-    if(states.exists(_.name == currentState.name))
-      throw new Exception(s"State $stateName defined multiple times, define a state only once")
+    checkForDuplicateState(currentState)
+    //update
     states += currentState
     statesMap += (stateName -> currentState)
-    stateIndexCounter += 1
   }
+
+  def checkStateNameIsValid(stateName:String): Unit ={
+    if(stateName == null) throw new Exception("You cannot call your state null")
+    if(stateName == Undefined) throw new Exception(s"You cannot call a state $Undefined")
+  }
+
+  def checkForDuplicateState(state:State): Unit ={
+    if(states.exists(_.name == state.name))
+      throw new Exception(s"State ${state.name} defined multiple times, define a state only once")
+  }
+
   def when(methodSignature:String) = {
+    checkMethodSignatureIsValid(methodSignature)
+    checkCurrentStateIsDefined()
+    new Goto(methodSignature)
+  }
+
+  def checkMethodSignatureIsValid(methodSignature:String): Unit ={
     if(methodSignature == null)
       throw new Exception(s"You cannot call your method null. You called a method null in state $currentState")
+  }
+
+  def checkCurrentStateIsDefined(): Unit ={
     currentState match{
       case null =>
         throw new Exception("Defined a method without being inside a state. " +
           "Use in(State) to define a state above a when(method) statement")
       case _ =>
     }
-    new Goto(methodSignature)
   }
 
   class Goto(val methodSignature:String){
+    //create a new method or fetch exiting one
     currentMethod = Method(methodSignature, currentState)
-    if(methods.contains(currentMethod)) {
       for(method <- methods){
-        if(method.currentState == currentState)
-          throw new Exception(s"Defined method $methodSignature for state $currentState more than once")
         if(method.name == currentMethod.name) {
+          checkMethodIsOnlyDefinedOnceForTheCurrentState(method)
           currentMethod = method
           currentMethod.currentState = currentState
         }
       }
-    }
     methods += currentMethod
 
     def goto(nextState:String) ={
+      //create a new return value or get an existing one
       var returnValue = ReturnValue(currentMethod, Any, returnValueIndexCounter)
-      for(rv <- returnValues){
-        if(rv.parentMethod.name == currentMethod.name && rv.valueName == Any) {
-          returnValue = rv
-          returnValueIndexCounter -=1
+      returnValueIndexCounter +=1
+      for(existingReturnValue <- returnValues){
+        if(existingReturnValue.parentMethod.name == currentMethod.name && existingReturnValue.valueName == Any) {
+          returnValue = existingReturnValue
+          returnValueIndexCounter -=1 //put counter back down since it is not used this time
         }
       }
-      if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter)
+
+      //Updates
       returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
-      returnValueIndexCounter +=1
+      //initialise method set with index of its Any version (method:_Any_)
+      if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter)
+
       new At()
     }
   }
 
+  def checkMethodIsOnlyDefinedOnceForTheCurrentState(method:Method): Unit ={
+    if(method.currentState == currentState)
+      throw new Exception(s"Defined method ${method.name} for state $currentState more than once")
+  }
+
   class At(){
     def at(returnValue:String)={
-      if(returnValue == Any || returnValue == Undefined)
-        throw new Exception(s"You used $returnValue in state $currentState as a return value for method ${currentMethod.name}." +
-          s"It is not allowed to use $Any or $Undefined as return values for a method")
-      //checks if a return value is defined multiple times for the same state and method and throws an error
-      for(transition <- transitions){
-        if(transition.startState == currentState &&
-          transition.method == currentMethod &&
-          transition.returnValue.valueName == returnValue)
-            throw new Exception(
-              s"Defined return value $returnValue for method ${currentMethod.name} " +
-                s"in state ${currentState.name} more than once")
-      }
+      checkReturnValueIsValid(returnValue)
+      
       //corrects return value in transition just defined
       val lastTransition = transitions.last
       if(lastTransition.returnValue.valueName == Any) {
@@ -114,6 +129,21 @@ class ProtocolLang {
       transitions.dropRight(1)
       transitions.add(lastTransition)
       new Or()
+    }
+  }
+
+  def checkReturnValueIsValid(returnValue:String): Unit ={
+    if(returnValue == Any || returnValue == Undefined)
+      throw new Exception(s"You used $returnValue in state $currentState as a return value for method ${currentMethod.name}." +
+        s"It is not allowed to use $Any or $Undefined as return values for a method")
+    //checks if a return value is defined multiple times for the same state and method and throws an error
+    for(transition <- transitions){
+      if(transition.startState == currentState &&
+        transition.method == currentMethod &&
+        transition.returnValue.valueName == returnValue)
+        throw new Exception(
+          s"Defined return value $returnValue for method ${currentMethod.name} " +
+            s"in state ${currentState.name} more than once")
     }
   }
 
