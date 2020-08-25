@@ -1,2 +1,8 @@
+[warn] C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\src\main\scala\ProtocolDSL\MyProtocol.scala:4:7: not a valid main method for ProtocolDSL.Example,
+[warn]   because main methods must have the exact signature (Array[String])Unit.
+[warn]   To define an entry point, please define the main method as:
+[warn]     def main(args: Array[String]): Unit
+[warn]   def main(args:Array[String]) = {
+[warn]       ^
 [warn] 3 deprecations (since 2.13.0); re-run with -deprecation for details
-[warn] one warning found
+[warn] two warnings found

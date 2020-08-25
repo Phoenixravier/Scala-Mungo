@@ -1,20 +1,19 @@
 package ProtocolDSL
 
 
-object Example extends ProtocolLang{
-  def main(args:Array[String]) = {
-    in ("State0")
-    when ("walk()") goto "State3"
-    when ("comeAlive()") goto "State0"
-    when ("die()") goto
-      "State1" at "True" or
-      "State2" at "False" or
-      "State3" at "Maybe" or
-      "State1" at null
+object SomeProtocol extends ProtocolLang with App{
+    in ("init")
+    when ("walk()") goto
+      "State2" at "undefined"
 
     in ("State3")
+    when ("walk()") goto
+      "State3" at "False"
+
     in ("State2")
+
     in ("State1")
-    end
-  }
+    when("walk()") goto
+      "State2" at "False"
+    end()
 }

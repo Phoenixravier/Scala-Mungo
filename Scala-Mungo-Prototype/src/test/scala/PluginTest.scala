@@ -150,6 +150,74 @@ class PluginTest extends FlatSpec with Matchers {
     assert(thrown.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
 
+  "plugin" should "throw an exception if end is not written in the protocol" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang{
+        |  def main(args:Array[String]) = {
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |    when ("die()") goto
+        |      "State1" at "True" or
+        |      "State2" at "False" or
+        |      "State3" at "Maybe" or
+        |      "State1" at null
+        |
+        |    in ("State3")
+        |    when ("notAMethod()") goto "State3"
+        |    in ("State2")
+        |    in ("State1")
+        |  }
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |sealed trait DeathState
+        |case object Dead extends DeathState
+        |case object Alive extends DeathState
+        |case object Unsure extends DeathState
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def die():DeathState = {
+        |    val randomGenerator = Random
+        |    val randomNumber = randomGenerator.nextDouble()
+        |    println(randomNumber)
+        |    if(randomNumber < 0.25) Dead
+        |    else if(randomNumber < 0.5) Alive
+        |    else if(randomNumber < 0.75) Unsure
+        |    else null
+        |  }
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  cat.comeAlive()
+        |  cat.walk()
+        |  cat.comeAlive()
+        |
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage === "The protocol at \"MyProtocol.scala\" could not be processed, check you have an end statement at the end of the protocol")
+  }
 
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={

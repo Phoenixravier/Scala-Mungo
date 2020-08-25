@@ -1,6 +1,7 @@
 package compilerPlugin
 
 import java.io.{File, FileInputStream, ObjectInputStream}
+import java.nio.file.{Files, Paths}
 
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
@@ -10,7 +11,6 @@ import ProtocolDSL.{ReturnValue, State}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
-
 import util.control.Breaks._
 
 class InstanceWithState(var className: String, var name:String, var currentState:State){
@@ -69,6 +69,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               //execute the DSL in the protocol file and serialize the data into a file
               executeFile(filename)
               //retrieve the serialized data
+              if(!Files.exists(Paths.get("protocolDir\\EncodedData.ser")))
+                throw new Exception(s"The protocol at $filename could not be processed, " +
+                  s"check you have an end statement at the end of the protocol")
               val (transitions, states, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
               cleanProject()
               checkMethodsAreSubset(returnValuesArray, body, name, filename)
@@ -220,7 +223,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         applyTraverser.methodCallInfo = ListBuffer[Array[String]]()
       }
 
-      /** Traverses a tree and collects (methodName, objectName) from method apllication statements
+      /** Traverses a tree and collects (methodName, objectName) from method application statements
        *
        */
       object applyTraverser extends Traverser {
