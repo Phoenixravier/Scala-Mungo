@@ -7,6 +7,7 @@ import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{ReturnValue, State}
+import jdk.nashorn.internal.runtime.Undefined
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -14,6 +15,7 @@ import scala.reflect.api.Trees
 import util.control.Breaks._
 
 class InstanceWithState(var className: String, var name:String, var currentState:State){
+
   def updateCurrentState(state:State): Unit ={
     this.currentState = state
   }
@@ -43,6 +45,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
+      val Undefined = "_Undefined_"
       override def name: String = GetFileFromAnnotation.this.name
 
       def apply(unit: CompilationUnit): Unit = {
@@ -88,7 +91,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       }
 
       /** Creates a hashmap from method names (e.g. "walk(String)")
-       * to indices at which it is present in the transitions array (including all the return values it could have)
+       * to indices at which it is present in the transitions array (including all the return values it might have)
        *
        * @param returnValuesArray:Array[ReturnValue]
        * @return mutable.Hashmap[String, Set[Int]]
@@ -172,6 +175,12 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
             if (classNm.symbol.name.toString == className) {
               Some(new InstanceWithState(className, tname.toString(), states(0)))
             } else None
+          case q"for (..$enums) $expr" => {
+            println("line is "+line)
+            println(enums)
+            println(expr)
+            None
+          }
           case _ => {
             updateStateIfNeeded(classInfo, instances, line)
             None
@@ -200,21 +209,21 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         for(apply <- applies){
           val methodName = apply(0)
           val objectName = apply(1)
-          println(methodName)
-          println(objectName)
           for (instance <- instances) {
             breakable {
               if (instance.name == objectName) {
                 val stateIndex = instance.currentState.index
-                if (stateIndex == -1) break
+                if (stateIndex == -2) break
                 val stateName = instance.currentState.name
                 if (methodToStateIndices.contains(methodName)) {
-                  val indiceSet = methodToStateIndices(methodName)
-                  val state = classInfo.transitions(stateIndex)(indiceSet.head)
-                  if (state == null) throw new Exception(s"Invalid transition in object $objectName of type $className from state $stateName with method $methodName")
+                  val indexSet = methodToStateIndices(methodName)
+                  val state = classInfo.transitions(stateIndex)(indexSet.head)
+                  if (state.name == Undefined)
+                    throw new Exception(s"Invalid transition in object $objectName of type $className " +
+                      s"from state $stateName with method $methodName")
                   instance.updateCurrentState(state)
                 }
-                else instance.updateCurrentState(State("unknown", -1))
+                else instance.updateCurrentState(State("unknown", -2))
               }
             }
           }

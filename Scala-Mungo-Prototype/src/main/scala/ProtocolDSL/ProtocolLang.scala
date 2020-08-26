@@ -83,7 +83,7 @@ class ProtocolLang {
       returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //initialise method set with index of its Any version (method:_Any_)
-      if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter)
+      if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter-1) //counter already incremented inside method above
       new At()
     }
   }
@@ -180,6 +180,7 @@ class ProtocolLang {
     checkWholeProtocolIsWellFormed()
     //create the array, print it and encode it into EncodedData.ser
     val arrayOfStates = createArray()
+    print(methods)
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }

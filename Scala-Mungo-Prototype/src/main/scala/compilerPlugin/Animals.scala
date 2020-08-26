@@ -30,9 +30,18 @@ object doMainThings {
 
     typedCat.walk()
 
-    someCat.die()
+    //someCat.die()
 
-    //cat.die()
+    println("RIGHT BEFORE FOR LOOP")
+
+    for(x <- 1 to 10 ) {
+
+      println(x)
+      cat.die()
+    }
+
+    println("RIGHT AFTER FOR LOOP")
+
 
 
     Dog.laze()
