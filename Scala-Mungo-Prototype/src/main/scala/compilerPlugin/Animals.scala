@@ -18,13 +18,13 @@ object doMainThings {
     println("RIGHT BEFORE LOOP")
     var x = 0
     do {
-      val forLoopCat = new Cat()
-      forLoopCat.walk()
+      for(y <- 1 to 100) cat.comeAlive()
+      cat.walk()
+      cat.comeAlive()
       cat.walk()
       x+=1
-    } while(true)
-
-    cat.comeAlive()
+    } while(x<10)
+    //cat.comeAlive()
     println("RIGHT AFTER LOOP")
   }
 

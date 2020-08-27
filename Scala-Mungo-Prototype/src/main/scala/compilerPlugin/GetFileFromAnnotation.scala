@@ -150,8 +150,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         instances.foreach(println)
       }
 
-      def checkExpr(classInfo:ClassInfo, code:Trees#Tree): Unit ={
-        var instances: Set[InstanceWithState] = Set()
+      def checkExpr(classInfo:ClassInfo, code:Trees#Tree, givenInstances:Set[InstanceWithState]=Set()): Unit ={
+        var instances: Set[InstanceWithState] = givenInstances
         if(classInfo.isObject) instances +=
           InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
         var nbOfLinesToSkip = 0
@@ -176,8 +176,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
       def processLine(line:Trees#Tree, instances: Set[InstanceWithState], classInfo:ClassInfo): (Option[InstanceWithState], Int) ={
         val className = classInfo.className
         val states = classInfo.states
-        println(s"Processing line $line")
-        println(showRaw(line))
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             if (classNm.symbol.name.toString == className) {
@@ -214,6 +212,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           }
           case q"do $expr while ($cond)" =>{
             dealWithLoopContents(classInfo, instances, expr)
+            checkExpr(classInfo, expr, instances)
             var nbOfLinesToSkip = 0
             for(lineLine <- line) nbOfLinesToSkip+=1
             nbOfLinesToSkip-=1 //because we are processing the current one already
