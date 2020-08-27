@@ -77,7 +77,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "Invalid transition in object cat of type Cat from state State3 with method comeAlive()")
+    assert(thrown.getMessage === "Invalid transition in object cat of type Cat from state(s) Set(State3) with method comeAlive()")
   }
 
   "plugin" should "throw an exception when protocol methods are not a subset of ones in class" in {
@@ -217,6 +217,199 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
     assert(thrown.getMessage === "The protocol at \"MyProtocol.scala\" could not be processed, check you have an end statement at the end of the protocol")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |sealed trait DeathState
+        |case object Dead extends DeathState
+        |case object Alive extends DeathState
+        |case object Unsure extends DeathState
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def die():DeathState = {
+        |    val randomGenerator = Random
+        |    val randomNumber = randomGenerator.nextDouble()
+        |    println(randomNumber)
+        |    if(randomNumber < 0.25) Dead
+        |    else if(randomNumber < 0.5) Alive
+        |    else if(randomNumber < 0.75) Unsure
+        |    else null
+        |  }
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- 1 to 10) cat.walk()
+        |
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage === "Invalid transition in object cat of type Cat from state(s) Set(State3) with method walk()")
+  }
+
+  "plugin" should "throw an exception if an instance defined inside a for loop violates its protocol" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |sealed trait DeathState
+        |case object Dead extends DeathState
+        |case object Alive extends DeathState
+        |case object Unsure extends DeathState
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def die():DeathState = {
+        |    val randomGenerator = Random
+        |    val randomNumber = randomGenerator.nextDouble()
+        |    println(randomNumber)
+        |    if(randomNumber < 0.25) Dead
+        |    else if(randomNumber < 0.5) Alive
+        |    else if(randomNumber < 0.75) Unsure
+        |    else null
+        |  }
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- 1 to 10) {
+        |   val kitty = new Cat()
+        |   kitty.comeAlive()
+        |   kitty.walk()
+        |   kitty.walk()
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage === "Invalid transition in object kitty of type Cat from state(s) Set(State3) with method walk()")
+  }
+
+  "plugin" should "throw an exception if an instance after being in a valid for loop violates its protocol" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    when("walk()") goto "State2"
+        |    in ("State2")
+        |    when("walk()") goto "init"
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |sealed trait DeathState
+        |case object Dead extends DeathState
+        |case object Alive extends DeathState
+        |case object Unsure extends DeathState
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def die():DeathState = {
+        |    val randomGenerator = Random
+        |    val randomNumber = randomGenerator.nextDouble()
+        |    println(randomNumber)
+        |    if(randomNumber < 0.25) Dead
+        |    else if(randomNumber < 0.5) Alive
+        |    else if(randomNumber < 0.75) Unsure
+        |    else null
+        |  }
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- 1 to 10) {
+        |   val kitty = new Cat()
+        |   kitty.comeAlive()
+        |   kitty.walk()
+        |   cat.walk()
+        |  }
+        |  cat.comeAlive()
+        |
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in object cat of type Cat from state(s) Set(init, State3, State2) with method comeAlive()")
   }
 
 

@@ -2,25 +2,23 @@ package compilerPlugin
 
 import java.io.{File, FileInputStream, ObjectInputStream}
 import java.nio.file.{Files, Paths}
-
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{ReturnValue, State}
-import jdk.nashorn.internal.runtime.Undefined
-
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 import util.control.Breaks._
 
-class InstanceWithState(var className: String, var name:String, var currentState:State){
+case class InstanceWithState(var className: String, var name:String, var currentStates:Set[State]){
 
-  def updateCurrentState(state:State): Unit ={
-    this.currentState = state
+  def updateState(stateToRemove:State, stateToAdd:State): Unit ={
+    this.currentStates -= stateToRemove
+    this.currentStates += stateToAdd
   }
   override def toString(): String={
-    this.className + " " + this.name +" "+ this.currentState
+    this.className + " " + this.name +" "+ this.currentStates
   }
 }
 
@@ -50,15 +48,15 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
       def apply(unit: CompilationUnit): Unit = {
         var setOfClassesWithProtocols: Set[String] = Set()
-        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
-          checkElement(unit, body, tname.toString(), tree, true) match{
-            case Some(objectName) => setOfClassesWithProtocols += objectName
-            case None =>
-          }
-        }
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
           checkElement(unit, stats, tpname.toString(), tree) match{
             case Some(className) => setOfClassesWithProtocols += className
+            case None =>
+          }
+        }
+        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
+          checkElement(unit, body, tname.toString(), tree, true) match{
+            case Some(objectName) => setOfClassesWithProtocols += objectName
             case None =>
           }
         }
@@ -139,56 +137,109 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        */
       def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree]): Unit = {
         var instances: Set[InstanceWithState] = Set()
-        if(classInfo.isObject) instances += new InstanceWithState(classInfo.className, classInfo.className, classInfo.states(0))
+        if(classInfo.isObject) instances +=
+          InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
         for (line <- code) {
-          processLine(line, instances, classInfo) match {
-            case Some(instance) => instances += instance
-            case None =>
-          }
+            val newInstanceAndNbLinesToSkip = processLine(line, instances, classInfo)
+            newInstanceAndNbLinesToSkip._1 match {
+              case Some(instance) => instances += instance
+              case None =>
+            }
         }
         println("\nInstances:")
         instances.foreach(println)
       }
 
-      def checkExpr(classInfo:ClassInfo, codeBlock:Trees#Tree): Unit ={
+      def checkExpr(classInfo:ClassInfo, code:Trees#Tree): Unit ={
         var instances: Set[InstanceWithState] = Set()
-        if(classInfo.isObject) instances += new InstanceWithState(classInfo.className, classInfo.className, classInfo.states(0))
-        for (line <- codeBlock) {
-          processLine(line, instances, classInfo) match {
-            case Some(instance) => instances += instance
-            case None =>
+        if(classInfo.isObject) instances +=
+          InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
+        var nbOfLinesToSkip = 0
+        for (line <- code) {
+          breakable {
+            if(nbOfLinesToSkip>0){
+              nbOfLinesToSkip-=1
+              break
+            }
+            val newInstanceAndNbLinesToSkip = processLine(line, instances, classInfo)
+            newInstanceAndNbLinesToSkip._1 match {
+              case Some(instance) => instances += instance
+              case None =>
+            }
+            nbOfLinesToSkip = newInstanceAndNbLinesToSkip._2
           }
         }
         println("\nInstances:")
         instances.foreach(println)
       }
 
-      def processLine(line:Trees#Tree, instances: Set[InstanceWithState], classInfo:ClassInfo): Option[InstanceWithState] ={
+      def processLine(line:Trees#Tree, instances: Set[InstanceWithState], classInfo:ClassInfo): (Option[InstanceWithState], Int) ={
         val className = classInfo.className
         val states = classInfo.states
+        println(s"Processing line $line")
+        println(showRaw(line))
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             if (classNm.symbol.name.toString == className) {
-              Some(new InstanceWithState(className, tname.toString(), states(0)))
-            } else None
-          case q"""$mods var $tname: $tpt = new $classNm(...$exprss)""" =>
+              (Some(InstanceWithState(className, tname.toString(), Set(states(0)))),0)
+            } else (None,0)
+          case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
             if (classNm.symbol.name.toString == className) {
-              Some(new InstanceWithState(className, tname.toString(), states(0)))
-            } else None
+              (Some(InstanceWithState(className, tname.toString(), Set(states(0)))),0)
+            } else (None,0)
           case q"for (..$enums) $expr" => {
-            println("line is "+line)
-            println(enums)
+            dealWithLoopContents(classInfo, instances, expr)
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None, nbOfLinesToSkip)
+          }
+          case q"while ($cond) $expr" =>{
+            println("IN while loop")
             println(expr)
-            None
+            dealWithLoopContents(classInfo, instances, expr)
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None, nbOfLinesToSkip)
+          }
+          case q"while$$1($cond) $expr" =>{
+            println("IN TRUE while loop")
+            println(expr)
+            //dealWithForLoopContents(classInfo, instances, expr)
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None, nbOfLinesToSkip)
+          }
+          case q"do $expr while ($cond)" =>{
+            dealWithLoopContents(classInfo, instances, expr)
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None, 0)
           }
           case _ => {
             updateStateIfNeeded(classInfo, instances, line)
-            None
+            (None,0)
           }
         }
       }
 
-
+      def dealWithLoopContents(classInfo:ClassInfo, instances:Set[InstanceWithState], expr:Trees#Tree): Unit ={
+        //deal with things defined inside the for loop (and nested for loops)
+        checkExpr(classInfo, expr)
+        //deal with instances already defined outside the for loop
+        for(instance <- instances){
+          var listOfIntermediateStates = ListBuffer[Set[State]]()
+          do{
+            listOfIntermediateStates += instance.currentStates
+            for(line <- expr) processLine(line, Set(instance), classInfo)
+          } while(!listOfIntermediateStates.contains(instance.currentStates))
+          for(setOfStates <- listOfIntermediateStates)
+            instance.currentStates = instance.currentStates ++ setOfStates
+        }
+      }
 
       /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
        *
@@ -212,18 +263,20 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           for (instance <- instances) {
             breakable {
               if (instance.name == objectName) {
-                val stateIndex = instance.currentState.index
-                if (stateIndex == -2) break
-                val stateName = instance.currentState.name
-                if (methodToStateIndices.contains(methodName)) {
-                  val indexSet = methodToStateIndices(methodName)
-                  val state = classInfo.transitions(stateIndex)(indexSet.head)
-                  if (state.name == Undefined)
-                    throw new Exception(s"Invalid transition in object $objectName of type $className " +
-                      s"from state $stateName with method $methodName")
-                  instance.updateCurrentState(state)
+                var newSetOfStates:Set[State] = Set()
+                for(state <- instance.currentStates) {
+                  if (state.index == -2) break
+                  if (methodToStateIndices.contains(methodName)) {
+                    val indexSet = methodToStateIndices(methodName)
+                    val newState = classInfo.transitions(state.index)(indexSet.head)
+                    if (newState.name == Undefined)
+                      throw new Exception(s"Invalid transition in object $objectName of type $className " +
+                        s"from state(s) ${instance.currentStates} with method $methodName")
+                    newSetOfStates += newState
+                  }
+                  else instance.currentStates = Set(State("unknown", -2))
                 }
-                else instance.updateCurrentState(State("unknown", -2))
+                instance.currentStates = newSetOfStates
               }
             }
           }

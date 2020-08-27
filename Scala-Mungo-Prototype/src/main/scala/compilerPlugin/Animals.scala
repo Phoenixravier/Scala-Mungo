@@ -12,56 +12,20 @@ case object Dead extends DeathState
 case object Alive extends DeathState
 case object Unsure extends DeathState
 
-
-
 object doMainThings {
   def main(args: Array[String]) {
     val cat = new Cat()
-    val typedCat: Cat = new Cat("hi")
-    var someCat = new Cat()
-    var typedSomeCat: Cat = new Cat()
-    val notACat: Int = 1
-    var stillNotACat = "new Cat"
+    println("RIGHT BEFORE LOOP")
+    var x = 0
+    do {
+      val forLoopCat = new Cat()
+      forLoopCat.walk()
+      cat.walk()
+      x+=1
+    } while(true)
 
-    cat.walk()
-    cat.run()
-    cat.createDog("wefdgf")
-    cat.run()
-
-    typedCat.walk()
-
-    //someCat.die()
-
-    println("RIGHT BEFORE FOR LOOP")
-
-    for(x <- 1 to 10 ) {
-
-      println(x)
-      cat.die()
-    }
-
-    println("RIGHT AFTER FOR LOOP")
-
-
-
-    Dog.laze()
-    Dog.stayOnAlert(false)
-    //koira.cry()
-
-
-    val jump = "false"
-    Dog.stayOnAlert(jump, 2)
-
-
-    def donothing(): Unit = {
-      println("noting")
-    }
-
-    def main(deathState: DeathState): Unit = {
-      println("dammit")
-    }
-
-    println("ha")
+    cat.comeAlive()
+    println("RIGHT AFTER LOOP")
   }
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
@@ -111,9 +75,6 @@ object doMainThings {
       println("on alert")
     }
   }
-
-
-
 }
 
 
