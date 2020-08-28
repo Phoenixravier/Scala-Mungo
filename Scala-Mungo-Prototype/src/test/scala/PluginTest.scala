@@ -11,6 +11,61 @@ import org.scalatest._
 
 
 class PluginTest extends FlatSpec with Matchers {
+
+  "plugin" should "only recognise the typestate annotation" in {
+    val felineProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang{
+        |  def main(args:Array[String]) = {
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    in ("State1")
+        |    end()
+        |  }
+        |}
+        |""".stripMargin
+    writeFile("FelineProtocol.scala", Seq(felineProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Nonsense(filename = "TrashProtocol.scala")
+        |class Trash{
+        | def comeAlive():Unit = println("The trash awakens")
+        | def walk():Unit = println("walking")
+        |}
+        |
+        |
+        |@Typestate(filename = "FelineProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  cat.walk()
+        |  cat.walk()
+        |
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("FelineProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in object cat of type Cat from state(s) Set(State1) with method walk()")
+  }
+
   "plugin" should "throw an exception when an invalid transition happens" in {
     val userProtocol =
       """
@@ -77,7 +132,8 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "Invalid transition in object cat of type Cat from state(s) Set(State3) with method comeAlive()")
+    assert(thrown.getMessage ===
+      "Invalid transition in object cat of type Cat from state(s) Set(State3) with method comeAlive()")
   }
 
   "plugin" should "throw an exception when protocol methods are not a subset of ones in class" in {
@@ -147,7 +203,9 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class Cat")
+    assert(thrown.getMessage ===
+      "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of " +
+        "methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
 
   "plugin" should "throw an exception if end is not written in the protocol" in {
@@ -216,7 +274,9 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "The protocol at \"MyProtocol.scala\" could not be processed, check you have an end statement at the end of the protocol")
+    assert(thrown.getMessage ===
+      "The protocol at \"MyProtocol.scala\" could not be processed, " +
+        "check you have an end statement at the end of the protocol")
   }
 
   /*
@@ -280,7 +340,8 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "Invalid transition in object cat of type Cat from state(s) Set(State3) with method walk()")
+    assert(thrown.getMessage ===
+      "Invalid transition in object cat of type Cat from state(s) Set(State3) with method walk()")
   }
 
   "plugin" should "throw an exception if an instance defined inside a for loop violates its protocol" in {
@@ -345,7 +406,8 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage === "Invalid transition in object kitty of type Cat from state(s) Set(State3) with method walk()")
+    assert(thrown.getMessage ===
+      "Invalid transition in object kitty of type Cat from state(s) Set(State3) with method walk()")
   }
 
   "plugin" should "throw an exception if an instance after being in a valid for loop violates its protocol" in {

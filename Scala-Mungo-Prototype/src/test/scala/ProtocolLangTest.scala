@@ -3,7 +3,7 @@ import java.io.{FileInputStream, ObjectInputStream}
 import ProtocolDSL.{Method, ProtocolLang, ReturnValue, State, Transition}
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
-class ProtocolLangpl extends FlatSpec with Matchers with BeforeAndAfter{
+class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
   val Any = "_Any_"
   val Undefined = "_Undefined_"
 

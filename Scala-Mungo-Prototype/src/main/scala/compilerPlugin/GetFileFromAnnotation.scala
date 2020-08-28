@@ -34,7 +34,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
   val description = "Checks the protocol defined on a class or object with the Typestate annotation"
   val components: List[PluginComponent] = List[PluginComponent](Component)
-  var data: (Array[Array[State]], Array[State], Array[ReturnValue]) = _
 
   private object Component extends PluginComponent {
     val global: GetFileFromAnnotation.this.global.type = GetFileFromAnnotation.this.global
@@ -43,26 +42,32 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
     def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
+      var compilationUnit:CompilationUnit =_
       val Undefined = "_Undefined_"
       override def name: String = GetFileFromAnnotation.this.name
 
+      def getType[T: TypeTag](obj: T) = typeOf[T]
+
       def apply(unit: CompilationUnit): Unit = {
+        functionTraverser.traverse(unit.body)
+        //println(s"functions are ${functionTraverser.functions}")
+        this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
-          checkElement(unit, stats, tpname.toString(), tree) match{
+          checkElement(stats, tpname.toString(), tree) match{
             case Some(className) => setOfClassesWithProtocols += className
             case None =>
           }
         }
         for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
-          checkElement(unit, body, tname.toString(), tree, true) match{
+          checkElement(body, tname.toString(), tree, true) match{
             case Some(objectName) => setOfClassesWithProtocols += objectName
             case None =>
           }
         }
       }
 
-      def checkElement(unit:CompilationUnit, body:Seq[Trees#Tree], name:String, tree:Tree, isObject:Boolean=false): Option[String] ={
+      def checkElement(body:Seq[Trees#Tree], name:String, tree:Tree, isObject:Boolean=false): Option[String] ={
         val annotations = tree.symbol.annotations
         for(annotation@AnnotationInfo(arg1,arg2, arg3) <- annotations){
           getFilenameFromTypestateAnnotation(annotation) match{
@@ -79,7 +84,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               val methodToIndices = createMethodToIndicesMap(returnValuesArray)
               val classInfo = ClassInfo(name, transitions, states, methodToIndices, isObject)
               println("checking class "+classInfo.className)
-              checkClassIsUsedCorrectly(classInfo, unit)
+              checkClassIsUsedCorrectly(classInfo)
               Some(name)
             }
             case None => None
@@ -113,8 +118,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * Does not work with methods with parameters
        * Only works with code inside "App"
        * */
-      def checkClassIsUsedCorrectly(classInfo:ClassInfo, unit:CompilationUnit): Unit ={
-        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
+      def checkClassIsUsedCorrectly(classInfo:ClassInfo): Unit ={
+        for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body){
           for(parent <- parents){
             if(parent.toString() == "App") {
               checkBody(classInfo, body)
@@ -135,8 +140,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param classInfo
        * @param code
        */
-      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree]): Unit = {
-        var instances: Set[InstanceWithState] = Set()
+      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree], givenInstances:Set[InstanceWithState]=Set()): Unit = {
+        var instances: Set[InstanceWithState] = givenInstances
         if(classInfo.isObject) instances +=
           InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
         for (line <- code) {
@@ -192,19 +197,20 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
             nbOfLinesToSkip-=1 //because we are processing the current one already
             (None, nbOfLinesToSkip)
           }
-          case q"while ($cond) $expr" =>{
-            println("IN while loop")
-            println(expr)
-            dealWithLoopContents(classInfo, instances, expr)
+          case LabelDef(
+          TermName(name),
+          List(),
+          block @ Block(statements, Apply(Ident(TermName(name2)), List())))
+            if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
+            println("IN TRUE while loop")
+            dealWithLoopContents(classInfo, instances, block.asInstanceOf[Trees#Tree])
             var nbOfLinesToSkip = 0
             for(lineLine <- line) nbOfLinesToSkip+=1
             nbOfLinesToSkip-=1 //because we are processing the current one already
             (None, nbOfLinesToSkip)
           }
-          case q"while$$1($cond) $expr" =>{
-            println("IN TRUE while loop")
-            println(expr)
-            //dealWithForLoopContents(classInfo, instances, expr)
+          case q"while ($cond) $expr" =>{
+            dealWithLoopContents(classInfo, instances, expr)
             var nbOfLinesToSkip = 0
             for(lineLine <- line) nbOfLinesToSkip+=1
             nbOfLinesToSkip-=1 //because we are processing the current one already
@@ -213,16 +219,60 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           case q"do $expr while ($cond)" =>{
             dealWithLoopContents(classInfo, instances, expr)
             checkExpr(classInfo, expr, instances)
+            (None, 0)
+          }
+          case q"for (..$enums) yield $expr" =>{
+            dealWithLoopContents(classInfo, instances, expr)
             var nbOfLinesToSkip = 0
             for(lineLine <- line) nbOfLinesToSkip+=1
             nbOfLinesToSkip-=1 //because we are processing the current one already
-            (None, 0)
+            (None, nbOfLinesToSkip)
+          }
+          case app@Apply(Select(x, name), args) =>{
+            printBanner()
+            println(x.tpe.widen.toString())
+            println(x.tpe.widen.baseClasses)
+            println(x.tpe.widen.firstParent)
+            println(x.tpe.widen.directObjectString)
+            println(line)
+            println(line.symbol)
+            println(line.tpe)
+            println(line.children)
+            println(showRaw(line))
+            println(showRaw(name))
+            println(name)
+            println(name)
+            println(name)
+            println(args)
+            updateStateIfNeeded(classInfo, instances, line)
+            methodTraverser.traverse(app)
+            for(methodCall <- methodTraverser.methodCallInfo)
+              println(s"here ${methodCall(0)} ${methodCall(1)}")
+            methodTraverser.methodCallInfo = ListBuffer[Array[String]]()
+            //checkFunction(name, args, instances)
+            (None,0)
           }
           case _ => {
-            updateStateIfNeeded(classInfo, instances, line)
+            //updateStateIfNeeded(classInfo, instances, line)
             (None,0)
           }
         }
+      }
+
+      def checkFunction(name:Tree,args:List[Tree], instances:Set[InstanceWithState]): Unit ={
+        println(s"checking function $name with args $args")
+        val functions = functionTraverser.functions
+        for(function <- functions) {
+          function match{
+            case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
+              if(tname.toString() == name.toString()) println(s"found the correct function $function which matches $name")
+            case _ =>
+          }
+        }
+        functionTraverser.traverse(name)
+        println(s"fucntions are ${functionTraverser.functions}")
+        //see if there is a definition for the current function
+        //if so then check the contents of the function called
       }
 
       def dealWithLoopContents(classInfo:ClassInfo, instances:Set[InstanceWithState], expr:Trees#Tree): Unit ={
@@ -247,15 +297,16 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param line
        */
       def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.InstanceWithState], line:Trees#Tree): Unit ={
+        println(s"Line inside the update state function is $line")
         val methodToStateIndices = classInfo.methodToIndices
         val className = classInfo.className
         line match{
           case app@Apply(fun, args) => {
-            applyTraverser.traverse(app)
+            methodTraverser.traverse(app)
           }
           case _ =>
         }
-        val applies = applyTraverser.methodCallInfo
+        val applies = methodTraverser.methodCallInfo
         for(apply <- applies){
           val methodName = apply(0)
           val objectName = apply(1)
@@ -281,13 +332,13 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
           }
         }
         //reset the traverser's list to be empty
-        applyTraverser.methodCallInfo = ListBuffer[Array[String]]()
+        methodTraverser.methodCallInfo = ListBuffer[Array[String]]()
       }
 
       /** Traverses a tree and collects (methodName, objectName) from method application statements
        *
        */
-      object applyTraverser extends Traverser {
+      object methodTraverser extends Traverser {
         var methodCallInfo = ListBuffer[Array[String]]()
         override def traverse(tree: Tree): Unit = {
           tree match {
@@ -295,15 +346,30 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
               app match {
                 case q"$expr(...$exprss)" =>
                   expr match {
-                    case select@Select(qualifier, name) => methodCallInfo +=
-                      Array(name.toString().appendedAll(getParametersFromTree(exprss)),
-                        qualifier.symbol.name.toString)
+                    case select@Select(qualifier, name) => {
+                      methodCallInfo +=
+                        Array(name.toString().appendedAll(getParametersFromTree(exprss)),
+                          qualifier.symbol.name.toString)
+                    }
                     case _ =>
                   }
                 case _ =>
               }
               super.traverse(fun)
               super.traverseTrees(args)
+            case _ =>
+              super.traverse(tree)
+          }
+        }
+      }
+
+      /** Gathers function definitions in a tree inside "functions" */
+      object functionTraverser extends Traverser{
+        var functions = ListBuffer[Tree]()
+        override def traverse(tree: Tree): Unit = {
+          tree match {
+            case  func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
+              functions += func
             case _ =>
               super.traverse(tree)
           }
@@ -444,6 +510,8 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         file.delete
         stock
       }
+
+
 
       /** Gathers constructor instances in a tree inside "constructors" */
       object constructorTraverser extends Traverser{

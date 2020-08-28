@@ -21,16 +21,23 @@ class ProtocolLang {
   val Undefined = "_Undefined_"
   val Any = "_Any_"
 
+  var ended = false
+
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
+    checkProtocolHasNotBeenEnded()
     checkStateNameIsValid(stateName)
     currentState = createNewState(stateName)
     checkForDuplicateState(currentState)
     //Update datastructures
     states += currentState
     statesMap += (stateName -> currentState)
+  }
+
+  def checkProtocolHasNotBeenEnded(): Unit ={
+    if(ended) throw new Exception("You wrote protocol code after writing end, write all the protocol code before end")
   }
 
   def checkStateNameIsValid(stateName:String): Unit ={
@@ -54,6 +61,7 @@ class ProtocolLang {
   }
 
   def when(methodSignature:String) = {
+    checkProtocolHasNotBeenEnded()
     checkMethodSignatureIsValid(methodSignature)
     checkCurrentStateIsDefined()
     new Goto(methodSignature)
@@ -111,9 +119,9 @@ class ProtocolLang {
   }
 
 
-  /** creates a new return value or gets an existing one
+  /** Creates a new return value or gets an existing one
    *
-   * @return
+   * @return ReturnValue
    */
   def getOrCreateReturnValue(returnValue:String):ReturnValue={
     var newReturnValue = ReturnValue(currentMethod, returnValue, returnValueIndexCounter)
@@ -130,7 +138,6 @@ class ProtocolLang {
   class At(){
     def at(returnValue:String)={
       checkReturnValueIsValid(returnValue)
-
       //corrects return value in transition just defined
       val lastTransition = transitions.last
       if(lastTransition.returnValue.valueName == Any) { //last transition was the first for this method
@@ -178,6 +185,7 @@ class ProtocolLang {
 
   def end() = {
     checkWholeProtocolIsWellFormed()
+    ended = true
     //create the array, print it and encode it into EncodedData.ser
     val arrayOfStates = createArray()
     print(methods)
@@ -201,6 +209,7 @@ class ProtocolLang {
         throw new Exception(s"State ${transition.nextState}, " +
           s"used in state ${transition.startState} with method ${transition.method.name}, isn't defined")
     }
+    if(ended) throw new Exception("You used end multiple times in the protocol, only use end once!")
   }
 
   def createArray():Array[Array[State]] ={

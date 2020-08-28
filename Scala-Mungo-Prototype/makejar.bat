@@ -1,4 +1,4 @@
-@echo on
+@echo off
 
 IF NOT EXIST classes mkdir classes
 

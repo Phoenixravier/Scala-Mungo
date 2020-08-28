@@ -1,35 +1,61 @@
 package compilerPlugin
 
 import scala.language.postfixOps
-import scala.util.Random
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
-class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
-
-sealed trait DeathState
-case object Dead extends DeathState
-case object Alive extends DeathState
-case object Unsure extends DeathState
 
 object doMainThings {
   def main(args: Array[String]) {
     val cat = new Cat()
-    println("RIGHT BEFORE LOOP")
-    var x = 0
-    do {
-      for(y <- 1 to 100) cat.comeAlive()
-      cat.walk()
-      cat.comeAlive()
-      cat.walk()
-      x+=1
-    } while(x<10)
-    //cat.comeAlive()
-    println("RIGHT AFTER LOOP")
+    someFunction()
+    makeCatWalk(cat)
+    makeCatWalk(cat)
+    walk()
+    cat.comeAlive()
   }
+
+  def walk(): Unit ={
+    println("walking in the void")
+  }
+
+  def someFunction(): Unit ={
+    println("in some function")
+    goSomewhere()
+    class item(){
+
+    }
+    def goSomewhere(): Unit ={
+      def newF(): Unit ={
+        println("Yet another function")
+      }
+      println("going somewhere else")
+    }
+    def canyouREachMeTraverser(): Unit ={
+
+    }
+
+  }
+
+  def goSomewhere(): Unit ={
+    println("going somewhere")
+  }
+
+
+  def makeCatWalk(cat:Cat): Unit ={
+    cat.walk()
+  }
+
+  def makeCatComeAlive(cat:Cat): Unit ={
+    cat.comeAlive()
+  }
+
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
   class Cat{
+    def selfChange(kit:Cat): Unit ={
+      kit.walk()
+    }
     def newMeth(s:String):Unit = println("test")
     def comeAlive(s:String, i:Int):String = "alternative come alive"
     def comeAlive():Unit = println("The cat is alive")
@@ -37,29 +63,11 @@ object doMainThings {
     def rest():Unit = println("Resting")
     def walk():Unit = println("Walking")
     def sleep():Unit = println("Sleeping")
-    def die():DeathState = {
-      val randomGenerator = Random
-      val randomNumber = randomGenerator.nextDouble()
-      println(randomNumber)
-      if(randomNumber < 0.25) Dead
-      else if(randomNumber < 0.5) Alive
-      else if(randomNumber < 0.75) Unsure
-      else null
-    }
     def this(s:String)={
       this
     }
-
-    def createDog(str:String)={
-      val doggo = Dog
-      doggo
-    }
   }
 
-  @Nonsense(filename="fox.txt")
-  class Rubish{
-
-  }
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{

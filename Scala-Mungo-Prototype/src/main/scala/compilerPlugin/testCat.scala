@@ -2,14 +2,14 @@ package compilerPlugin
 
 import scala.util.Random
 
-/*
-class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+
+//class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 sealed trait DeathState
 case object Dead extends DeathState
 case object Alive extends DeathState
 case object Unsure extends DeathState
-*/
+
 
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\SomeProtocol.scala")
