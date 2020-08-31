@@ -2,7 +2,7 @@ package compilerPlugin
 
 import scala.util.Random
 
-
+/*
 //class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 sealed trait DeathState
@@ -25,7 +25,7 @@ class Cat{
     else if(randomNumber < 0.75) Unsure
     else null
   }
-}
+} */
 
 object Main extends App {
   val cat = new Cat()

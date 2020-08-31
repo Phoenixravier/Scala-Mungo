@@ -7,17 +7,29 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 object doMainThings {
   def main(args: Array[String]) {
-    val cat = new Cat()
+    val cat = new Cat
     someFunction()
     makeCatWalk(cat)
     makeCatWalk(cat)
     walkWithNoCat()
-    cat.comeAlive()
     cat.walk()
+    cat.comeAlive()
+    def dothgm(): Unit ={
+      val cat = new Cat()
+      cat.walk()
+    }
+    def dothgm2(): Unit ={
+      val cat = new Cat()
+      cat.walk()
+    }
+    println("sdfd")
   }
 
   def walkWithNoCat(): Unit ={
     println("walking in the void")
+    class anotherItem(){
+
+    }
   }
 
   def someFunction(): Unit ={
@@ -33,7 +45,11 @@ object doMainThings {
       println("going somewhere else")
     }
     def canyouREachMeTraverser(): Unit ={
+      def deeper(): Unit ={
+        def deeperest(): Unit ={
 
+        }
+      }
     }
 
   }
@@ -52,23 +68,6 @@ object doMainThings {
   }
 
 
-  @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
-  class Cat{
-    def selfChange(kit:Cat): Unit ={
-      kit.walk()
-    }
-    def newMeth(s:String):Unit = println("test")
-    def comeAlive(s:String, i:Int):String = "alternative come alive"
-    def comeAlive():Unit = println("The cat is alive")
-    def run():Unit = println("Running")
-    def rest():Unit = println("Resting")
-    def walk():Unit = println("Walking")
-    def sleep():Unit = println("Sleeping")
-    def this(s:String)={
-      this
-    }
-  }
-
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{
@@ -83,6 +82,23 @@ object doMainThings {
     def stayOnAlert(str:String, nb:Int): Unit ={
       println("on alert")
     }
+  }
+}
+
+@Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
+class Cat{
+  def selfChange(kit:Cat): Unit ={
+    kit.walk()
+  }
+  def newMeth(s:String):Unit = println("test")
+  def comeAlive(s:String, i:Int):String = "alternative come alive"
+  def comeAlive():Unit = println("The cat is alive")
+  def run():Unit = println("Running")
+  def rest():Unit = println("Resting")
+  def walk():Unit = println("Walking")
+  def sleep():Unit = println("Sleeping")
+  def this(s:String)={
+    this
   }
 }
 

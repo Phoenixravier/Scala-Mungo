@@ -14,13 +14,12 @@ import scala.reflect.api.Trees
 import util.control.Breaks._
 
 case class Instance(var className: String, var name:String, var currentStates:Set[State], var scope: String){
-
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
     this.currentStates -= stateToRemove
     this.currentStates += stateToAdd
   }
   override def toString(): String={
-    this.className + " " + this.name +" "+ this.currentStates
+    this.className + " " + this.name +" "+ this.currentStates+" "+scope
   }
 }
 
@@ -40,8 +39,11 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
 class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends PluginComponent {
     import global._
-    case class Function(name:String, body:Tree, scope:String)
-    //val global: compilerPlugin.GetFileFromAnnotation.this.global.type = compilerPlugin.GetFileFromAnnotation.this.global
+    case class Function(name:String, body:Tree, scope:String){
+      override def toString():String={
+        this.name + " " + this.scope
+      }
+    }
     val runsAfter: List[String] = List[String]("refchecks")
     val phaseName: String = "compilerPlugin.GetFileFromAnnotation.this.name"
     def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
@@ -55,7 +57,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
 
       def apply(unit: CompilationUnit): Unit = {
         functionTraverser.traverse(unit.body)
-        //println(s"functions are ${functionTraverser.functions}")
+        println(s"functions are ${functionTraverser.functions}")
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
@@ -233,23 +235,32 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
             nbOfLinesToSkip-=1 //because we are processing the current one already
             (None, nbOfLinesToSkip)
           }
-          case app@Apply(Select(x, name), args) =>{
+          case app@Apply(Select(calledOn, functionName), args) =>{
             printBanner()
-            println(x.tpe.widen.toString())
-            println(x.tpe.widen.baseClasses)
-            println(x.tpe.widen.firstParent)
-            println(x.tpe.widen.directObjectString)
+            val functionScope = app.symbol.fullNameString
+            var instanceScope = ""
+            if(calledOn.hasSymbolField) {
+              println("owner is "+calledOn.symbol.owner.ownerChain)
+              //instanceScope = calledOn.symbol.owner
+            }
+            println(calledOn.tpe.widen.toString())
+            println(calledOn.tpe)
             println(line)
-            println(line.symbol)
-            println(line.tpe)
-            println(line.children)
-            println(showRaw(line))
-            println(showRaw(name))
-            println(name)
-            println(name)
-            println(name)
+            println(functionName)
             println(args)
-            updateStateIfNeeded(classInfo, instances, line)
+            for (function <- functionTraverser.functions){
+              if(function.name == functionName.toString() && function.scope == functionScope) {
+                println("matched")
+                println(args)
+                //check parameters to see if they are instances we have already created
+                //find their new names in the function and replace those in the instances
+                //create hashmap to be able to retrieve them
+                //use checkExpr on the function body
+                //replace names using the hashmap
+
+              }
+            }
+            updateStateIfNeeded(classInfo, instances, line, instanceScope)
             methodTraverser.traverse(app)
             for(methodCall <- methodTraverser.methodCallInfo)
               println(s"here ${methodCall(0)} ${methodCall(1)}")
@@ -301,7 +312,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
        * @param instances
        * @param line
        */
-      def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.Instance], line:Trees#Tree): Unit ={
+      def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.Instance], line:Trees#Tree, scope:String): Unit ={
         println(s"Line inside the update state function is $line")
         val methodToStateIndices = classInfo.methodToIndices
         val className = classInfo.className
@@ -318,6 +329,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
           for (instance <- instances) {
             breakable {
               if (instance.name == objectName) {
+                instance.scope = scope
                 var newSetOfStates:Set[State] = Set()
                 for(state <- instance.currentStates) {
                   if (state.index == -2) break
@@ -370,11 +382,27 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
 
       /** Gathers function definitions in a tree inside "functions" */
       object functionTraverser extends Traverser{
-        var functions = ListBuffer[Tree]()
+        var functions = ListBuffer[Function]()
+        var scopes = mutable.Stack[String]()
+        var linesUntilReturn = ListBuffer[Int]()
         override def traverse(tree: Tree): Unit = {
+          if(linesUntilReturn.contains(0)) scopes.pop()
+          for(x <- linesUntilReturn.indices) if(linesUntilReturn(x) > -1) linesUntilReturn(x) -= 1
+          linesUntilReturn -= -1
           tree match {
             case  func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
-              functions += func
+              var nbLinesInExpr =0
+              var nbLinesInFunc = 0
+              for(line <- expr) nbLinesInExpr += 1
+              for(line <- func) nbLinesInFunc += 1
+              val differenceInLines = nbLinesInFunc - nbLinesInExpr
+              for(x <- linesUntilReturn.indices) if(linesUntilReturn(x) > -1) linesUntilReturn(x) -= differenceInLines
+              if(scopes.isEmpty) scopes.push(func.symbol.fullNameString)
+              else scopes.push(s"${scopes.head}.$tname")
+              functions += Function(tname.toString(), expr, scopes.head)
+              linesUntilReturn += nbLinesInExpr -1
+              println(linesUntilReturn)
+              super.traverse(expr)
             case _ =>
               super.traverse(tree)
           }
