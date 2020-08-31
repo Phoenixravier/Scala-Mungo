@@ -2,16 +2,18 @@ package compilerPlugin
 
 import java.io.{File, FileInputStream, ObjectInputStream}
 import java.nio.file.{Files, Paths}
+
 import scala.sys.process._
 import scala.tools.nsc.{Global, Phase}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import ProtocolDSL.{ReturnValue, State}
+
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 import util.control.Breaks._
 
-case class InstanceWithState(var className: String, var name:String, var currentStates:Set[State]){
+case class Instance(var className: String, var name:String, var currentStates:Set[State], var scope: String){
 
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
     this.currentStates -= stateToRemove
@@ -28,23 +30,26 @@ case class ClassInfo(className:String, transitions:Array[Array[State]], states:A
   }
 }
 
-class GetFileFromAnnotation(val global: Global) extends Plugin {
-  import global._
 
+class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
   val description = "Checks the protocol defined on a class or object with the Typestate annotation"
-  val components: List[PluginComponent] = List[PluginComponent](Component)
+  lazy val components =
+    new MyComponent(this, global) :: Nil
+}
 
-  private object Component extends PluginComponent {
-    val global: GetFileFromAnnotation.this.global.type = GetFileFromAnnotation.this.global
+class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends PluginComponent {
+    import global._
+    case class Function(name:String, body:Tree, scope:String)
+    //val global: compilerPlugin.GetFileFromAnnotation.this.global.type = compilerPlugin.GetFileFromAnnotation.this.global
     val runsAfter: List[String] = List[String]("refchecks")
-    val phaseName: String = GetFileFromAnnotation.this.name
+    val phaseName: String = "compilerPlugin.GetFileFromAnnotation.this.name"
     def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       var compilationUnit:CompilationUnit =_
       val Undefined = "_Undefined_"
-      override def name: String = GetFileFromAnnotation.this.name
+      override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
       def getType[T: TypeTag](obj: T) = typeOf[T]
 
@@ -140,10 +145,10 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param classInfo
        * @param code
        */
-      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree], givenInstances:Set[InstanceWithState]=Set()): Unit = {
-        var instances: Set[InstanceWithState] = givenInstances
+      def checkBody(classInfo:ClassInfo, code:Seq[Trees#Tree], givenInstances:Set[Instance]=Set()): Unit = {
+        var instances: Set[Instance] = givenInstances
         if(classInfo.isObject) instances +=
-          InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
+          Instance(classInfo.className, classInfo.className, Set(classInfo.states(0)), "")
         for (line <- code) {
             val newInstanceAndNbLinesToSkip = processLine(line, instances, classInfo)
             newInstanceAndNbLinesToSkip._1 match {
@@ -155,10 +160,10 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         instances.foreach(println)
       }
 
-      def checkExpr(classInfo:ClassInfo, code:Trees#Tree, givenInstances:Set[InstanceWithState]=Set()): Unit ={
-        var instances: Set[InstanceWithState] = givenInstances
+      def checkExpr(classInfo:ClassInfo, code:Trees#Tree, givenInstances:Set[Instance]=Set()): Unit ={
+        var instances: Set[Instance] = givenInstances
         if(classInfo.isObject) instances +=
-          InstanceWithState(classInfo.className, classInfo.className, Set(classInfo.states(0)))
+          Instance(classInfo.className, classInfo.className, Set(classInfo.states(0)), "")
         var nbOfLinesToSkip = 0
         for (line <- code) {
           breakable {
@@ -178,17 +183,17 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         instances.foreach(println)
       }
 
-      def processLine(line:Trees#Tree, instances: Set[InstanceWithState], classInfo:ClassInfo): (Option[InstanceWithState], Int) ={
+      def processLine(line:Trees#Tree, instances: Set[Instance], classInfo:ClassInfo): (Option[Instance], Int) ={
         val className = classInfo.className
         val states = classInfo.states
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             if (classNm.symbol.name.toString == className) {
-              (Some(InstanceWithState(className, tname.toString(), Set(states(0)))),0)
+              (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
             } else (None,0)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
             if (classNm.symbol.name.toString == className) {
-              (Some(InstanceWithState(className, tname.toString(), Set(states(0)))),0)
+              (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
             } else (None,0)
           case q"for (..$enums) $expr" => {
             dealWithLoopContents(classInfo, instances, expr)
@@ -259,7 +264,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
 
-      def checkFunction(name:Tree,args:List[Tree], instances:Set[InstanceWithState]): Unit ={
+      def checkFunction(name:Tree,args:List[Tree], instances:Set[Instance]): Unit ={
         println(s"checking function $name with args $args")
         val functions = functionTraverser.functions
         for(function <- functions) {
@@ -275,7 +280,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         //if so then check the contents of the function called
       }
 
-      def dealWithLoopContents(classInfo:ClassInfo, instances:Set[InstanceWithState], expr:Trees#Tree): Unit ={
+      def dealWithLoopContents(classInfo:ClassInfo, instances:Set[Instance], expr:Trees#Tree): Unit ={
         //deal with things defined inside the for loop (and nested for loops)
         checkExpr(classInfo, expr)
         //deal with instances already defined outside the for loop
@@ -296,7 +301,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
        * @param instances
        * @param line
        */
-      def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.InstanceWithState], line:Trees#Tree): Unit ={
+      def updateStateIfNeeded(classInfo:ClassInfo, instances: Set[compilerPlugin.Instance], line:Trees#Tree): Unit ={
         println(s"Line inside the update state function is $line")
         val methodToStateIndices = classInfo.methodToIndices
         val className = classInfo.className
@@ -544,5 +549,4 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
         }
       }
     }
-  }
 }

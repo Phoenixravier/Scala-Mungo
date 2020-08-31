@@ -2,6 +2,7 @@
 import java.io.{BufferedWriter, ByteArrayOutputStream, File, FileWriter}
 
 import compilerPlugin.GetFileFromAnnotation
+import compilerPlugin.MyComponent
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.VirtualDirectory
@@ -279,9 +280,9 @@ class PluginTest extends FlatSpec with Matchers {
         "check you have an end statement at the end of the protocol")
   }
 
-  /*
-  LOOPS
-   */
+  /* -----------------
+         LOOPS
+   -------------------*/
 
   "plugin" should "throw an exception if an instance violates its protocol inside a for loop" in {
     val userProtocol =

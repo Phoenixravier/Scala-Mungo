@@ -11,11 +11,12 @@ object doMainThings {
     someFunction()
     makeCatWalk(cat)
     makeCatWalk(cat)
-    walk()
+    walkWithNoCat()
     cat.comeAlive()
+    cat.walk()
   }
 
-  def walk(): Unit ={
+  def walkWithNoCat(): Unit ={
     println("walking in the void")
   }
 
