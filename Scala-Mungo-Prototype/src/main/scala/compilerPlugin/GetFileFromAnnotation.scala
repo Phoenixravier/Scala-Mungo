@@ -39,9 +39,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
 class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends PluginComponent {
     import global._
-    case class Function(name:String, body:Tree, scope:String){
+    case class Function(name:String, params:ArrayBuffer[Array[String]], body:Tree, scope:String){
       override def toString():String={
-        this.name + " " + this.scope
+        this.name + " " + this.params + " " + this.scope
       }
     }
     val runsAfter: List[String] = List[String]("refchecks")
@@ -57,17 +57,16 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
 
       def apply(unit: CompilationUnit): Unit = {
         functionTraverser.traverse(unit.body)
-        println(s"functions are ${functionTraverser.functions}")
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
-          checkElement(stats, tpname.toString(), tree) match{
+          checkElement(stats, getScope(tree)+s".${tpname.toString()}", tree) match{
             case Some(className) => setOfClassesWithProtocols += className
             case None =>
           }
         }
         for(tree@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body){
-          checkElement(body, tname.toString(), tree, true) match{
+          checkElement(body, getScope(tree), tree, true) match{
             case Some(objectName) => setOfClassesWithProtocols += objectName
             case None =>
           }
@@ -190,11 +189,11 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
         val states = classInfo.states
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
-            if (classNm.symbol.name.toString == className) {
+            if (getScope(classNm) + s".${classNm.toString()}" == className) {
               (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
             } else (None,0)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
-            if (classNm.symbol.name.toString == className) {
+            if (getScope(classNm)  == className) {
               (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
             } else (None,0)
           case q"for (..$enums) $expr" => {
@@ -204,12 +203,12 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
             nbOfLinesToSkip-=1 //because we are processing the current one already
             (None, nbOfLinesToSkip)
           }
+            //while(true) and dowhile(true)
           case LabelDef(
           TermName(name),
           List(),
           block @ Block(statements, Apply(Ident(TermName(name2)), List())))
             if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
-            println("IN TRUE while loop")
             dealWithLoopContents(classInfo, instances, block.asInstanceOf[Trees#Tree])
             var nbOfLinesToSkip = 0
             for(lineLine <- line) nbOfLinesToSkip+=1
@@ -236,43 +235,59 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
             (None, nbOfLinesToSkip)
           }
           case app@Apply(Select(calledOn, functionName), args) =>{
-            printBanner()
-            val functionScope = app.symbol.fullNameString
-            var instanceScope = ""
-            if(calledOn.hasSymbolField) {
-              println("owner is "+calledOn.symbol.owner.ownerChain)
-              //instanceScope = calledOn.symbol.owner
-            }
-            println(calledOn.tpe.widen.toString())
-            println(calledOn.tpe)
-            println(line)
-            println(functionName)
-            println(args)
+            println("found function call "+app+" on line "+line)
+            val functionScope = getScope(app, true)
+            val instanceScope = getScope(calledOn)
             for (function <- functionTraverser.functions){
               if(function.name == functionName.toString() && function.scope == functionScope) {
-                println("matched")
-                println(args)
-                //check parameters to see if they are instances we have already created
-                //find their new names in the function and replace those in the instances
-                //create hashmap to be able to retrieve them
-                //use checkExpr on the function body
-                //replace names using the hashmap
-
+                println(s"matched ${function.name}")
+                var paramNameToInstanceName = new mutable.HashMap[String, String]
+                var argCounter = 0
+                for(arg <- args){
+                  for(instance <- instances){
+                    if(instance.name == arg.toString() && (instance.scope == instanceScope || instance.scope == "")) {
+                      println("matched instances")
+                      val paramName = function.params(argCounter)(0)
+                      paramNameToInstanceName += paramName -> instance.name
+                      instance.name = paramName
+                    }
+                  }
+                  argCounter += 1
+                }
+                println("checking inside body "+function.body)
+                checkExpr(classInfo, function.body, instances)
+                for(mapping <- paramNameToInstanceName) {
+                  for(instance <- instances) if(instance.name == mapping._1) instance.name = mapping._2
+                }
               }
             }
             updateStateIfNeeded(classInfo, instances, line, instanceScope)
-            methodTraverser.traverse(app)
-            for(methodCall <- methodTraverser.methodCallInfo)
-              println(s"here ${methodCall(0)} ${methodCall(1)}")
-            methodTraverser.methodCallInfo = ListBuffer[Array[String]]()
-            //checkFunction(name, args, instances)
-            (None,0)
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None,nbOfLinesToSkip)
+          }
+          case func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => {
+            var nbOfLinesToSkip = 0
+            for(lineLine <- line) nbOfLinesToSkip+=1
+            nbOfLinesToSkip-=1 //because we are processing the current one already
+            (None,nbOfLinesToSkip)
           }
           case _ => {
             //updateStateIfNeeded(classInfo, instances, line)
             (None,0)
           }
         }
+      }
+
+      def getScope(obj:Tree, dontCheck:Boolean = false): String ={
+        var objectScope = ""
+        if(obj.hasSymbolField || dontCheck) {
+          for (symbol <- obj.symbol.owner.ownerChain.reverse)
+            objectScope += symbol.name + "."
+          objectScope = objectScope.substring(0, objectScope.lastIndexOf('.'))
+        }
+        objectScope
       }
 
       def checkFunction(name:Tree,args:List[Tree], instances:Set[Instance]): Unit ={
@@ -322,13 +337,13 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
           }
           case _ =>
         }
-        val applies = methodTraverser.methodCallInfo
-        for(apply <- applies){
-          val methodName = apply(0)
-          val objectName = apply(1)
+        val methodCallInfos = methodTraverser.methodCallInfo
+        for(methodCallInfo <- methodCallInfos){
+          val methodName = methodCallInfo(0)
+          val objectName = methodCallInfo(1)
           for (instance <- instances) {
             breakable {
-              if (instance.name == objectName) {
+              if (instance.name == objectName && (instance.scope == "" || instance.scope == scope)) {
                 instance.scope = scope
                 var newSetOfStates:Set[State] = Set()
                 for(state <- instance.currentStates) {
@@ -336,9 +351,11 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
                   if (methodToStateIndices.contains(methodName)) {
                     val indexSet = methodToStateIndices(methodName)
                     val newState = classInfo.transitions(state.index)(indexSet.head)
-                    if (newState.name == Undefined)
+                    if (newState.name == Undefined) {
                       throw new Exception(s"Invalid transition in object $objectName of type $className " +
-                        s"from state(s) ${instance.currentStates} with method $methodName")
+                        s"from state(s) ${instance.currentStates} with method $methodName " +
+                        s"in file ${line.pos.source} at line ${line.pos.line}")
+                    }
                     newSetOfStates += newState
                   }
                   else instance.currentStates = Set(State("unknown", -2))
@@ -383,25 +400,13 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
       /** Gathers function definitions in a tree inside "functions" */
       object functionTraverser extends Traverser{
         var functions = ListBuffer[Function]()
-        var scopes = mutable.Stack[String]()
-        var linesUntilReturn = ListBuffer[Int]()
         override def traverse(tree: Tree): Unit = {
-          if(linesUntilReturn.contains(0)) scopes.pop()
-          for(x <- linesUntilReturn.indices) if(linesUntilReturn(x) > -1) linesUntilReturn(x) -= 1
-          linesUntilReturn -= -1
           tree match {
             case  func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
-              var nbLinesInExpr =0
-              var nbLinesInFunc = 0
-              for(line <- expr) nbLinesInExpr += 1
-              for(line <- func) nbLinesInFunc += 1
-              val differenceInLines = nbLinesInFunc - nbLinesInExpr
-              for(x <- linesUntilReturn.indices) if(linesUntilReturn(x) > -1) linesUntilReturn(x) -= differenceInLines
-              if(scopes.isEmpty) scopes.push(func.symbol.fullNameString)
-              else scopes.push(s"${scopes.head}.$tname")
-              functions += Function(tname.toString(), expr, scopes.head)
-              linesUntilReturn += nbLinesInExpr -1
-              println(linesUntilReturn)
+              val parameters = getParametersWithInstanceNames(paramss)
+              if(tname.toString() != "<init>")
+                functions += Function(tname.toString(),parameters, expr,getScope(func))
+              println("function is "+ func+" body is "+expr)
               super.traverse(expr)
             case _ =>
               super.traverse(tree)
@@ -511,15 +516,39 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
       def getParameters(params:List[List[ValDef]]): String ={
         params match{
           case List(List()) => ""
-          case List(List(value)) => value.tpt.toString()
+          case List(List(value)) => {
+            println(value.name.toString())
+            value.tpt.toString()
+          }
           case List(values) => {
             var parameters:ArrayBuffer[String] = ArrayBuffer()
             for(elem <- values){
+              println(elem.name.toString())
               parameters += elem.tpt.toString
             }
             parameters.mkString(",")
           }
           case _ => ""
+        }
+      }
+
+      def getParametersWithInstanceNames(params:List[List[ValDef]]): ArrayBuffer[Array[String]] ={
+        params match{
+          case List(List()) => ArrayBuffer(Array(""))
+          case List(List(value)) => {
+            println(value.name.toString())
+            value.tpt.toString()
+            ArrayBuffer(Array(value.name.toString(), value.tpt.toString()))
+          }
+          case List(values) => {
+            var parameters:ArrayBuffer[Array[String]] = ArrayBuffer()
+            for(elem <- values){
+              println(elem.name.toString())
+              parameters += Array(elem.name.toString(), elem.tpt.toString)
+            }
+            parameters
+          }
+          case _ => ArrayBuffer()
         }
       }
 

@@ -1,5 +1,6 @@
 package compilerPlugin
 
+
 import scala.language.postfixOps
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
@@ -7,22 +8,30 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 object doMainThings {
   def main(args: Array[String]) {
-    val cat = new Cat
+    dothgm()
+    val kat = new Cat()
     someFunction()
-    makeCatWalk(cat)
-    makeCatWalk(cat)
+    makeCatWalk(kat)
+    makeCatWalk(kat)
     walkWithNoCat()
-    cat.walk()
-    cat.comeAlive()
-    def dothgm(): Unit ={
-      val cat = new Cat()
-      cat.walk()
-    }
+    kat.walk()
+    kat.comeAlive()
+
     def dothgm2(): Unit ={
       val cat = new Cat()
       cat.walk()
     }
     println("sdfd")
+  }
+
+  def init(){
+  }
+
+
+  def dothgm(): Unit ={
+    val cat = new Cat()
+    cat.walk()
+    cat.walk()
   }
 
   def walkWithNoCat(): Unit ={
@@ -59,18 +68,18 @@ object doMainThings {
   }
 
 
-  def makeCatWalk(cat:Cat): Unit ={
-    cat.walk()
+  def makeCatWalk(kitty:Cat): Unit ={
+    kitty.walk()
   }
 
-  def makeCatComeAlive(cat:Cat): Unit ={
-    cat.comeAlive()
+  def makeCatComeAlive(catToLive:Cat): Unit ={
+    catToLive.comeAlive()
   }
 
 
 
   @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
-  object Dog extends Serializable{
+  class Dog extends Serializable{
     def walk():Unit = println("Yee kavelemme!")
     def cry():Unit = println("Itkeen :'(")
     def bark():Unit = println("hau hau")
@@ -87,6 +96,8 @@ object doMainThings {
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
+
+  println("help")
   def selfChange(kit:Cat): Unit ={
     kit.walk()
   }
