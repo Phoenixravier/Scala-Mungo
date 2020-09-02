@@ -25,7 +25,7 @@ class Cat{
     else if(randomNumber < 0.75) Unsure
     else null
   }
-} */
+}
 
 object Main extends App {
   val cat = new Cat()
@@ -39,3 +39,4 @@ object Main extends App {
   }
   cat.comeAlive()
 }
+*/

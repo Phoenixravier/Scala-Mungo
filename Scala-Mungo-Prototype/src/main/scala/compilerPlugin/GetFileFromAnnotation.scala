@@ -57,6 +57,8 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
 
       def apply(unit: CompilationUnit): Unit = {
         functionTraverser.traverse(unit.body)
+        printBanner()
+        println(functionTraverser.functions)
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" <- unit.body) {
@@ -151,7 +153,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
         if(classInfo.isObject) instances +=
           Instance(classInfo.className, classInfo.className, Set(classInfo.states(0)), "")
         for (line <- code) {
-            val newInstanceAndNbLinesToSkip = processLine(line, instances, classInfo)
+            val newInstanceAndNbLinesToSkip =   processLine(line, instances, classInfo)
             newInstanceAndNbLinesToSkip._1 match {
               case Some(instance) => instances += instance
               case None =>
@@ -178,6 +180,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
               case None =>
             }
             nbOfLinesToSkip = newInstanceAndNbLinesToSkip._2
+
           }
         }
         println("\nInstances:")
@@ -190,7 +193,9 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             if (getScope(classNm) + s".${classNm.toString()}" == className) {
-              (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
+              printBanner()
+              println(line.symbol.fullName)
+              (Some(Instance(className, tname.toString(), Set(states(0)),"")),0)
             } else (None,0)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
             if (getScope(classNm)  == className) {
@@ -235,7 +240,8 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
             (None, nbOfLinesToSkip)
           }
           case app@Apply(Select(calledOn, functionName), args) =>{
-            println("found function call "+app+" on line "+line)
+            println("found function call "+app)
+            println("id is "+calledOn.id)
             val functionScope = getScope(app, true)
             val instanceScope = getScope(calledOn)
             for (function <- functionTraverser.functions){

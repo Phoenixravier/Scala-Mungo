@@ -9,28 +9,24 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 object doMainThings {
   def main(args: Array[String]) {
     dothgm()
-    val kat = new Cat()
-    someFunction()
+    val kat, kitkat = new Cat(0)
+    //someFunction()
     makeCatWalk(kat)
-    makeCatWalk(kat)
-    walkWithNoCat()
+    //makeCatWalk(kat)
+    //walkWithNoCat()
     kat.walk()
-    kat.comeAlive()
+    //kat.comeAlive()
 
     def dothgm2(): Unit ={
-      val cat = new Cat()
-      cat.walk()
+      val cat = new Cat(1)
+      cat.comeAlive()
     }
-    println("sdfd")
+    //dothgm2()
+    //println("sdfd")
   }
-
-  def init(){
-  }
-
 
   def dothgm(): Unit ={
-    val cat = new Cat()
-    cat.walk()
+    val cat = new Cat(2)
     cat.walk()
   }
 
@@ -95,7 +91,7 @@ object doMainThings {
 }
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
-class Cat{
+class Cat(id:Int){
 
   println("help")
   def selfChange(kit:Cat): Unit ={
@@ -106,11 +102,8 @@ class Cat{
   def comeAlive():Unit = println("The cat is alive")
   def run():Unit = println("Running")
   def rest():Unit = println("Resting")
-  def walk():Unit = println("Walking")
+  def walk():Unit = println(this.id+" Walking")
   def sleep():Unit = println("Sleeping")
-  def this(s:String)={
-    this
-  }
 }
 
 
