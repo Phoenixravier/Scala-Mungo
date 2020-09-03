@@ -12,7 +12,7 @@ object doMainThings {
     val kat, kitkat = new Cat(0)
     //someFunction()
     makeCatWalk(kat)
-    //makeCatWalk(kat)
+    makeCatWalk(kat)
     //walkWithNoCat()
     kat.walk()
     //kat.comeAlive()
@@ -23,11 +23,17 @@ object doMainThings {
     }
     //dothgm2()
     //println("sdfd")
+
+  }
+
+  def makeCatWalk(kitty:Cat): Unit ={
+    kitty.walk()
   }
 
   def dothgm(): Unit ={
     val cat = new Cat(2)
     cat.walk()
+    //cat.walk()
   }
 
   def walkWithNoCat(): Unit ={
@@ -64,9 +70,7 @@ object doMainThings {
   }
 
 
-  def makeCatWalk(kitty:Cat): Unit ={
-    kitty.walk()
-  }
+
 
   def makeCatComeAlive(catToLive:Cat): Unit ={
     catToLive.comeAlive()
@@ -74,7 +78,7 @@ object doMainThings {
 
 
 
-  @Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
+  //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   class Dog extends Serializable{
     def walk():Unit = println("Yee kavelemme!")
     def cry():Unit = println("Itkeen :'(")
@@ -90,10 +94,12 @@ object doMainThings {
   }
 }
 
+
+
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat(id:Int){
 
-  println("help")
+  println("init "+id)
   def selfChange(kit:Cat): Unit ={
     kit.walk()
   }

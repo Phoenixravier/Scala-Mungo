@@ -50,6 +50,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
 
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       var compilationUnit:CompilationUnit =_
+      var currentScope:List[String] = List()
       val Undefined = "_Undefined_"
       override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -135,7 +136,9 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
           }
           for (definition <- body){
             definition match{
-              case q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
+              case line@q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
+                currentScope.::(line.symbol.owner)
+                println(currentScope)
                 if(getParameters(paramss) == "Array[String]") checkExpr(classInfo, expr)
               case _ =>
             }
@@ -190,16 +193,31 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
       def processLine(line:Trees#Tree, instances: Set[Instance], classInfo:ClassInfo): (Option[Instance], Int) ={
         val className = classInfo.className
         val states = classInfo.states
+        printBanner()
+
+        def getLineScope() = {
+          var scopeList: List[String] = Nil
+          if (line.symbol != null) {
+            var parent = line.symbol.owner
+            while (parent.toString != "<none>") {
+              scopeList = scopeList.::(parent.name.toString)
+              parent = parent.owner
+            }
+          }
+          scopeList.mkString(".")
+        }
+
+        //val currentScope: String = getLineScope()
+        println(s"current scope at top of line $line at line number ${line.pos.line} is "+currentScope)
+
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             if (getScope(classNm) + s".${classNm.toString()}" == className) {
-              printBanner()
-              println(line.symbol.fullName)
-              (Some(Instance(className, tname.toString(), Set(states(0)),"")),0)
+              (Some(Instance(className, tname.toString(), Set(states(0)),currentScope)),0)
             } else (None,0)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
             if (getScope(classNm)  == className) {
-              (Some(Instance(className, tname.toString(), Set(states(0)), "")),0)
+              (Some(Instance(className, tname.toString(), Set(states(0)), currentScope)),0)
             } else (None,0)
           case q"for (..$enums) $expr" => {
             dealWithLoopContents(classInfo, instances, expr)
@@ -241,9 +259,13 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
           }
           case app@Apply(Select(calledOn, functionName), args) =>{
             println("found function call "+app)
-            println("id is "+calledOn.id)
+            println("updating current scope")
+            currentScope.::(functionName.toString())
+            println(instances)
             val functionScope = getScope(app, true)
+            println("current scope is "+currentScope)
             val instanceScope = getScope(calledOn)
+            println("instance scope is "+instanceScope)
             for (function <- functionTraverser.functions){
               if(function.name == functionName.toString() && function.scope == functionScope) {
                 println(s"matched ${function.name}")
@@ -251,7 +273,7 @@ class MyComponent(plugin: GetFileFromAnnotation, val global: Global) extends Plu
                 var argCounter = 0
                 for(arg <- args){
                   for(instance <- instances){
-                    if(instance.name == arg.toString() && (instance.scope == instanceScope || instance.scope == "")) {
+                    if(instance.name == arg.toString() && instance.scope == currentScope) {
                       println("matched instances")
                       val paramName = function.params(argCounter)(0)
                       paramNameToInstanceName += paramName -> instance.name
