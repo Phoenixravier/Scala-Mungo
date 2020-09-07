@@ -6,80 +6,34 @@ import scala.language.postfixOps
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
-object doMainThings {
-  def main(args: Array[String]) {
-    dothgm()
-    val kat, kitkat = new Cat(0)
-    //someFunction()
-    makeCatWalk(kat)
-    makeCatWalk(kat)
-    //walkWithNoCat()
-    kat.walk()
-    //kat.comeAlive()
 
-    def dothgm2(): Unit ={
-      val cat = new Cat(1)
-      cat.comeAlive()
-    }
-    //dothgm2()
-    //println("sdfd")
+object doMainThings{
+  println("in main things")
+  def main(args: Array[String]): Unit = {
+    val cat = new Cat(0)
+    Dog
+  }
+  println("still in main things")
 
+  def makeCatWalk(set:Cat): Unit ={
+    set.walk()
+    set.walk()
   }
 
-  def makeCatWalk(kitty:Cat): Unit ={
-    kitty.walk()
-  }
-
-  def dothgm(): Unit ={
-    val cat = new Cat(2)
+  object notMain{
+    println("not main")
+    println("don't execute this")
+    val cat = new Cat(4)
     cat.walk()
-    //cat.walk()
+    cat.walk()
   }
-
-  def walkWithNoCat(): Unit ={
-    println("walking in the void")
-    class anotherItem(){
-
-    }
-  }
-
-  def someFunction(): Unit ={
-    println("in some function")
-    goSomewhere()
-    class item(){
-
-    }
-    def goSomewhere(): Unit ={
-      def newF(): Unit ={
-        println("Yet another function")
-      }
-      println("going somewhere else")
-    }
-    def canyouREachMeTraverser(): Unit ={
-      def deeper(): Unit ={
-        def deeperest(): Unit ={
-
-        }
-      }
-    }
-
-  }
-
-  def goSomewhere(): Unit ={
-    println("going somewhere")
-  }
-
-
-
-
-  def makeCatComeAlive(catToLive:Cat): Unit ={
-    catToLive.comeAlive()
-  }
-
-
 
   //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
-  class Dog extends Serializable{
+  object Dog extends Serializable{
+    println("made a dog")
+    val cat = new Cat(1)
+    cat.walk()
+    cat.walk()
     def walk():Unit = println("Yee kavelemme!")
     def cry():Unit = println("Itkeen :'(")
     def bark():Unit = println("hau hau")
@@ -94,12 +48,17 @@ object doMainThings {
   }
 }
 
+object Trash{
+
+}
 
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat(id:Int){
-
   println("init "+id)
+  walk()
+  walk()
+
   def selfChange(kit:Cat): Unit ={
     kit.walk()
   }
@@ -108,7 +67,10 @@ class Cat(id:Int){
   def comeAlive():Unit = println("The cat is alive")
   def run():Unit = println("Running")
   def rest():Unit = println("Resting")
-  def walk():Unit = println(this.id+" Walking")
+  def walk():Boolean = {
+    println("walking "+id)
+    false
+  }
   def sleep():Unit = println("Sleeping")
 }
 

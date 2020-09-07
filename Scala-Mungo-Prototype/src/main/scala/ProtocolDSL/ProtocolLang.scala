@@ -148,6 +148,7 @@ class ProtocolLang {
       }
       else lastTransition.returnValue.valueName = returnValue
 
+      currentMethod.indices += lastTransition.returnValue.index
       //replaces the transition with one with the correct return value
       transitions.dropRight(1)
       transitions.add(lastTransition)
@@ -174,10 +175,10 @@ class ProtocolLang {
     def or(nextState:String) ={
       //create a new return value with undefined as the name and add a new Transition with it
       var returnValue = ReturnValue(currentMethod, Undefined, returnValueIndexCounter)
-      returnValueIndexCounter +=1
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //Updates
       currentMethod.indices += returnValueIndexCounter
+      returnValueIndexCounter +=1
       returnValues += returnValue
       new At()
     }
@@ -188,7 +189,8 @@ class ProtocolLang {
     ended = true
     //create the array, print it and encode it into EncodedData.ser
     val arrayOfStates = createArray()
-    print(methods)
+    println(methods)
+    println(returnValues)
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }
