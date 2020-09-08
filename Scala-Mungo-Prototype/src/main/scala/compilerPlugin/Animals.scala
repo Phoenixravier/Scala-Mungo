@@ -10,9 +10,10 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 object doMainThings{
   println("in main things")
   def main(args: Array[String]): Unit = {
-    new Cat(1)
+    val kat = new Cat(1)
+    new CatMaker(kat)
+    Dog
     Dog.walk()
-
   }
   println("still in main things")
 
@@ -28,6 +29,7 @@ object doMainThings{
     cat.walk()
     cat.walk()
   }
+
 
   //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{
@@ -53,11 +55,12 @@ object Trash{
 
 }
 
-class CatMaker(){
-  val kitty = new Cat(2)
-  kitty.walk()
-  kitty.walk()
+class CatMaker(cat:Cat){
+  cat.walk()
+  cat.walk()
 }
+
+
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat(id:Int){

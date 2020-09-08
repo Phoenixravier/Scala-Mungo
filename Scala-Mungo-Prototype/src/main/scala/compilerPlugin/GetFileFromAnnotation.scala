@@ -51,7 +51,7 @@ class MyComponent(val global: Global) extends PluginComponent {
   import global._
   case class Function(name: String, params: ArrayBuffer[Array[String]], body: Tree, scope: String) {
     override def toString(): String = {
-      this.name + " " + this.params + " " + this.scope
+      s"name: $name parameters: $params scope: $scope"
     }
   }
   val runsAfter: List[String] = List[String]("refchecks")
@@ -71,7 +71,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         classAndObjectTraverser.traverse(unit.body)
         println(classAndObjectTraverser.classesAndObjects)
         functionTraverser.traverse(unit.body)
-        println(functionTraverser.functions)
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $className[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body) {
@@ -141,6 +140,8 @@ class MyComponent(val global: Global) extends PluginComponent {
        * Does not deal with try-catch
        * Does not deal with if on its own
        * Does not deal with code on itself in constructor
+       * Does not deal with companion objects
+       * Does not deal with code inside parameters and conditions
        * */
       def checkClassIsUsedCorrectly(): Unit ={
         for(line@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body){
@@ -323,6 +324,27 @@ class MyComponent(val global: Global) extends PluginComponent {
 
       def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance]):Set[Instance] = {
         println("found function call "+funcCall)
+        println("its raw form is "+showRaw(funcCall))
+        println("it has name "+functionName)
+        println("it has args "+args)
+
+        funcCall match{
+          case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+            parents match {
+              case List(Apply(expr, arg2)) =>
+                printBanner()
+                println("matched new " + expr)
+                for (element <- classAndObjectTraverser.classesAndObjects
+                     if(!element.isObject && element.name == expr.toString()
+                       && element.scope == getScope(expr))) {
+                  println("worked")
+                  checkInsideAppBody(element.body, instances)
+                  }
+              case _ =>
+            }
+          case _ =>
+        }
+
         //finding function definition
         val functionScope = getScope(funcCall, true)
         for (function <- functionTraverser.functions){
@@ -474,8 +496,20 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
 
-      case class ClassOrObject(name:String, body:Seq[Trees#Tree], scope:String, isObject:Boolean=false, met:Boolean=false){
-        override def toString(): String={ s"$name $scope" }
+      case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:String,  isObject:Boolean=false, met:Boolean=false){
+        override def toString(): String={ s"$name ${showParams(params)} $scope" }
+
+        def showParams(params:ArrayBuffer[Array[String]]):String={
+          var parameters = ""
+          for(param <- params) {
+            for(par <- param)
+              parameters += par+": "
+            parameters += " ; "
+          }
+
+          parameters
+        }
+
       }
 
       object classAndObjectTraverser extends Traverser{
@@ -483,10 +517,11 @@ class MyComponent(val global: Global) extends PluginComponent {
         override def traverse(tree: Tree): Unit = {
           tree match{
             case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-              classesAndObjects += ClassOrObject(tname.toString(), body, getScope(obj), true)
+              classesAndObjects += ClassOrObject(tname.toString(), ArrayBuffer(), body, getScope(obj), isObject = true)
               super.traverse(obj)
             case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-              classesAndObjects += ClassOrObject(tpname.toString(), stats, getScope(cla))
+              val parameters = getParametersWithInstanceNames(paramss)
+              classesAndObjects += ClassOrObject(tpname.toString(), parameters, stats, getScope(cla))
               super.traverse(cla)
             case _ =>
               super.traverse(tree)
