@@ -1311,6 +1311,71 @@ class PluginTest extends FlatSpec with Matchers {
       "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 28")
   }
 
+  "plugin" should "throw an exception if an instance violates its protocol inside an outer functions called by an inner one in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  makeCatComeAlive(cat)
+        |
+        |  def makeCatComeAlive(kitty:Cat): Unit ={
+        |      val cat = new Cat()
+        |    makeCatWalk(cat)
+        |    def makeCatWalk(cat:Cat): Unit ={
+        |      makeWalk(cat)
+        |      def makeWalk(cat:Cat): Unit ={
+        |        walk(cat)
+        |        walk(cat)
+        |      }
+        |    }
+        |
+        |    def walk(cat:Cat): Unit ={
+        |      cat.walk()
+        |    }
+        |   }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 32")
+  }
+
   "plugin" should "throw an exception if an instance defined in a function violates its protocol inside the function" in {
     val userProtocol =
       """

@@ -10,8 +10,9 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 object doMainThings{
   println("in main things")
   def main(args: Array[String]): Unit = {
-    val cat = new Cat(0)
-    Dog
+    new Cat(1)
+    Dog.walk()
+
   }
   println("still in main things")
 
@@ -34,7 +35,7 @@ object doMainThings{
     val cat = new Cat(1)
     cat.walk()
     cat.walk()
-    def walk():Unit = println("Yee kavelemme!")
+    def walk():Unit = println("Jee kävelemme!")
     def cry():Unit = println("Itkeen :'(")
     def bark():Unit = println("hau hau")
     def laze():Unit = println("Olen vasinyt")
@@ -52,12 +53,16 @@ object Trash{
 
 }
 
+class CatMaker(){
+  val kitty = new Cat(2)
+  kitty.walk()
+  kitty.walk()
+}
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat(id:Int){
   println("init "+id)
-  walk()
-  walk()
+
 
   def selfChange(kit:Cat): Unit ={
     kit.walk()

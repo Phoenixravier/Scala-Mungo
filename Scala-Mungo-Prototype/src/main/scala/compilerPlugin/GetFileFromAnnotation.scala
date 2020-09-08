@@ -71,8 +71,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         classAndObjectTraverser.traverse(unit.body)
         println(classAndObjectTraverser.classesAndObjects)
         functionTraverser.traverse(unit.body)
-        constructorTraverser.traverse(unit.body)
-        println(constructorTraverser.constructors)
+        println(functionTraverser.functions)
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $className[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body) {
@@ -141,6 +140,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        * Does not deal with objects returned by a function
        * Does not deal with try-catch
        * Does not deal with if on its own
+       * Does not deal with code on itself in constructor
        * */
       def checkClassIsUsedCorrectly(): Unit ={
         for(line@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body){
@@ -167,8 +167,9 @@ class MyComponent(val global: Global) extends PluginComponent {
        *
        * @param code
        */
-      def checkInsideAppBody(code:Seq[Trees#Tree], givenInstances:Set[Instance]=Set()): Unit = {
+      def checkInsideAppBody(code:Seq[Trees#Tree], givenInstances:Set[Instance]=Set()): Set[Instance] = {
         var instances: Set[Instance] = givenInstances
+        for(instance <- givenInstances) instances += Instance(instance.className, instance.name, instance.currentStates, instance.scope)
         if(classInfo.isObject) instances +=Instance(classInfo.className, classInfo.className, Set(classInfo.states(0)), currentScope.clone())
         for (line <- code) {
             val newInstanceAndNbLinesToSkip = processLine(line, instances)
@@ -176,6 +177,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
         println("\nInstances:")
         instances.foreach(println)
+        instances
       }
 
       def checkInsideMainBody(code:Trees#Tree, givenInstances:Set[Instance]=Set()): Set[Instance] ={
@@ -199,6 +201,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         instances
       }
 
+
+
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
         val className = classInfo.className
         val states = classInfo.states
@@ -206,21 +210,11 @@ class MyComponent(val global: Global) extends PluginComponent {
         println(showRaw(line))
         line match {
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
-            if (getScope(classNm) + s".${classNm.toString()}" == className) {
-              var newInstances = for(instance <- instances) yield instance
-              for(newInstance <- newInstances if(newInstance == Instance(className, tname.toString(), Set(states(0)),currentScope.clone())))
-                newInstances -= newInstance
-              newInstances += Instance(className, tname.toString(), Set(states(0)),currentScope.clone())
-              (newInstances,0)
-            } else (instances,0)
+            var newInstances = dealWithNewInstance(tname, classNm, instances)
+            (newInstances,0)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
-            if (getScope(classNm)  == className) {
-              var newInstances = for(instance <- instances) yield instance
-              for(newInstance <- newInstances if(newInstance == Instance(className, tname.toString(), Set(states(0)),currentScope.clone())))
-                newInstances -= newInstance
-              newInstances += Instance(className, tname.toString(), Set(states(0)),currentScope.clone())
-              (newInstances,0)
-            } else (instances,0)
+            var newInstances = dealWithNewInstance(tname, classNm, instances)
+            (newInstances,0)
           case q"for (..$enums) $expr" => {
             val newInstances = dealWithLoopContents(instances, expr)
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
@@ -245,17 +239,14 @@ class MyComponent(val global: Global) extends PluginComponent {
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
           }
           case func@Apply(Ident(functionName), args) =>{
-            println("found function in weird "+func)
             val newInstances = dealWithFunction(func, functionName, args, instances)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, getLengthOfTree(line)-1) //because we are processing the current one already
+            (updatedInstances, 0) //because we are processing the current one already
           }
           case func@Apply(Select(instanceCalledOn, functionName), args) =>{
-            println("found function "+func)
             val newInstances = dealWithFunction(func, functionName, args, instances)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            println("after being returned by update and to be returned by process line instances are "+ updatedInstances)
-            (updatedInstances, getLengthOfTree(line)-1) //because we are processing the current one already
+            (updatedInstances, 0) //because we are processing the current one already
           }
           case func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => {
             (instances, getLengthOfTree(line)-1) //because we are processing the current one already
@@ -276,6 +267,24 @@ class MyComponent(val global: Global) extends PluginComponent {
             (instances,0)
           }
         }
+      }
+
+      def dealWithNewInstance(instanceTree:TermName, classTree:Tree, instances:Set[Instance]):Set[Instance]= {
+        val className = classInfo.className
+        val states = classInfo.states
+        var newInstances = for (instance <- instances) yield instance
+        println(s"looking through ${classAndObjectTraverser.classesAndObjects} for ${classTree.toString()}")
+        println(s"with scope ${getScope(classTree)}")
+        for (element <- classAndObjectTraverser.classesAndObjects if !element.isObject && element.name == classTree.toString() && element.scope == getScope(classTree)) {
+          println("found element " + element.name)
+          newInstances = checkInsideAppBody(element.body, newInstances)
+        }
+        if (getScope(classTree) + s".${classTree.toString()}" == className) {
+          for (newInstance <- newInstances if newInstance == Instance(className, instanceTree.toString(), Set(), currentScope))
+            newInstances -= newInstance
+          newInstances += Instance(className, instanceTree.toString(), Set(states(0)), currentScope.clone())
+        }
+        newInstances
       }
 
       def mergeInstanceStates(firstInstances:Set[Instance], secondInstances:Set[Instance]): Set[Instance] ={
