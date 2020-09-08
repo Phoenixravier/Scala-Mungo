@@ -5,11 +5,11 @@
 [info] Compiling 3 Scala sources to C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes ...
 [debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
 [debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
-[debug] [zinc] Running cached compiler 2cc19aaf for Scala compiler version 2.13.3
+[debug] [zinc] Running cached compiler 24018dad for Scala compiler version 2.13.3
 [debug] [zinc] The Scala compiler is invoked with:
 [debug] 	-bootclasspath
 [debug] 	C:\Program Files\Java\jdk1.8.0_60\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\rt.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_60\jre\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-library\2.13.3\scala-library-2.13.3.jar
 [debug] 	-classpath
 [debug] 	C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes
-[debug] Scala compilation took 9.4374682 s
+[debug] Scala compilation took 9.206857 s
 [info] Done compiling.

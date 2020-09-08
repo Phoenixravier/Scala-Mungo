@@ -71,6 +71,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         classAndObjectTraverser.traverse(unit.body)
         println(classAndObjectTraverser.classesAndObjects)
         functionTraverser.traverse(unit.body)
+        println(functionTraverser.functions)
         this.compilationUnit = unit
         var setOfClassesWithProtocols: Set[String] = Set()
         for (tree@q"$mods class $className[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- unit.body) {
@@ -132,7 +133,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       /** Checks that a class is following its protocol
        * Limited at the moment
        *
-       * Only works with code inside "App" and main
+       * Does not deal with code inside object which contains main function
        * Only works on a single file
        *
        * Does not take into account linearity
@@ -202,14 +203,16 @@ class MyComponent(val global: Global) extends PluginComponent {
         instances
       }
 
-
-
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
         val className = classInfo.className
         val states = classInfo.states
         println("checking line "+line+" at line number "+line.pos.line)
         println(showRaw(line))
         line match {
+          case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
+            (instances, getLengthOfTree(line)-1)
+          case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+            (instances, getLengthOfTree(line)-1)
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             var newInstances = dealWithNewInstance(tname, classNm, instances)
             (newInstances,0)
@@ -245,7 +248,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             (updatedInstances, 0) //because we are processing the current one already
           }
           case func@Apply(Select(instanceCalledOn, functionName), args) =>{
-            val newInstances = dealWithFunction(func, functionName, args, instances)
+            val newInstances = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
             (updatedInstances, 0) //because we are processing the current one already
           }
@@ -263,7 +266,22 @@ class MyComponent(val global: Global) extends PluginComponent {
             elseInstances = checkInsideMainBody(elseBody, elseInstances)
             val resultingInstances = mergeInstanceStates(ifInstances, elseInstances)
             (resultingInstances,getLengthOfTree(line)-1)
-
+          //All three next cases are to check for solitary object name on a line
+          case Ident(TermName(objectName)) =>
+            checkObject(objectName, instances)
+            (instances,0)
+          case Select(location, expr) =>
+            var exprString = expr.toString()
+            if(exprString.lastIndexOf(".") != -1)
+              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
+            checkObject(exprString, instances)
+            (instances,0)
+          case Block(List(expr), Literal(Constant(()))) =>
+            var exprString = expr.toString()
+            if(exprString.lastIndexOf(".") != -1)
+              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
+            checkObject(exprString, instances)
+            (instances,0)
           case _ => {
             (instances,0)
           }
@@ -274,12 +292,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         val className = classInfo.className
         val states = classInfo.states
         var newInstances = for (instance <- instances) yield instance
-        println(s"looking through ${classAndObjectTraverser.classesAndObjects} for ${classTree.toString()}")
-        println(s"with scope ${getScope(classTree)}")
-        for (element <- classAndObjectTraverser.classesAndObjects if !element.isObject && element.name == classTree.toString() && element.scope == getScope(classTree)) {
-          println("found element " + element.name)
-          newInstances = checkInsideAppBody(element.body, newInstances)
-        }
         if (getScope(classTree) + s".${classTree.toString()}" == className) {
           for (newInstance <- newInstances if newInstance == Instance(className, instanceTree.toString(), Set(), currentScope))
             newInstances -= newInstance
@@ -322,54 +334,38 @@ class MyComponent(val global: Global) extends PluginComponent {
         None
       }
 
-      def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance]):Set[Instance] = {
-        println("found function call "+funcCall)
-        println("its raw form is "+showRaw(funcCall))
-        println("it has name "+functionName)
-        println("it has args "+args)
 
-        funcCall match{
-          case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-            parents match {
-              case List(Apply(expr, arg2)) =>
-                printBanner()
-                println("matched new " + expr)
-                for (element <- classAndObjectTraverser.classesAndObjects
-                     if(!element.isObject && element.name == expr.toString()
-                       && element.scope == getScope(expr))) {
-                  println("worked")
-                  checkInsideAppBody(element.body, instances)
-                  }
-              case _ =>
-            }
-          case _ =>
+      def checkObjectFunctionCall(calledOn: global.Tree, instances:Set[Instance]): Unit = {
+        if(calledOn == null) return
+        var calledOnString = calledOn.toString()
+        if(calledOnString.lastIndexOf(".") != -1)
+          calledOnString = calledOn.toString.substring(calledOn.toString.lastIndexOf(".")+1)
+        for (element <- classAndObjectTraverser.classesAndObjects
+             if(!element.met && element.isObject && element.name == calledOnString
+               && element.scope == getScope(calledOn))) {
+          element.met = true
+          currentScope.push(calledOnString)
+          checkInsideAppBody(element.body, instances)
+          currentScope.pop()
         }
+      }
 
+      def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance], calledOn:Tree=null):Set[Instance] = {
+        println("found function call "+funcCall)
+        checkNewFunction(funcCall, instances, args)
+        checkObjectFunctionCall(calledOn, instances)
         //finding function definition
         val functionScope = getScope(funcCall, true)
         for (function <- functionTraverser.functions){
           if(function.name == functionName.toString() && function.scope == functionScope) {
             println("matched functions, found body "+function.body)
-            //handling parameters
-            var paramNameToInstanceName = new mutable.HashMap[String, String]
-            var argCounter = 0
-            for(arg <- args){
-              var argString = arg.toString()
-              if(argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".")+1)
-              getClosestScopeInstance(argString,instances) match{
-                case Some(instance) =>
-                  val paramName = function.params(argCounter)(0)
-                  paramNameToInstanceName += paramName -> instance.name
-                  instance.name = paramName
-                case None =>
-              }
-              argCounter += 1
-            }
+            //handling parameters on entry
+            val paramNameToInstanceName = handleParameters(args, function, instances)
             //checking inside the function body
             currentScope.push(functionName.toString())
             val newInstances = checkInsideMainBody(function.body, instances)
             currentScope.pop()
-            //renaming parameters
+            //renaming parameters on exit
             for(mapping <- paramNameToInstanceName) {
               for(instance <- instances if instance.name == mapping._1) instance.name = mapping._2
             }
@@ -377,6 +373,96 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         }
         instances
+      }
+
+      def getClosestScopeObject(objectName: String): Option[ClassOrObject] ={
+        var classesAndObjects = classAndObjectTraverser.classesAndObjects
+        if(classesAndObjects.isEmpty) return None
+        var closestScope = ""
+        var closestObject = ClassOrObject("myObj",ArrayBuffer(), null, "")
+        var foundObject = false
+        for(element <- classesAndObjects) {
+          if(element.name == objectName && element.isObject){
+            if(closestScope.length < element.scope.length) {
+              closestScope = element.scope
+              closestObject = element
+              foundObject = true
+            }
+          }
+        }
+        if(foundObject) return Some(closestObject)
+        None
+      }
+
+      def checkObject(objectName: String, instances:Set[Instance]) = {
+        getClosestScopeObject(objectName) match{
+          case Some(obj) =>
+            obj.met = true
+            currentScope.push(objectName)
+            checkInsideAppBody(obj.body, instances)
+            currentScope.pop()
+          case _ =>
+        }
+      }
+
+      def checkNewFunction(funcCall: global.Apply, instances:Set[Instance], args: List[global.Tree]): Unit ={
+        funcCall match{
+          case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+            parents match {
+              case List(Apply(expr, arg2)) =>
+                var exprString = expr.toString()
+                if(exprString.lastIndexOf(".") != -1)
+                  exprString = exprString.substring(exprString.lastIndexOf(".")+1)
+                for (element <- classAndObjectTraverser.classesAndObjects
+                     if(!element.isObject && element.name == exprString
+                       && element.scope == getScope(expr))) {
+                  val paramNameToInstanceName = handleParameters(args, element, instances)
+                  currentScope.push(element.name)
+                  checkInsideAppBody(element.body, instances)
+                  currentScope.pop()
+                  for (mapping <- paramNameToInstanceName)
+                    for (instance <- instances if instance.name == mapping._1) instance.name = mapping._2
+                }
+              case _ =>
+            }
+          case _ =>
+        }
+      }
+
+      def handleParameters(args:List[global.Tree], function:Function, instances:Set[Instance]): mutable.HashMap[String, String] ={
+        var paramNameToInstanceName = new mutable.HashMap[String, String]
+        var argCounter = 0
+        for(arg <- args){
+          var argString = arg.toString()
+          if(argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".")+1)
+          getClosestScopeInstance(argString,instances) match{
+            case Some(instance) =>
+              val paramName = function.params(argCounter)(0)
+              paramNameToInstanceName += paramName -> instance.name
+              instance.name = paramName
+            case None =>
+          }
+          argCounter += 1
+        }
+        paramNameToInstanceName
+      }
+
+      def handleParameters(args:List[global.Tree], element:ClassOrObject, instances:Set[Instance]): mutable.HashMap[String, String] ={
+        var paramNameToInstanceName = new mutable.HashMap[String, String]
+        var argCounter = 0
+        for(arg <- args){
+          var argString = arg.toString()
+          if(argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".")+1)
+          getClosestScopeInstance(argString,instances) match{
+            case Some(instance) =>
+              val paramName = element.params(argCounter)(0)
+              paramNameToInstanceName += paramName -> instance.name
+              instance.name = paramName
+            case None =>
+          }
+          argCounter += 1
+        }
+        paramNameToInstanceName
       }
 
       def dealWithLoopContents(instances:Set[Instance], expr:Trees#Tree): Set[Instance] ={
@@ -496,8 +582,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
 
-      case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:String,  isObject:Boolean=false, met:Boolean=false){
-        override def toString(): String={ s"$name ${showParams(params)} $scope" }
+      case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:String,  isObject:Boolean=false, var met:Boolean=false){
+        override def toString(): String={ s"$name ${showParams(params)} $scope $met" }
 
         def showParams(params:ArrayBuffer[Array[String]]):String={
           var parameters = ""
@@ -506,18 +592,21 @@ class MyComponent(val global: Global) extends PluginComponent {
               parameters += par+": "
             parameters += " ; "
           }
-
           parameters
         }
-
       }
 
       object classAndObjectTraverser extends Traverser{
         var classesAndObjects = ListBuffer[ClassOrObject]()
+        def setMetStatus(obj:ClassOrObject): Unit ={
+          for(element <- classesAndObjects if element==obj){
+            element.met = true
+          }
+        }
         override def traverse(tree: Tree): Unit = {
           tree match{
             case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-              classesAndObjects += ClassOrObject(tname.toString(), ArrayBuffer(), body, getScope(obj), isObject = true)
+              classesAndObjects += ClassOrObject(tname.toString, ArrayBuffer(), body, getScope(obj), isObject = true)
               super.traverse(obj)
             case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
               val parameters = getParametersWithInstanceNames(paramss)

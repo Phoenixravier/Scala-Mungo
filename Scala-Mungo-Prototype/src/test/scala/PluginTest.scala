@@ -1875,6 +1875,381 @@ class PluginTest extends FlatSpec with Matchers {
       "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 19")
   }
 
+  /* ------------------------------
+     CODE IN CLASSES AND OBJECTS
+   --------------------------------*/
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a class construtor" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val kat = new Cat()
+        |    new CatMaker(kat)
+        |}
+        |
+        |class CatMaker(cat:Cat){
+        |  cat.walk()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a class construtor in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val kat = new Cat()
+        |    new CatMaker(kat)
+        |  }
+        |  class CatMaker(cat:Cat){
+        |  cat.walk()
+        |  cat.walk()
+        |}
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside an object construtor" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    Dog.walk()
+        |
+        |    object Dog extends Serializable{
+        |    println("made a dog")
+        |    val cat = new Cat()
+        |    cat.walk()
+        |    cat.walk()
+        |    def walk():Unit = println("Jee kävelemme!")
+        |    def cry():Unit = println("Itkeen :'(")
+        |    def bark():Unit = println("hau hau")
+        |    def laze():Unit = println("Olen vasinyt")
+        |    def stayOnAlert(intruderHere:Boolean): Unit = {
+        |      if(intruderHere) bark()
+        |      else laze()
+        |    }
+        |    def stayOnAlert(str:String, nb:Int): Unit ={
+        |      println("on alert")
+        |    }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside an object construtor in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    Dog.walk()
+        |
+        |    object Dog extends Serializable{
+        |    println("made a dog")
+        |    val cat = new Cat()
+        |    cat.walk()
+        |    cat.walk()
+        |    def walk():Unit = println("Jee kävelemme!")
+        |    def cry():Unit = println("Itkeen :'(")
+        |    def bark():Unit = println("hau hau")
+        |    def laze():Unit = println("Olen vasinyt")
+        |    def stayOnAlert(intruderHere:Boolean): Unit = {
+        |      if(intruderHere) bark()
+        |      else laze()
+        |    }
+        |    def stayOnAlert(str:String, nb:Int): Unit ={
+        |      println("on alert")
+        |    }
+        |   }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    Dog
+        |
+        |    object Dog extends Serializable{
+        |    println("made a dog")
+        |    val cat = new Cat()
+        |    cat.walk()
+        |    cat.walk()
+        |    def walk():Unit = println("Jee kävelemme!")
+        |    def cry():Unit = println("Itkeen :'(")
+        |    def bark():Unit = println("hau hau")
+        |    def laze():Unit = println("Olen vasinyt")
+        |    def stayOnAlert(intruderHere:Boolean): Unit = {
+        |      if(intruderHere) bark()
+        |      else laze()
+        |    }
+        |    def stayOnAlert(str:String, nb:Int): Unit ={
+        |      println("on alert")
+        |    }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    Dog
+        |
+        |    object Dog extends Serializable{
+        |    println("made a dog")
+        |    val cat = new Cat()
+        |    cat.walk()
+        |    cat.walk()
+        |    def walk():Unit = println("Jee kävelemme!")
+        |    def cry():Unit = println("Itkeen :'(")
+        |    def bark():Unit = println("hau hau")
+        |    def laze():Unit = println("Olen vasinyt")
+        |    def stayOnAlert(intruderHere:Boolean): Unit = {
+        |      if(intruderHere) bark()
+        |      else laze()
+        |    }
+        |    def stayOnAlert(str:String, nb:Int): Unit ={
+        |      println("on alert")
+        |    }
+        |   }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val thrown = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    assert(thrown.getMessage ===
+      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+  }
+
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={
     val sources = List(new BatchSourceFile("<test>", code))
