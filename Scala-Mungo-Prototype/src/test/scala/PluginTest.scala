@@ -1,4 +1,3 @@
-
 import java.io.{BufferedWriter, ByteArrayOutputStream, File, FileWriter}
 
 import compilerPlugin.GetFileFromAnnotation
@@ -1872,7 +1871,7 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
     assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 19")
+      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
   }
 
   /* ------------------------------

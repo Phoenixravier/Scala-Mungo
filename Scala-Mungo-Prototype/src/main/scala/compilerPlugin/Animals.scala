@@ -6,11 +6,11 @@ import scala.language.postfixOps
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
-
-
 object doMainThings extends App{
   println("in main things")
   Dog
+
+
 
   class CatMaker(cat:Cat){
     cat.walk()
