@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 
-import scala.collection.mutable
+import scala.collection.{SortedSet, mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 import scala.sys.process._
@@ -42,6 +42,15 @@ case class ElementInfo(className:String, transitions:Array[Array[State]], states
   }
 }
 
+/** Error for when a protocol is violated */
+class protocolViolatedException(instanceName:String, className:String, states:SortedSet[State], methodName:String,
+                                file:String, line:Int)
+  extends Exception(s"Invalid transition in instance $instanceName of type $className " +
+    s"from state(s) $states with method $methodName in file $file at line $line")
+
+/** Error for when the user defines their protocol wrong */
+class badlyDefinedProtocolException(message:String) extends Exception(message)
+
 /** My plugin */
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
@@ -53,15 +62,16 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 /** The component which will run when my plugin is used */
 class MyComponent(val global: Global) extends PluginComponent {
   import global._
+
+  /** Sorts a set */
+  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
+
   case class Function(name: String, params: ArrayBuffer[Array[String]], body: Tree, scope: String) {
     override def toString(): String = {
       s"name: $name parameters: $params scope: $scope"
     }
   }
-  /** Error for when the user defines their protocol wrong */
-  class badlyDefinedProtocolException(message:String) extends Exception(message)
-  /** Error for when a protocol is violated */
-  class protocolViolatedException(message:String) extends Exception(message)
+
   val runsAfter: List[String] = List[String]("refchecks")
   val phaseName: String = "compilerPlugin.GetFileFromAnnotation.this.name"
   def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
@@ -165,12 +175,16 @@ class MyComponent(val global: Global) extends PluginComponent {
        * TODO Deal with code inside object which contains main function
        *  Make work on more than a single file
        *  Take into account linearity
+       *  Deal with return values when they are protocolled objects (aliasing)
        *  Deal with objects returned by a function
        *  Deal with try-catch
        *  Deal with if on its own
        *  Deal with code on itself in constructor
        *  Deal with companion objects
        *  Deal with code inside parameters and conditions
+       *  Deal with special cases of loops (known counts)
+       *  Deal with while(true) and do while(true) as special cases
+       *  Deal with match statements (unless this is already dealt with by if else)
        * */
       def checkElementIsUsedCorrectly(): Unit ={
         for(line@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body){
@@ -386,10 +400,11 @@ class MyComponent(val global: Global) extends PluginComponent {
         mergedInstances
       }
 
-      /** Gets the instance with hte closest scope to the current scope with the given name if it exists. If not,
+      /** Gets the instance with the closest scope to the current scope with the given name if it exists. If not,
        * returns None.
-       *
-       * @TODO At the moment this does not actually get the closest scope but just the instance with the longest scope.
+       * Works by copying the current scope and then checking if there is an instance which matches name and the copied
+       * scope. If not then it will reduce the current scope and do the same search there until it finds the instance
+       * with the same name with the longest possible scope which is still a subset of the current scope.
        *
        * @param name
        * @param instances
@@ -397,21 +412,17 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def getClosestScopeInstance(name:String, instances:Set[Instance]): Option[Instance] ={
         if(instances.isEmpty) return None
-        var closestScope:mutable.Stack[String] = mutable.Stack()
-        var closestInstance = Instance("dummyClass","dummyInstance", Set(), mutable.Stack())
-        var foundInstance = false
-        for(instance <- instances) {
-          if(instance.name == name){
-            if(closestScope.size < instance.scope.size) {
-              closestScope = instance.scope
-              closestInstance = instance
-              foundInstance = true
+        val curScope = currentScope.clone()
+        while(curScope.nonEmpty){
+          for(instance <- instances){
+            if(instance.name == name && instance.scope == curScope){
+              return Option(instance)
             }
           }
+          curScope.pop()
         }
-        if(foundInstance) return Some(closestInstance)
         None
-      }
+        }
 
       /** Checks if the object (calledOn) is defined in the file and if it has not already been initialised, runs the
        * code inside the object.
@@ -681,9 +692,8 @@ class MyComponent(val global: Global) extends PluginComponent {
                         newStates = for(x <- indexSet - indexSet.min) yield curentElementInfo.transitions(state.index)(x)
                     println("new states are "+newStates)
                     for(state <- newStates if state.name == Undefined) {
-                      throw new protocolViolatedException(s"Invalid transition in instance $instanceName of type $className " +
-                        s"from state(s) ${instance.currentStates} with method $methodName " +
-                        s"in file ${line.pos.source} at line ${line.pos.line}")
+                      throw new protocolViolatedException(instanceName, className, sortSet(instance.currentStates),
+                        methodName, line.pos.source.toString(), line.pos.line)
                     }
                     newSetOfStates = newSetOfStates ++ newStates
                   }
@@ -792,12 +802,11 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @param dontCheckSymbolField
        * @return
        */
-      def getScope(obj:Tree, dontCheckSymbolField:Boolean = false): String ={
-        var objectScope = ""
+      def getScope(obj:Tree, dontCheckSymbolField:Boolean = false): mutable.Stack[String] ={
+        var objectScope = mutable.Stack[String]()
         if(obj.hasSymbolField || dontCheckSymbolField) {
           for (symbol <- obj.symbol.owner.ownerChain.reverse)
-            objectScope += symbol.name + "."
-          objectScope = objectScope.substring(0, objectScope.lastIndexOf('.'))
+            objectScope.push(symbol.name.toString())
         }
         objectScope
       }
@@ -973,5 +982,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         file.delete
         stock
       }
+
+
     }
 }

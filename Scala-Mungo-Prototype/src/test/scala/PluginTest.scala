@@ -1,12 +1,17 @@
 import java.io.{BufferedWriter, ByteArrayOutputStream, File, FileWriter}
 
-import compilerPlugin.GetFileFromAnnotation
+import ProtocolDSL.State
+import compilerPlugin.{GetFileFromAnnotation, protocolViolatedException}
+import compilerPlugin.MyComponent
+import ProtocolDSL.{ReturnValue, State}
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.ConsoleReporter
 import scala.tools.nsc.{Global, Settings}
 import org.scalatest._
+
+import scala.collection.SortedSet
 
 
 class PluginTest extends FlatSpec with Matchers {
@@ -54,18 +59,13 @@ class PluginTest extends FlatSpec with Matchers {
         |  t.walk()
         |  val cat = new Cat()
         |  cat.walk()
-        |  cat.walk()
-        |
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    noException should be thrownBy {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    deleteFile("FelineProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1) with method walk() in file <test> at line 28")
   }
 
   "plugin" should "throw an exception when an invalid transition happens in a class" in {
@@ -129,14 +129,15 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 32")
-  }
+    val exceptedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 32)
+    assert(actualException.getMessage == exceptedException.getMessage)
+   }
 
   "plugin" should "throw an exception when an invalid transition happens in an object" in {
     val userProtocol =
@@ -198,13 +199,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance Cat of type Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 31")
+    val exceptedException = new protocolViolatedException("Cat", "Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 31)
+    assert(actualException.getMessage === exceptedException.getMessage)
   }
 
   "plugin" should "throw an exception when an invalid transition happens in a class in main" in {
@@ -269,14 +271,15 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 33")
-  }
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 33)
+    assert(actualException.getMessage === expectedException.getMessage)
+   }
 
   "plugin" should "throw an exception when an invalid transition happens in an object in main" in {
     val userProtocol =
@@ -339,13 +342,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance Cat of type Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 32")
+    val expectedException = new protocolViolatedException("Cat", "Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 32)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception when protocol methods are not a subset of ones in class" in {
@@ -410,12 +414,12 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
+    assert(actualException.getMessage ===
       "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of " +
         "methods Set(comeAlive(), walk(), die()) defined in class <root>.compilerPlugin.Cat")
   }
@@ -481,12 +485,12 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
+    assert(actualException.getMessage ===
       "The protocol at \"MyProtocol.scala\" could not be processed, " +
         "check you have an end statement at the end of the protocol")
   }
@@ -596,13 +600,13 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("CatProtocol.scala")
     deleteFile("DogProtocol.scala")
-    assert(thrown.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"CatProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class <root>.compilerPlugin.Cat")
+    assert(actualException.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"CatProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class <root>.compilerPlugin.Cat")
   }
 
   /* -----------------
@@ -661,14 +665,15 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 30")
-  }
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 30)
+    assert(actualException.getMessage === expectedException.getMessage)
+ }
 
   "plugin" should "throw an exception if an instance defined inside a for loop violates its protocol" in {
     val userProtocol =
@@ -727,13 +732,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 34")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 34)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance after being in a valid for loop violates its protocol" in {
@@ -794,13 +800,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3, State2, init) with method comeAlive() in file <test> at line 36")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 36)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance after being in a valid while loop violates its protocol" in {
@@ -850,13 +857,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3, State2, init) with method comeAlive() in file <test> at line 25")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception with the correct states if an instance after being in a valid do-while loop violates its protocol" in {
@@ -903,13 +911,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3, State2) with method comeAlive() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception when inner loop causes a violation" in {
@@ -957,13 +966,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State2) with method comeAlive() in file <test> at line 20")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   /* -----------------
@@ -1013,13 +1023,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 21")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function" in {
@@ -1068,13 +1079,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 23")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions" in {
@@ -1128,13 +1140,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 27")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 27)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function in main" in {
@@ -1182,13 +1195,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function in main" in {
@@ -1239,13 +1253,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method comeAlive() in file <test> at line 24")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 24)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions in main" in {
@@ -1301,13 +1316,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 28")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 28)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an outer functions called by an inner one in main" in {
@@ -1366,16 +1382,17 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 32")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 32)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
-  "plugin" should "throw an exception if an instance defined in a function violates its protocol inside the function" in {
+  "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function" in {
     val userProtocol =
       """
         |package ProtocolDSL
@@ -1418,16 +1435,17 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 21")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
-  "plugin" should "throw an exception if an instance defined in a function violates its protocol inside the function in main" in {
+  "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function in main" in {
     val userProtocol =
       """
         |package ProtocolDSL
@@ -1472,13 +1490,67 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State3) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "not throw an exception if two instances with the same name do one legal method each" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        | def makeCatWalk(): Unit ={
+        |      val cat = new Cat()
+        |      cat.walk()
+        |  }
+        |  makeCatWalk()
+        |  val cat = new Cat()
+        |  cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
   }
 
   /* -----------------
@@ -1527,13 +1599,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 19")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after a method giving multiple states" in {
@@ -1576,13 +1649,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 18")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   /* -----------------
@@ -1635,13 +1709,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after an if else statement" in {
@@ -1688,13 +1763,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement" in {
@@ -1745,13 +1821,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 21")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement in main" in {
@@ -1804,13 +1881,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement inside a for loop" in {
@@ -1865,13 +1943,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance kitty of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   /* ------------------------------
@@ -1922,13 +2001,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a class construtor in main" in {
@@ -1976,16 +2056,17 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
-  "plugin" should "throw an exception if an instance violates its protocol inside an object construtor" in {
+  "plugin" should "throw an exception if an instance violates its protocol inside an object constructor" in {
     val userProtocol =
       """
         |package ProtocolDSL
@@ -2041,13 +2122,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor in main" in {
@@ -2108,13 +2190,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone" in {
@@ -2173,13 +2256,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 22")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone in main" in {
@@ -2240,13 +2324,14 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val thrown = intercept[Exception] {
+    val actualException = intercept[Exception] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    assert(thrown.getMessage ===
-      "Invalid transition in instance cat of type <root>.compilerPlugin.Cat from state(s) Set(State1, init) with method walk() in file <test> at line 23")
+    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
   }
 
 
@@ -2280,6 +2365,9 @@ class PluginTest extends FlatSpec with Matchers {
       fileTemp.delete()
     }
   }
+
+  /** Sorts a set */
+  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
 }
 
