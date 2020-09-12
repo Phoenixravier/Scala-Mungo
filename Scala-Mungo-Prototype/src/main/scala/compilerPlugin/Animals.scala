@@ -1,37 +1,34 @@
 package compilerPlugin
 
 
+import java.io.{FileNotFoundException, FileOutputStream, IOException, ObjectOutputStream}
+
 import scala.language.postfixOps
+import scala.util.control.Breaks.{break, breakable}
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
 object doMainThings{
   def main(args: Array[String]): Unit = {
-    println("in main things")
-    Dog
+      val kitty = new Cat(1)
+    if(returnTrue()) println("true is true")
 
 
-    class CatMaker(cat: Cat) {
-      cat.walk()
-      cat.walk()
-    }
+
   }
 
-  println("still in main things")
-
+  def returnTrue():Boolean ={
+    val cat = new Cat(1)
+    cat.walk()
+    cat.walk()
+    true
+  }
   def makeCatWalk(set:Cat): Unit ={
     set.walk()
     set.walk()
   }
 
-  object notMain{
-    println("not main")
-    println("don't execute this")
-    val cat = new Cat(4)
-    cat.walk()
-    cat.walk()
-  }
   //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{
     println("made a dog")
@@ -56,7 +53,10 @@ object doMainThings{
 }
 
 object Trash{
+    def someMethod(): Unit ={
 
+    }
+  println("inside object trash")
 }
 
 

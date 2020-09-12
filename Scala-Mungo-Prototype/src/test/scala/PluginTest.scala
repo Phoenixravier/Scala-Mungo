@@ -134,7 +134,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val exceptedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val exceptedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 32)
     assert(actualException.getMessage == exceptedException.getMessage)
    }
@@ -276,7 +276,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 33)
     assert(actualException.getMessage === expectedException.getMessage)
    }
@@ -421,7 +421,7 @@ class PluginTest extends FlatSpec with Matchers {
     deleteFile("MyProtocol.scala")
     assert(actualException.getMessage ===
       "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of " +
-        "methods Set(comeAlive(), walk(), die()) defined in class <root>.compilerPlugin.Cat")
+        "methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
 
   "plugin" should "throw an exception if end is not written in the protocol" in {
@@ -606,7 +606,7 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("CatProtocol.scala")
     deleteFile("DogProtocol.scala")
-    assert(actualException.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"CatProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class <root>.compilerPlugin.Cat")
+    assert(actualException.getMessage === "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"CatProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
 
   /* -----------------
@@ -670,7 +670,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 30)
     assert(actualException.getMessage === expectedException.getMessage)
  }
@@ -737,7 +737,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 34)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -805,7 +805,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 36)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -862,7 +862,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -916,7 +916,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -971,9 +971,121 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "not throw an exception if two instances with looping protocols of different lengths are in a loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    in ("State1")
+        |    when("comeAlive()") goto "init"
+        |    when("run()") goto "State2"
+        |    in ("State2")
+        |    when("run()") goto "State3"
+        |    in ("State3")
+        |    when("run()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def run(): Unit = println("running")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val kitty = new Cat()
+        |  for(i <- 1 to 10) {
+        |  cat.walk()
+        |  cat.comeAlive()
+        |  kitty.walk()
+        |  kitty.run()
+        |  kitty.run()
+        |  kitty.run()
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+  }
+
+  "plugin" should "not throw an exception if a protocol violation happens after a while(true) loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    in ("State1")
+        |    when("comeAlive()") goto "init"
+        |    when("run()") goto "State2"
+        |    in ("State2")
+        |    when("run()") goto "State3"
+        |    in ("State3")
+        |    when("run()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def run(): Unit = println("running")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val kitty = new Cat()
+        |  while(true){
+        |  cat.walk()
+        |  cat.comeAlive()
+        |  }
+        |  kitty.walk()
+        |  kitty.walk()
+        |
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
   }
 
   /* -----------------
@@ -1028,7 +1140,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1084,7 +1196,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1145,7 +1257,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 27)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1200,7 +1312,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1258,7 +1370,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1321,7 +1433,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 28)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1387,7 +1499,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 32)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1440,7 +1552,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1495,7 +1607,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1604,7 +1716,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1654,7 +1766,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1714,7 +1826,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1768,7 +1880,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1826,7 +1938,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1886,7 +1998,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1948,8 +2060,61 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("kitty", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol after a singular if statement" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val cat = new Cat()
+        |    var x = 1
+        |    if(x == 1){
+        |     cat.walk()
+        |    }
+        |    cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -2006,7 +2171,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2061,7 +2226,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2127,7 +2292,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2195,7 +2360,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2261,7 +2426,7 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2329,10 +2494,179 @@ class PluginTest extends FlatSpec with Matchers {
       new compiler.Run() compileSources (sources)
     }
     deleteFile("MyProtocol.scala")
-    val expectedException = new protocolViolatedException("cat", "<root>.compilerPlugin.Cat",
+    val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside an object containing main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | val cat = new Cat
+        | cat.walk()
+        | cat.walk()
+        |
+        | def main(args: Array[String]): Unit = {
+        | }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  /* ------------------------------
+          TRY CATCH FINALLY
+   --------------------------------*/
+
+  "plugin" should "not throw an exception if an instance doesn't violate its protocol inside a try catch" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val cat = new Cat()
+        |     try{
+        |     cat.walk()
+        |    }
+        |    catch{
+        |     case e: FileNotFoundException => cat.walk()
+        |    }
+        |    finally{
+        |    }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+  }
+
+  "plugin" should "not throw an exception if an instance doesn't violate its protocol inside a try catch in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val cat = new Cat()
+        |     try{
+        |     cat.walk()
+        |    }
+        |    catch{
+        |     case e: FileNotFoundException => cat.walk()
+        |    }
+        |    finally{
+        |    }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+  }
+
 
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={

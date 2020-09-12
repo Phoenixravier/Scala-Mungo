@@ -239,6 +239,6 @@ class ProtocolLang {
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
     val oos = new ObjectOutputStream(new FileOutputStream(filename))
     oos.writeObject(data)
-    oos.close
+    oos.close()
   }
 }
