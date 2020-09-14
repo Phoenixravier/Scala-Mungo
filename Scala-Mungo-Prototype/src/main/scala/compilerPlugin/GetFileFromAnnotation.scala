@@ -266,19 +266,109 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
 
+      def dealWithWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree) = {
+        //initialisations
+        var newInstances = for(instance <- instances) yield instance
+        var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
+        for(instance <- newInstances) instanceToInterimStates += instance -> ListBuffer(instance.currentStates)
+        //loop
+        do{
+          //go through condition of the while
+          newInstances = checkInsideFunctionBody(cond, newInstances)
+          //go through loop body
+          newInstances = checkInsideFunctionBody(loopContent, newInstances)
+          for(instance <- newInstances if instanceToInterimStates.contains(instance))
+            instanceToInterimStates(instance) += instance.currentStates
+        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        //go through condition of the while one last time before exiting as that is how the program will execute
+        newInstances = checkInsideFunctionBody(cond, newInstances)
+        //assigns interim states to the instances
+        for(instance <- newInstances if instanceToInterimStates.contains(instance))
+          for(setOfStates <- instanceToInterimStates(instance))
+            instance.currentStates = instance.currentStates ++ setOfStates
+        newInstances
+      }
 
+      def dealWithDoWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree) = {
+        //initialisations
+        var newInstances = for(instance <- instances) yield instance
+        var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
+        for(instance <- newInstances) instanceToInterimStates += instance -> ListBuffer()
+        //loop
+        do{
+          //go through loop body
+          newInstances = checkInsideFunctionBody(loopContent, newInstances)
+          //go through condition of the while
+          newInstances = checkInsideFunctionBody(cond, newInstances)
+          for(instance <- newInstances if instanceToInterimStates.contains(instance))
+            instanceToInterimStates(instance) += instance.currentStates
+        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        //assigns interim states to the instances
+        for(instance <- newInstances if instanceToInterimStates.contains(instance)){
+          for(setOfStates <- instanceToInterimStates(instance))
+            instance.currentStates = instance.currentStates ++ setOfStates
+        }
+        newInstances
+      }
+
+      def checkInsideEnums(enums: Seq[Trees#Tree], instances: Set[Instance]): Set[Instance] = {
+        var newInstances = for(instance <- instances) yield instance
+        enums match{
+          case List(fq"$pat <- $beginning until $end") =>
+            for(begin <- beginning.children)
+              newInstances = checkInsideFunctionBody(begin, newInstances)
+            newInstances = checkInsideFunctionBody(end, newInstances)
+          case List(fq"$pat <- $beginning to $end") =>
+            for(begin <- beginning.children)
+              newInstances = checkInsideFunctionBody(begin, newInstances)
+            newInstances = checkInsideFunctionBody(end, newInstances)
+          case List(fq"$pat <- $gen") =>
+            newInstances = checkInsideFunctionBody(gen, newInstances)
+          case _ =>
+        }
+        newInstances
+      }
+
+      def dealWithForLoop(enums: Seq[Trees#Tree], instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
+        //initialisations
+        var newInstances = for(instance <- instances) yield instance
+        var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
+        for(instance <- newInstances) instanceToInterimStates += instance -> ListBuffer()
+        println("after instantiation, map is "+instanceToInterimStates)
+        //loop
+        do{
+          //go through condition of the for
+          printBanner()
+          println("before checking for loop generator "+enums)
+          //newInstances = checkInsideObjectBody(enums, instances)
+
+          newInstances = checkInsideEnums(enums, newInstances)
+          println("after checking for loop generator")
+          //go through loop body
+          newInstances = checkInsideFunctionBody(loopContent, newInstances)
+          //update map with new states of the instances
+          for(instance <- newInstances if instanceToInterimStates.contains(instance))
+            instanceToInterimStates(instance) += instance.currentStates
+          println("right before check for duplicates, map is "+instanceToInterimStates)
+        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        //assigns interim states to the instances
+        for(instance <- newInstances if instanceToInterimStates.contains(instance)){
+          for(setOfStates <- instanceToInterimStates(instance))
+            instance.currentStates = instance.currentStates ++ setOfStates
+        }
+        newInstances
+      }
 
       /** Checks a line and returns possibly updated instances.
-       * Has different cases for different types of line
+       *  Has different cases for different types of line
        *
        * @param line line of code to analyse
-       * @param instances instances to potentially update
+       * @param instances instances to update
        * @return
        */
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
         if(endCheck) return(Set(), 0)
         println(s"checking line $line at line number "+line.pos.line)
-        println("raw is "+showRaw(line))
         line match {
           //definitions to skip over (object, class, function)
           case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
@@ -294,8 +384,8 @@ class MyComponent(val global: Global) extends PluginComponent {
             var newInstances = processNewInstance(tname, classNm, instances)
             (newInstances,0)
           case q"for (..$enums) $expr" => {
-            checkInsideObjectBody(enums)
-            val newInstances = dealWithLoopContents(instances, expr)
+            println("matched for loop in process line")
+            val newInstances = dealWithForLoop(enums, instances, expr)
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
           }
           //while(true) and dowhile(true)
@@ -305,15 +395,12 @@ class MyComponent(val global: Global) extends PluginComponent {
             endCheck = true
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
           }
-          case q"while ($cond) $expr" =>{
-            checkInsideFunctionBody(cond)
-            val newInstances = dealWithLoopContents(instances, expr)
+          case q"while ($cond) $loopContents" =>{
+            val newInstances = dealWithWhileLoop(cond, instances, loopContents)
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
           }
-          case q"do $expr while ($cond)" =>{
-            val newInstances = dealWithLoopContents(instances, expr)
-            checkInsideFunctionBody(expr, instances)
-            checkInsideFunctionBody(cond)
+          case q"do $loopContents while ($cond)" =>{
+            val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
             (newInstances, 0)
           }
           case q"for (..$enums) yield $expr" =>{
@@ -331,7 +418,6 @@ class MyComponent(val global: Global) extends PluginComponent {
             val updatedInstances = updateStateIfNeeded(newInstances, line)
             (updatedInstances, 0) //because we are processing the current one already
           }
-
           case q"if ($cond) $ifBody else $elseBody" =>
             val newInstances = dealWithIfElse(cond, ifBody, elseBody, instances)
             (newInstances,getLengthOfTree(line)-1)
@@ -505,6 +591,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
 
+
       /** Checks function calls.
        * Firstly it checks if the function is new x and therefore the code inside a class should be analysed.
        * Secondly it checks if an object is being called on for the first time and its code should be analysed.
@@ -519,6 +606,10 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance], calledOn:Tree=null):Set[Instance] = {
         println("found function call "+funcCall)
+        println("checking parameters "+args)
+        //checks parameters
+        for(arg <- args) checkInsideFunctionBody(arg, instances)
+        println("after checking parameters")
         checkNewFunction(funcCall, instances, args)
         checkObjectFunctionCall(calledOn, instances)
         //finding function definition
@@ -527,7 +618,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           if(function.name == functionName.toString() && function.scope == functionScope) {
             println("matched functions, found body "+function.body)
             //handling parameters on entry
-            val paramNameToInstanceName = handleParameters(args, function, instances)
+            val paramNameToInstanceName = handleInstanceParameters(args, function, instances)
             //checking inside the function body
             currentScope.push(functionName.toString())
             val newInstances = checkInsideFunctionBody(function.body, instances)
@@ -602,7 +693,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @param instances
        * @return
        */
-      def handleParameters(args:List[global.Tree], function:Function, instances:Set[Instance]): mutable.HashMap[String, String] ={
+      def handleInstanceParameters(args:List[global.Tree], function:Function, instances:Set[Instance]): mutable.HashMap[String, String] ={
         var paramNameToInstanceName = new mutable.HashMap[String, String]
         var argCounter = 0
         for(arg <- args){
@@ -610,6 +701,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           if(argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".")+1)
           getClosestScopeInstance(argString,instances) match{
             case Some(instance) =>
+              println(s"found instance $instance in parameters")
               val paramName = function.params(argCounter)(0)
               paramNameToInstanceName += paramName -> instance.name
               instance.name = paramName

@@ -921,6 +921,59 @@ class PluginTest extends FlatSpec with Matchers {
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "throw an exception if the condition inside the do while causes a protocol violation" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    when("walk()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  var x=0
+        |   do {
+        |   cat.comeAlive()
+        |  } while(makeCatWalk(cat))
+        |
+        |  def makeCatWalk(cat:Cat): Boolean={
+        |   cat.walk()
+        |   true
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   "plugin" should "throw an exception when inner loop causes a violation" in {
     val userProtocol =
       """

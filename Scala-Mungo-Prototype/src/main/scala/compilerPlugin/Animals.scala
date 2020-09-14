@@ -3,6 +3,7 @@ package compilerPlugin
 
 import java.io.{FileNotFoundException, FileOutputStream, IOException, ObjectOutputStream}
 
+
 import scala.language.postfixOps
 import scala.util.control.Breaks.{break, breakable}
 
@@ -11,11 +12,31 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 object doMainThings{
   def main(args: Array[String]): Unit = {
-      val kitty = new Cat(1)
-    if(returnTrue()) println("true is true")
+    val kitty = new Cat(1)
+    for(x <- getCatAgeRange(kitty)) println("sing")
+    //funcWithParams(getCatAgeRange(kitty), getBirthAge(kitty))
+  }
 
+  def funcWithParams(lst:List[Int], int:Int){
 
+  }
 
+  def getCatAge(cat:Cat): Int ={
+    println("inside get cat age")
+    cat.walk()
+    10
+  }
+
+  def getCatAgeRange(cat:Cat): List[Int] ={
+    println("inside get cat age range")
+    cat.walk()
+    List(0,10)
+  }
+
+  def getBirthAge(kitty: Cat) = {
+    println("inside get birth age")
+    kitty.walk()
+    0
   }
 
   def returnTrue():Boolean ={
