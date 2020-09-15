@@ -129,7 +129,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -199,7 +199,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -271,7 +271,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -342,7 +342,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -665,7 +665,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -732,7 +732,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -800,7 +800,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -921,7 +921,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -983,7 +983,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1043,7 +1043,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1105,7 +1105,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1171,7 +1171,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1228,7 +1228,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1293,7 +1293,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1359,7 +1359,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1425,7 +1425,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1482,7 +1482,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1548,7 +1548,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1605,7 +1605,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1659,7 +1659,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1716,7 +1716,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1777,7 +1777,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1831,7 +1831,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1884,7 +1884,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -1937,7 +1937,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2051,7 +2051,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2110,7 +2110,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2168,7 +2168,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2225,7 +2225,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2281,7 +2281,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2342,7 +2342,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2397,7 +2397,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2455,7 +2455,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2518,7 +2518,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2584,7 +2584,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2637,7 +2637,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2692,7 +2692,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2801,7 +2801,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2851,7 +2851,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2911,7 +2911,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -2965,7 +2965,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3023,7 +3023,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3083,7 +3083,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3145,7 +3145,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3198,7 +3198,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3251,7 +3251,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3302,7 +3302,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3355,7 +3355,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3406,7 +3406,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3464,7 +3464,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3519,7 +3519,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3585,7 +3585,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3653,7 +3653,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3719,7 +3719,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3787,7 +3787,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
@@ -3841,7 +3841,7 @@ class PluginTest extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    val actualException = intercept[Exception] {
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
