@@ -228,8 +228,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         var instances = for (instance <- givenInstances) yield instance
         if(curentElementInfo.isObject) instances +=Instance(curentElementInfo.name, curentElementInfo.name, Set(curentElementInfo.states(0)), currentScope.clone())
         for (line <- code) {
-            val newInstanceAndNbLinesToSkip = processLine(line, instances)
-            instances = newInstanceAndNbLinesToSkip._1
+            instances = checkInsideFunctionBody(line, instances)
+            //val newInstanceAndNbLinesToSkip = processLine(line, instances)
+            //instances = newInstanceAndNbLinesToSkip._1
         }
         println("\nInstances:")
         instances.foreach(println)
@@ -265,6 +266,98 @@ class MyComponent(val global: Global) extends PluginComponent {
         instances
       }
 
+
+
+
+      /** Checks a line and returns possibly updated instances.
+       *  Has different cases for different types of line
+       *
+       * @param line line of code to analyse
+       * @param instances instances to update
+       * @return
+       */
+      def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
+        if(endCheck) return(Set(), 0)
+        println(s"checking line $line at line number "+line.pos.line)
+        println(showRaw(line))
+        line match {
+          //definitions to skip over (object, class, function)
+          case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
+            (instances, getLengthOfTree(line)-1)
+          case q"$mod class $pname[..$tpara] $actMods(...$para) extends { ..$defs } with ..$prnts { $self => ..$sts }" =>
+            (instances, getLengthOfTree(line)-1)
+          case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr"=>
+            (instances, getLengthOfTree(line)-1)
+          //new instance declarations (val and var)
+          case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
+            var newInstances = processNewInstance(tname, classNm, instances)
+            (newInstances,0)
+          case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
+            var newInstances = processNewInstance(tname, classNm, instances)
+            (newInstances,0)
+          //loops
+          case q"for (..$enums) $expr" => {
+            println("matched for loop in process line")
+            val newInstances = dealWithForLoop(enums, instances, expr)
+            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
+          }
+          case q"for (..$enums) yield $expr" =>{
+            println("matched for yield")
+            val newInstances = dealWithForLoop(enums, instances, expr)
+            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
+          }
+            //while(true) and dowhile(true)
+          case LabelDef(TermName(name), List(), block @ Block(statements, Apply(Ident(TermName(name2)), List())))
+            if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
+            val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
+            endCheck = true
+            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
+          }
+          case q"while ($cond) $loopContents" =>{
+            val newInstances = dealWithWhileLoop(cond, instances, loopContents)
+            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
+          }
+          case q"do $loopContents while ($cond)" =>{
+            val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
+            (newInstances, 0)
+          }
+          //Functions (first is for functions defined in the same scope, second the others)
+          case func@Apply(Ident(functionName), args) =>{
+            val newInstances = dealWithFunction(func, functionName, args, instances)
+            val updatedInstances = updateStateIfNeeded(newInstances, line)
+            (updatedInstances, 0) //because we are processing the current one already
+          }
+          case func@Apply(Select(instanceCalledOn, functionName), args) =>{
+            val newInstances = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
+            val updatedInstances = updateStateIfNeeded(newInstances, line)
+            (updatedInstances, 0) //because we are processing the current one already
+          }
+          case q"if ($cond) $ifBody else $elseBody" =>
+            val newInstances = dealWithIfElse(cond, ifBody, elseBody, instances)
+            (newInstances,getLengthOfTree(line)-1)
+          //All three next cases are to check for solitary object name on a line
+          case Ident(TermName(objectName)) =>
+            checkObject(objectName, instances)
+            (instances,0)
+          case Select(location, expr) =>
+            var exprString = expr.toString()
+            if(exprString.lastIndexOf(".") != -1)
+              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
+            checkObject(exprString, instances)
+            (instances,0)
+          case Block(List(expr), Literal(Constant(()))) =>
+            var exprString = expr.toString()
+            if(exprString.lastIndexOf(".") != -1)
+              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
+            checkObject(exprString, instances)
+            (instances,0)
+          case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
+            val newInstances = checkTryCatchFinally(tryBody, cases, finallyBody, instances)
+            (newInstances,getLengthOfTree(line)-1)
+          //default case
+          case _ => (instances,0)
+        }
+      }
 
       def dealWithWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree) = {
         //initialisations
@@ -323,8 +416,9 @@ class MyComponent(val global: Global) extends PluginComponent {
               newInstances = checkInsideFunctionBody(begin, newInstances)
             newInstances = checkInsideFunctionBody(end, newInstances)
           case List(fq"$pat <- $gen") =>
+            println("matched pure generator")
             newInstances = checkInsideFunctionBody(gen, newInstances)
-          case _ =>
+          case _ => newInstances = checkInsideObjectBody(enums, newInstances)
         }
         newInstances
       }
@@ -340,8 +434,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           //go through condition of the for
           printBanner()
           println("before checking for loop generator "+enums)
-          //newInstances = checkInsideObjectBody(enums, instances)
-
           newInstances = checkInsideEnums(enums, newInstances)
           println("after checking for loop generator")
           //go through loop body
@@ -357,92 +449,6 @@ class MyComponent(val global: Global) extends PluginComponent {
             instance.currentStates = instance.currentStates ++ setOfStates
         }
         newInstances
-      }
-
-      /** Checks a line and returns possibly updated instances.
-       *  Has different cases for different types of line
-       *
-       * @param line line of code to analyse
-       * @param instances instances to update
-       * @return
-       */
-      def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
-        if(endCheck) return(Set(), 0)
-        println(s"checking line $line at line number "+line.pos.line)
-        line match {
-          //definitions to skip over (object, class, function)
-          case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
-            (instances, getLengthOfTree(line)-1)
-          case q"$mod class $pname[..$tpara] $actMods(...$para) extends { ..$defs } with ..$prnts { $self => ..$sts }" =>
-            (instances, getLengthOfTree(line)-1)
-          case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr"=>
-            (instances, getLengthOfTree(line)-1)
-          case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
-            var newInstances = processNewInstance(tname, classNm, instances)
-            (newInstances,0)
-          case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
-            var newInstances = processNewInstance(tname, classNm, instances)
-            (newInstances,0)
-          case q"for (..$enums) $expr" => {
-            println("matched for loop in process line")
-            val newInstances = dealWithForLoop(enums, instances, expr)
-            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
-          }
-          //while(true) and dowhile(true)
-          case LabelDef(TermName(name), List(), block @ Block(statements, Apply(Ident(TermName(name2)), List())))
-            if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
-            val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
-            endCheck = true
-            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
-          }
-          case q"while ($cond) $loopContents" =>{
-            val newInstances = dealWithWhileLoop(cond, instances, loopContents)
-            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
-          }
-          case q"do $loopContents while ($cond)" =>{
-            val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
-            (newInstances, 0)
-          }
-          case q"for (..$enums) yield $expr" =>{
-            val newInstances = dealWithLoopContents(instances, expr)
-            (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
-          }
-          //Functions (first is for functions defined in the same scope, second the others)
-          case func@Apply(Ident(functionName), args) =>{
-            val newInstances = dealWithFunction(func, functionName, args, instances)
-            val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, 0) //because we are processing the current one already
-          }
-          case func@Apply(Select(instanceCalledOn, functionName), args) =>{
-            val newInstances = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
-            val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, 0) //because we are processing the current one already
-          }
-          case q"if ($cond) $ifBody else $elseBody" =>
-            val newInstances = dealWithIfElse(cond, ifBody, elseBody, instances)
-            (newInstances,getLengthOfTree(line)-1)
-          //All three next cases are to check for solitary object name on a line
-          case Ident(TermName(objectName)) =>
-            checkObject(objectName, instances)
-            (instances,0)
-          case Select(location, expr) =>
-            var exprString = expr.toString()
-            if(exprString.lastIndexOf(".") != -1)
-              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
-            checkObject(exprString, instances)
-            (instances,0)
-          case Block(List(expr), Literal(Constant(()))) =>
-            var exprString = expr.toString()
-            if(exprString.lastIndexOf(".") != -1)
-              exprString = exprString.substring(exprString.lastIndexOf(".")+1)
-            checkObject(exprString, instances)
-            (instances,0)
-          case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
-            val newInstances = checkTryCatchFinally(tryBody, cases, finallyBody, instances)
-            (newInstances,getLengthOfTree(line)-1)
-          //default case
-          case _ => (instances,0)
-        }
       }
 
       /** Handles try-catch in a basic manner, assuming no exceptions.
@@ -470,11 +476,14 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def dealWithIfElse(condition: Trees#Tree, ifBody: Trees#Tree, elseBody: Trees#Tree, instances:Set[Instance]):Set[Instance] = {
-        checkInsideFunctionBody(condition)
+        printBanner()
+        println(showRaw(condition))
+        var newInstances = for(instance <- instances) yield instance
+        newInstances = checkInsideFunctionBody(condition, newInstances)
         var ifInstances:Set[Instance] = Set()
-        for (instance <- instances) ifInstances += Instance(instance.className, instance.name, instance.currentStates, instance.scope)
+        for (instance <- newInstances) ifInstances += Instance(instance.className, instance.name, instance.currentStates, instance.scope)
         var elseInstances:Set[Instance] = Set()
-        for (instance <- instances) elseInstances += Instance(instance.className, instance.name, instance.currentStates, instance.scope)
+        for (instance <- newInstances) elseInstances += Instance(instance.className, instance.name, instance.currentStates, instance.scope)
         ifInstances = checkInsideFunctionBody(ifBody, ifInstances)
         elseInstances = checkInsideFunctionBody(elseBody, elseInstances)
         mergeInstanceStates(ifInstances, elseInstances)

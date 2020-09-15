@@ -10,16 +10,9 @@ import scala.util.control.Breaks.{break, breakable}
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
-object doMainThings{
-  def main(args: Array[String]): Unit = {
-    val kitty = new Cat(1)
-    for(x <- getCatAgeRange(kitty)) println("sing")
-    //funcWithParams(getCatAgeRange(kitty), getBirthAge(kitty))
-  }
-
-  def funcWithParams(lst:List[Int], int:Int){
-
-  }
+object doMainThings extends App{
+    val cat = new Cat(1)
+    val ones = for(i <- getCatAgeRange(cat)) yield 1
 
   def getCatAge(cat:Cat): Int ={
     println("inside get cat age")

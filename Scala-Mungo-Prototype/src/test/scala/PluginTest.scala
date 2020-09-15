@@ -610,7 +610,7 @@ class PluginTest extends FlatSpec with Matchers {
   }
 
   /* -----------------
-         LOOPS
+         FOR LOOPS
    -------------------*/
 
   "plugin" should "throw an exception if an instance violates its protocol inside a for loop" in {
@@ -810,6 +810,926 @@ class PluginTest extends FlatSpec with Matchers {
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "not throw an exception if two instances with looping protocols of different lengths are in a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    in ("State1")
+        |    when("comeAlive()") goto "init"
+        |    when("run()") goto "State2"
+        |    in ("State2")
+        |    when("run()") goto "State3"
+        |    in ("State3")
+        |    when("run()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |  def run(): Unit = println("running")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val kitty = new Cat()
+        |  for(i <- 1 to 10) {
+        |  cat.walk()
+        |  cat.comeAlive()
+        |  kitty.walk()
+        |  kitty.run()
+        |  kitty.run()
+        |  kitty.run()
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+  }
+
+  /* -----------------
+     FOR LOOP GENERATORS
+   -------------------*/
+
+  "plugin" should "throw an exception if an instance violates its protocol in the to generator of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- getBirthAge(cat) to getCatAge(cat)) cat.walk()
+        |
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the to generator of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for(i <- getBirthAge(cat) to getCatAge(cat)) cat.walk()
+        |}
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the until generator of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- getBirthAge(cat) until getCatAge(cat)) cat.walk()
+        |
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the until generator of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for(i <- getBirthAge(cat) until getCatAge(cat)) cat.walk()
+        |}
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat)) println("for")
+        |
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |  def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 26)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat)) println("for")
+        |}
+        |
+        |   def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the multiple generators of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for{
+        |  i <- getCatAgeRange(cat)
+        |  j <- getKittyAgeRange(cat)
+        |  } println("for")
+        |
+        |
+        |  def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |  def getKittyAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,4)
+        |  }
+        |
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 24)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the multiple generators  of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for{
+        |  i <- getCatAgeRange(cat)
+        |  j <- getKittyAgeRange(cat)
+        |  } println("for")
+        | }
+        |
+        |   def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |  def getKittyAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,4)
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 26)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator with guard of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Int = 1
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat) if (i == cat.walk())) println("for")
+        |
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |  def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 26)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator with guard of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Int = 1
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat) if (i == cat.walk())) println("for")
+        |}
+        |
+        |   def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator with multiple guards of a for loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Int = 1
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat) if (i == 0) if(cat.walk() == 0)) println("for")
+        |
+        |   def getCatAge(cat:Cat): Int ={
+        |    println("inside get cat age")
+        |    cat.walk()
+        |    10
+        |  }
+        |
+        |  def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |
+        |  def getBirthAge(kitty: Cat) = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    0
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 26)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator with multiple guards of a for loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Int = 1
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  for(i <- getCatAgeRange(cat) if (i == 0) if(cat.walk() == 0)) println("for")
+        |}
+        |
+        |   def getCatAgeRange(cat:Cat): List[Int] ={
+        |    println("inside get cat age range")
+        |    cat.walk()
+        |    List(0,10)
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator of a for yield loop" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val ones = for(i <- getBirthAgeRange(cat)) yield 1
+        |
+        |
+        |  def getBirthAgeRange(kitty: Cat):List[Int] = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    List(0,10)
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("kitty", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the generator of a for yield loop in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main{
+        |def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  val ones = for(i <- getBirthAgeRange(cat)) yield 1
+        |
+        |}
+        |  def getBirthAgeRange(kitty: Cat):List[Int] = {
+        |    println("inside get birth age")
+        |    kitty.walk()
+        |    List(0,10)
+        |  }
+        |
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("kitty", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 23)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  /* -----------------
+         WHILE LOOPS
+   -------------------*/
+
   "plugin" should "throw an exception if an instance after being in a valid while loop violates its protocol" in {
     val userProtocol =
       """
@@ -974,18 +1894,15 @@ class PluginTest extends FlatSpec with Matchers {
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
-  "plugin" should "throw an exception when inner loop causes a violation" in {
+  "plugin" should "throw an exception if the condition inside a while causes a protocol violation" in {
     val userProtocol =
       """
         |package ProtocolDSL
         |
         |object Example extends ProtocolLang with App{
         |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    when("comeAlive()") goto "init"
-        |    in ("State1")
-        |    when ("comeAlive()") goto "State2"
-        |    in ("State2")
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
         |    when("walk()") goto "init"
         |    end()
         |}
@@ -1009,13 +1926,14 @@ class PluginTest extends FlatSpec with Matchers {
         |object Main extends App {
         |  val cat = new Cat()
         |  var x=0
-        |   do {
+        |   while(makeCatWalk(cat)) {
+        |   cat.comeAlive()
+        |  }
+        |
+        |  def makeCatWalk(cat:Cat): Boolean={
         |   cat.walk()
-        |   for(y <- 1 to 100) cat.comeAlive()
-        |   cat.walk()
-        |   x+=1
-        |  } while(x<10)
-        |  cat.comeAlive()
+        |   true
+        |  }
         |}
         |
         |""".stripMargin
@@ -1025,65 +1943,8 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 20)
+      sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
-  }
-
-  "plugin" should "not throw an exception if two instances with looping protocols of different lengths are in a loop" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    in ("State1")
-        |    when("comeAlive()") goto "init"
-        |    when("run()") goto "State2"
-        |    in ("State2")
-        |    when("run()") goto "State3"
-        |    in ("State3")
-        |    when("run()") goto "init"
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
-    val userCode =
-      """
-        |package compilerPlugin
-        |
-        |import scala.util.Random
-        |
-        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-        |
-        |
-        |@Typestate(filename = "MyProtocol.scala")
-        |class Cat{
-        |  def comeAlive(): Unit = println("The cat is alive")
-        |  def walk(): Unit = println("walking")
-        |  def run(): Unit = println("running")
-        |}
-        |
-        |object Main extends App {
-        |  val cat = new Cat()
-        |  val kitty = new Cat()
-        |  for(i <- 1 to 10) {
-        |  cat.walk()
-        |  cat.comeAlive()
-        |  kitty.walk()
-        |  kitty.run()
-        |  kitty.run()
-        |  kitty.run()
-        |  }
-        |
-        |}
-        |
-        |""".stripMargin
-    noException should be thrownBy{
-      val (compiler, sources) = createCompiler(userCode)
-      new compiler.Run() compileSources (sources)
-    }
-    deleteFile("MyProtocol.scala")
   }
 
   "plugin" should "not throw an exception if a protocol violation happens after a while(true) loop" in {
@@ -1142,6 +2003,67 @@ class PluginTest extends FlatSpec with Matchers {
   }
 
   /* -----------------
+         MIXED LOOPS
+   -------------------*/
+
+  "plugin" should "throw an exception when inner loop causes a violation" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    when("comeAlive()") goto "init"
+        |    in ("State1")
+        |    when ("comeAlive()") goto "State2"
+        |    in ("State2")
+        |    when("walk()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  var x=0
+        |   do {
+        |   cat.walk()
+        |   for(y <- 1 to 100) cat.comeAlive()
+        |   cat.walk()
+        |   x+=1
+        |  } while(x<10)
+        |  cat.comeAlive()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+
+
+  /* -----------------
          FUNCTIONS
    -------------------*/
 
@@ -1195,6 +2117,121 @@ class PluginTest extends FlatSpec with Matchers {
     deleteFile("MyProtocol.scala")
     val expectedException = new protocolViolatedException("kitty", "Cat",
       sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a function with one parameter" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  takeInt(makeCatWalk(cat))
+        |  takeInt(makeCatWalk(cat))
+        |
+        |
+        | def takeInt(int:Int): Unit={
+        | }
+        |
+        |  def makeCatWalk(kitty:Cat): Int ={
+        |      kitty.walk()
+        |      1
+        |    }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("kitty", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 25)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a function with multiple parameters" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State3"
+        |    when ("comeAlive()") goto "init"
+        |
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  takeInts(makeCatWalk(cat), makeCatWalk(cat))
+        |
+        |
+        | def takeInts(int:Int, int2:Int): Unit={
+        | }
+        |
+        |  def makeCatWalk(kitty:Cat): Int ={
+        |      kitty.walk()
+        |      1
+        |    }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("kitty", "Cat",
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1880,7 +2917,7 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1934,7 +2971,7 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -2168,6 +3205,214 @@ class PluginTest extends FlatSpec with Matchers {
     deleteFile("MyProtocol.scala")
     val expectedException = new protocolViolatedException("cat", "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the condition of the if in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val cat = new Cat()
+        |    var x = 1
+        |    if(cat.walk() && cat.walk()) println("if")
+        |    else println("else")
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the condition of the if" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val cat = new Cat()
+        |    var x = 1
+        |    if(cat.walk() && cat.walk()) println("if")
+        |    else println("else")
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the  complex condition of the if in main" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val cat = new Cat()
+        |    var x = 1
+        |    if(cat.walk() && (false || (cat.walk() && true))) println("if")
+        |    else println("else")
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in the complex condition of the if" in {
+    val userProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    when ("comeAlive()") goto "init"
+        |    in ("State3")
+        |    in ("State2")
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("MyProtocol.scala", Seq(userProtocol))
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "MyProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val cat = new Cat()
+        |    var x = 1
+        |    if(cat.walk() && (false || (cat.walk() && true))) println("if")
+        |    else println("else")
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[Exception] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    deleteFile("MyProtocol.scala")
+    val expectedException = new protocolViolatedException("cat", "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -2719,6 +3964,8 @@ class PluginTest extends FlatSpec with Matchers {
     }
     deleteFile("MyProtocol.scala")
   }
+
+
 
 
 
