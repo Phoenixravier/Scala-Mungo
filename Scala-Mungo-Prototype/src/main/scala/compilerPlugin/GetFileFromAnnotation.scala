@@ -79,7 +79,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       var compilationUnit:CompilationUnit=_
       var currentScope:mutable.Stack[String] = mutable.Stack()
-      var endCheck = false
       val Undefined = "_Undefined_"
       val Unknown = "_Unknown_"
       var curentElementInfo: ElementInfo=_
@@ -180,13 +179,9 @@ class MyComponent(val global: Global) extends PluginComponent {
        *  Take into account linearity
        *  Deal with return values when they are protocolled objects (aliasing)
        *  Deal with objects returned by a function
-       *  Deal with try-catch
-       *  Deal with if on its own
        *  Deal with code on itself in constructor
        *  Deal with companion objects
-       *  Deal with code inside parameters and conditions
        *  Deal with special cases of loops (known counts)
-       *  Deal with while(true) and do while(true) as special cases
        *  Deal with match statements (unless this is already dealt with by if else)
        * */
       def checkElementIsUsedCorrectly(): Unit ={
@@ -224,7 +219,6 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @param code
        */
       def checkInsideObjectBody(code:Seq[Trees#Tree], givenInstances:Set[Instance]=Set()): Set[Instance] = {
-        if(endCheck) return givenInstances
         var instances = for (instance <- givenInstances) yield instance
         if(curentElementInfo.isObject) instances +=Instance(curentElementInfo.name, curentElementInfo.name, Set(curentElementInfo.states(0)), currentScope.clone())
         for (line <- code) {
@@ -246,7 +240,6 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def checkInsideFunctionBody(code:Trees#Tree, givenInstances:Set[Instance]=Set()): Set[Instance] ={
-        if(endCheck) return givenInstances
         var instances = for (instance <- givenInstances) yield instance
         if(curentElementInfo.isObject) instances += Instance(curentElementInfo.name, curentElementInfo.name, Set(curentElementInfo.states(0)), currentScope.clone())
         var nbOfLinesToSkip = 0
@@ -277,7 +270,6 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int) ={
-        if(endCheck) return(Set(), 0)
         println(s"checking line $line at line number "+line.pos.line)
         println(showRaw(line))
         line match {
@@ -310,7 +302,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           case LabelDef(TermName(name), List(), block @ Block(statements, Apply(Ident(TermName(name2)), List())))
             if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
             val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
-            endCheck = true
             (newInstances, getLengthOfTree(line)-1) //-1 because we are processing the current one already
           }
           case q"while ($cond) $loopContents" =>{

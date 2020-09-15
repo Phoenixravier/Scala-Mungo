@@ -22,19 +22,21 @@ SHOULD HAVE
 - [ ] Deal with try-catch (advanced, handling exceptions)
 
 COULD HAVE
-- [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire chck each time 
+- [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
 
 
 ************OCT****************
+- [ ] Build
 - [ ] Make work on more than a single file
-- [ ] Scala-stMungo
+- [ ] Make things faster
+
 
 ************DEC****************
+- [ ] Scala-stMungo
 - [ ] Case study 
 
 ### In Progress
 
-- [ ] Deal with code inside parameters and conditions
 
 ### Done ✓
 
@@ -57,3 +59,4 @@ COULD HAVE
 - [x] Deal with if on its own
 - [x] Deal with code inside object which contains main function 
 - [x] Deal with while(true) and do while(true) as special cases
+- [x] Deal with code inside parameters and conditions
