@@ -213,7 +213,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
       /** Goes inside "App" object to see if there are instances with protocols and if they are following their protocol
-       * Analyses the code line by line with processLine. Takes instances or creates a new set of them and returns
+       * Analyses the code line by line with checkInsideFunctionBody. Takes instances or creates a new set of them and returns
        * updated ones
        *
        * @param code
@@ -221,11 +221,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       def checkInsideObjectBody(code:Seq[Trees#Tree], givenInstances:Set[Instance]=Set()): Set[Instance] = {
         var instances = for (instance <- givenInstances) yield instance
         if(curentElementInfo.isObject) instances +=Instance(curentElementInfo.name, curentElementInfo.name, Set(curentElementInfo.states(0)), currentScope.clone())
-        for (line <- code) {
+        for (line <- code)
             instances = checkInsideFunctionBody(line, instances)
-            //val newInstanceAndNbLinesToSkip = processLine(line, instances)
-            //instances = newInstanceAndNbLinesToSkip._1
-        }
         println("\nInstances:")
         instances.foreach(println)
         instances

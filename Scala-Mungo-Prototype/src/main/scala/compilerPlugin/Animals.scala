@@ -12,7 +12,10 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 object doMainThings extends App{
     val cat = new Cat(1)
-    val ones = for(i <- getCatAgeRange(cat)) yield 1
+    val ones = for(i <- List(cat)) yield i
+  println(ones)
+  ones(0).walk()
+  cat.walk()
 
   def getCatAge(cat:Cat): Int ={
     println("inside get cat age")
@@ -77,7 +80,7 @@ object Trash{
 
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
-class Cat(id:Int){
+case class Cat(var id:Int){
   println("init "+id)
 
 

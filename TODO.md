@@ -5,7 +5,7 @@
 ************SEP***************
 MUST HAVE
 - [ ] Take into account linearity
-- [ ] Deal with return values when they are protocolled instances (aliasing)
+- [ ] Deal with return values when they are protocolled instances, assignments, yield (aliasing)
 - [ ] Deal with code on itself in constructor
 - [ ] Deal with parameters which are new Cat or a function which returns a Cat
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
@@ -18,7 +18,7 @@ SHOULD HAVE
 - [ ] Deal with special cases of for loops (known counts)
 - [ ] Deal with threading
 - [ ] Deal with foreach and other map like things
-- [ ] Deal with break
+- [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with try-catch (advanced, handling exceptions)
 
 COULD HAVE
