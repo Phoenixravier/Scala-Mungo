@@ -4,10 +4,8 @@
 ### Todo
 ************SEP***************
 MUST HAVE
-- [ ] Take into account linearity
-- [ ] Deal with return values when they are protocolled instances, assignments, yield (aliasing)
 - [ ] Deal with code on itself in constructor
-- [ ] Deal with parameters which are new Cat or a function which returns a Cat
+- [ ] Deal with parameters which are new Cat
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with companion objects
 - [ ] Deal with match statements
@@ -36,7 +34,7 @@ COULD HAVE
 - [ ] Case study 
 
 ### In Progress
-
+- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, yield (aliasing)
 
 ### Done ✓
 

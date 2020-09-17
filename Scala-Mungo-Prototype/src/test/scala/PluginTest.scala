@@ -1,3 +1,4 @@
+
 import java.io.{BufferedWriter, File, FileWriter}
 
 import ProtocolDSL.State
@@ -17,6 +18,10 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var protocolWithoutEnd = ""
   var walkLoop3comeAliveLoop1 = ""
   var cannotWalkProtocol = ""
+  var walkComeAliveWalkLoopProtocol = ""
+  var decisionWalkProtocol = ""
+
+  /** Create protocol files before testing */
   override def beforeAll(): Unit = {
     protocolWalkTwiceIllegal =
       """
@@ -93,16 +98,49 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |""".stripMargin
     writeFile("cannotWalkProtocol.scala", Seq(cannotWalkProtocol))
+
+    walkComeAliveWalkLoopProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto "State1"
+        |    when("comeAlive()") goto "init"
+        |    in ("State1")
+        |    when ("comeAlive()") goto "State2"
+        |    in ("State2")
+        |    when("walk()") goto "init"
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("walkComeAliveWalkLoopProtocol.scala", Seq(walkComeAliveWalkLoopProtocol))
+
+    decisionWalkProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object Example extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("walk()") goto
+        |      "State1" at "true" or
+        |      "init" at "false"
+        |    in ("State1")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
   }
 
+  /** Delete protocol files after testing */
   override def afterAll(): Unit = {
     deleteFile("walkTwiceIllegalProtocol.scala")
     deleteFile("withNotAMethodProtocol.scala")
     deleteFile("withoutEndProtocol.scala")
     deleteFile("walkLoop3comeAliveLoop1Protocol.scala")
-    deleteFile("MyProtocol.scala")
-    deleteFile("CatProtocol.scala")
-    deleteFile("DogProtocol.scala")
+    deleteFile("cannotWalkProtocol.scala")
+    deleteFile("walkComeAliveWalkLoopProtocol.scala")
+    deleteFile("decisionWalkProtocol.scala")
   }
 
   "plugin" should "only recognise the typestate annotation" in {
@@ -171,7 +209,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val exceptedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 31)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage == exceptedException.getMessage)
    }
 
@@ -192,7 +230,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |object Main extends App {
         |  Cat.walk()
         |  Cat.walk()
-        |
         |}
         |
         |""".stripMargin
@@ -202,7 +239,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val exceptedException = new protocolViolatedException("Cat", "Cat",
-      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 31)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
     assert(actualException.getMessage === exceptedException.getMessage)
   }
 
@@ -233,7 +270,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 33)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
     assert(actualException.getMessage === expectedException.getMessage)
    }
 
@@ -266,7 +303,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("Cat", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 32)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -311,7 +348,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     assert(actualException.getMessage ===
-      "Methods Set(notAMethod(), walk(), comeAlive(), die()) defined in \"MyProtocol.scala\" are not a subset of " +
+      "Methods Set(walk(), notAMethod()) defined in \"withNotAMethodProtocol.scala\" are not a subset of " +
         "methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
 
@@ -359,7 +396,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     assert(actualException.getMessage ===
-      "The protocol at \"MyProtocol.scala\" could not be processed, " +
+      "The protocol at \"withoutEndProtocol.scala\" could not be processed, " +
         "check you have an end statement at the end of the protocol")
   }
 
@@ -452,7 +489,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
  }
 
@@ -461,35 +498,18 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-        |
-        |sealed trait DeathState
-        |case object Dead extends DeathState
-        |case object Alive extends DeathState
-        |case object Unsure extends DeathState
         |
         |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
-        |  def die():DeathState = {
-        |    val randomGenerator = Random
-        |    val randomNumber = randomGenerator.nextDouble()
-        |    println(randomNumber)
-        |    if(randomNumber < 0.25) Dead
-        |    else if(randomNumber < 0.5) Alive
-        |    else if(randomNumber < 0.75) Unsure
-        |    else null
-        |  }
         |}
         |
         |object Main extends App {
         |  val cat = new Cat()
         |  for(i <- 1 to 10) {
         |   val kitty = new Cat()
-        |   kitty.comeAlive()
         |   kitty.walk()
         |   kitty.walk()
         |  }
@@ -503,7 +523,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("kitty", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 34)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -512,28 +532,13 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |sealed trait DeathState
-        |case object Dead extends DeathState
-        |case object Alive extends DeathState
-        |case object Unsure extends DeathState
         |
         |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
-        |  def die():DeathState = {
-        |    val randomGenerator = Random
-        |    val randomNumber = randomGenerator.nextDouble()
-        |    println(randomNumber)
-        |    if(randomNumber < 0.25) Dead
-        |    else if(randomNumber < 0.5) Alive
-        |    else if(randomNumber < 0.75) Unsure
-        |    else null
-        |  }
         |}
         |
         |object Main extends App {
@@ -554,7 +559,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 36)
+      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1143,7 +1148,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1180,7 +1185,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("kitty", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1220,7 +1225,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("kitty", "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1301,7 +1306,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
+      sortSet(Set(State("init", 0), State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1418,7 +1423,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException("kitty", "Cat",
-      sortSet(Set(State("init", 0))), "comeAlive()", "<test>", 23)
+      sortSet(Set(State("State1", 0))), "comeAlive()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1427,32 +1432,15 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    -------------------*/
 
   "plugin" should "throw an exception when inner loop causes a violation" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    when("comeAlive()") goto "init"
-        |    in ("State1")
-        |    when ("comeAlive()") goto "State2"
-        |    in ("State2")
-        |    when("walk()") goto "init"
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkComeAliveWalkLoopProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1488,22 +1476,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    -------------------*/
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1513,7 +1485,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1541,22 +1513,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with one parameter" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1566,7 +1522,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1599,22 +1555,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with multiple parameters" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1624,7 +1564,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1656,22 +1596,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1681,7 +1605,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1693,9 +1617,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |  def makeCatWalk(kitty:Cat): Unit ={
         |      kitty.walk()
-        |      makeCatComeAlive(kitty)
-        |      def makeCatComeAlive(cat:Cat): Unit ={
-        |         cat.comeAlive()
+        |      makeCatWalkAgain(kitty)
+        |      def makeCatWalkAgain(cat:Cat): Unit ={
+        |         cat.walk()
         |      }
         |   }
         |}
@@ -1707,27 +1631,11 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 23)
+      sortSet(Set(State("State3", 1))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1737,7 +1645,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1745,16 +1653,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |object Main extends App {
         |  val cat = new Cat()
-        |  makeCatComeAlive(cat)
+        |  makeCatWalkTwice(cat)
         |
-        |  def makeCatComeAlive(kitty:Cat): Unit ={
-        |      kitty.comeAlive()
-        |      makeCatComeAliveAgain(kitty)
-        |      def makeCatComeAliveAgain(cat:Cat): Unit ={
-        |         cat.comeAlive()
-        |         makeCatWalkTwice(cat)
-        |         def makeCatWalkTwice(cat:Cat): Unit ={
-        |             cat.walk()
+        |  def makeCatWalkTwice(kitty:Cat): Unit ={
+        |      kitty.walk()
+        |      makeCatWalkAgain(kitty)
+        |      def makeCatWalkAgain(cat:Cat): Unit ={
+        |         makeCatWalk(cat)
+        |         def makeCatWalk(cat:Cat): Unit ={
         |             cat.walk()
         |         }
         |      }
@@ -1773,22 +1679,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1798,7 +1688,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1823,27 +1713,11 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("kitty", "Cat",
-      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1853,7 +1727,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1866,9 +1740,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |  def makeCatWalk(kitty:Cat): Unit ={
         |      kitty.walk()
-        |      makeCatComeAlive(kitty)
-        |      def makeCatComeAlive(cat:Cat): Unit ={
-        |         cat.comeAlive()
+        |      makeCatWalkAgain(kitty)
+        |      def makeCatWalkAgain(cat:Cat): Unit ={
+        |         cat.walk()
         |      }
         |   }
         |  }
@@ -1881,27 +1755,11 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "comeAlive()", "<test>", 24)
+      sortSet(Set(State("State1", 1))), "comeAlive()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -1911,7 +1769,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1920,16 +1778,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |object Main{
         |def main(args: Array[String]): Unit = {
         |  val cat = new Cat()
-        |  makeCatComeAlive(cat)
+        |  makeCatWalkTwice(cat)
         |
-        |  def makeCatComeAlive(kitty:Cat): Unit ={
-        |      kitty.comeAlive()
-        |      makeCatComeAliveAgain(kitty)
-        |      def makeCatComeAliveAgain(cat:Cat): Unit ={
-        |         cat.comeAlive()
-        |         makeCatWalkTwice(cat)
-        |         def makeCatWalkTwice(cat:Cat): Unit ={
-        |             cat.walk()
+        |  def makeCatWalkTwice(kitty:Cat): Unit ={
+        |      kitty.walk()
+        |      makeCatWalkAgain(kitty)
+        |      def makeCatWalkAgain(cat:Cat): Unit ={
+        |         makeCatWalk(cat)
+        |         def makeCatWalk(cat:Cat): Unit ={
         |             cat.walk()
         |         }
         |      }
@@ -1944,37 +1800,19 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "walk()", "<test>", 28)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 28)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an outer functions called by an inner one in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1986,7 +1824,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  makeCatComeAlive(cat)
         |
         |  def makeCatComeAlive(kitty:Cat): Unit ={
-        |      val cat = new Cat()
+        |    val cat = new Cat()
         |    makeCatWalk(cat)
         |    def makeCatWalk(cat:Cat): Unit ={
         |      makeWalk(cat)
@@ -2010,37 +1848,20 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "walk()", "<test>", 32)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 32)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2063,37 +1884,20 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "walk()", "<test>", 21)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2118,27 +1922,11 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State3", 1))), "walk()", "<test>", 22)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "not throw an exception if two instances with the same name do one legal method each" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State3"
-        |    when ("comeAlive()") goto "init"
-        |
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -2148,7 +1936,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2172,7 +1960,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-
   }
 
   /* -----------------
@@ -2180,33 +1967,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    -------------------*/
 
   "plugin" should "throw an exception if an instance could violate its protocol after a method giving multiple states in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2232,33 +2000,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after a method giving multiple states" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2286,33 +2035,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    -------------------*/
 
   "plugin" should "throw an exception if an instance could violate its protocol after an if else statement in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2337,28 +2067,11 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 23)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after an if else statement" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -2368,7 +2081,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2391,38 +2104,19 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException("cat", "Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2454,33 +2148,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2514,33 +2189,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement inside a for loop" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2576,33 +2232,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol after a singular if statement" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2629,33 +2266,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the condition of the if in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2682,23 +2300,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the condition of the if" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -2708,7 +2309,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2733,33 +2334,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the  complex condition of the if in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2786,33 +2368,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the complex condition of the if" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2841,33 +2404,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    --------------------------------*/
 
   "plugin" should "throw an exception if an instance violates its protocol inside a class construtor" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2895,33 +2439,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a class construtor in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2950,23 +2475,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object constructor" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -2976,7 +2484,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3016,33 +2524,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3084,33 +2573,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3150,33 +2620,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
-        |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3218,23 +2669,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object containing main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
@@ -3244,7 +2678,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3276,34 +2710,15 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
    --------------------------------*/
 
   "plugin" should "not throw an exception if an instance doesn't violate its protocol inside a try catch" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
-        |
-        |import scala.util.Random
         |import java.io.FileNotFoundException
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3326,38 +2741,18 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-
   }
 
   "plugin" should "not throw an exception if an instance doesn't violate its protocol inside a try catch in main" in {
-    val userProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object Example extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    in ("State2")
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("MyProtocol.scala", Seq(userProtocol))
     val userCode =
       """
         |package compilerPlugin
-        |
-        |import scala.util.Random
         |import java.io.FileNotFoundException
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "MyProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol.scala")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3382,9 +2777,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-
   }
-
 
 
 
@@ -3424,4 +2817,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
 }
+
+
 
