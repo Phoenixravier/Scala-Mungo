@@ -27,6 +27,8 @@ SHOULD HAVE
 - [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with try-catch (advanced, handling exceptions)
 - [ ] Deal with globals (have special scope like GLOBAL?)
+- [ ] Deal with collections
+- [ ] Deal with class attributes
 
 COULD HAVE
 - [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 

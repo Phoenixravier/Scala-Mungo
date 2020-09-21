@@ -314,7 +314,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         val newInstancesAndReturned = checkInsideFunctionBody(newValue, instances)
         newInstances = newInstancesAndReturned._1
         val returned = newInstancesAndReturned._2
-        println("returned is " +returned)
+        println("in process ass, returned is " +returned)
         var newValueName = ""
         returned match{
           case Some(Array(arrayContent)) =>
@@ -329,7 +329,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         //check if assignee is alias in current scope
         (getClosestScopeAlias(assigneeName, newInstances), getClosestScopeAlias(newValueName, newInstances)) match{
           case (Some(newAlias), Some(oldAlias)) =>
-            println(s"found new alias $newAlias in current scope  in instance ${newAlias.instance}")
+            println(s"found new alias $newAlias in current scope in instance ${newAlias.instance}")
             println(s"and found old alias $oldAlias")
             //remove new alias from instances
             newInstances = removeAlias(newInstances, newAlias.name)
@@ -375,7 +375,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("assignee is "+assignee)
         println("new value is "+newValue)
         val (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
-        println("returned is " +returned)
+        println("in novel returned is " +returned)
         var newValueName = ""
         returned match{
           case Some(Array(arrayContent)) =>
@@ -432,7 +432,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             val newInstances = processNovelAssignment(assignee, newValue, instances)
             (instances,0, None)
           case q"$assignee = $newValue" =>
-            println("in assignment")
+            println("in assignment "+line)
             val newInstances = processAssignment(assignee, newValue, instances)
             (newInstances,0, None)
           //loops
@@ -462,12 +462,12 @@ class MyComponent(val global: Global) extends PluginComponent {
           case func@Apply(Ident(functionName), args) =>{
             val (newInstances, returned) = dealWithFunction(func, functionName, args, instances)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, 0, returned) //because we are processing the current one already
+            (updatedInstances, getLengthOfTree(line)-1, returned) //because we are processing the current one already
           }
           case func@Apply(Select(instanceCalledOn, functionName), args) =>{
             val (newInstances, returned) = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, 0, returned) //because we are processing the current one already
+            (updatedInstances, getLengthOfTree(line)-1, returned) //because we are processing the current one already
           }
           case q"if ($cond) $ifBody else $elseBody" =>
             val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
@@ -793,6 +793,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             currentScope.pop()
             //renaming parameters on exit
             newInstances = replaceAliases(paramNameScopeToAlias, instances)
+            println(s"the deal with function returns $returned")
             return (newInstances, returned)
           }
         }

@@ -12,23 +12,14 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 object doMainThings extends App{
   val cat = new Cat(0)
-  var cat1 = new Cat(1)
-  cat1 = cat
-  val cat2 = cat
-  val cat3 = cat
-  cat2.walk()
-  cat3.walk()
-  var x = 1
-  val ifElseResult = if(x ==1) println("lol") else new Cat(0)
+  val cat1 = createCat
+  cat1.walk()
+  cat1.walk()
 
-
-  /*
-  val ones = for(i <- List(cat)) yield i
-  println(ones)
-  ones(0).walk()
-  cat.walk()
-
-   */
+  def createCat(): Cat ={
+    val kitty = new Cat(0)
+    kitty
+  }
 
   def getCatAge(cat:Cat): Int ={
     println("inside get cat age")
