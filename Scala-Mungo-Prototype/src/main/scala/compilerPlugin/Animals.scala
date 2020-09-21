@@ -11,11 +11,15 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
 object doMainThings extends App{
-  val cat = new Cat(1)
+  val cat = new Cat(0)
+  var cat1 = new Cat(1)
+  cat1 = cat
   val cat2 = cat
   val cat3 = cat
   cat2.walk()
   cat3.walk()
+  var x = 1
+  val ifElseResult = if(x ==1) println("lol") else new Cat(0)
 
 
   /*
@@ -62,9 +66,9 @@ object doMainThings extends App{
     cat.walk()
     cat.walk()
     def walk():Unit = println("Jee kävelemme!")
-    def cry():Unit = println("Itkeen :'(")
+    def cry():Unit = println("Itken :'(")
     def bark():Unit = println("hau hau")
-    def laze():Unit = println("Olen vasinyt")
+    def laze():Unit = println("Olen väsynyt")
     def stayOnAlert(intruderHere:Boolean): Unit = {
       if(intruderHere) bark()
       else laze()
