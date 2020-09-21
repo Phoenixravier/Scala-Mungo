@@ -17,7 +17,7 @@ import scala.util.control.Breaks._
 /** Holds an alias' name and scope */
 case class Alias(var name:String, var scope: mutable.Stack[String], instance:Instance){
   override def toString(): String={
-    s"$name ${scope.reverse.mkString(".")}"
+    s"$name ${scope.reverse.mkString(".")} ${instance.className}"
   }
 
   override def equals(alias:Any): Boolean ={
@@ -296,7 +296,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
       def addInMissingAlias(instances: Set[Instance], name: String):Set[Instance] = {
         var newInstances = for(instance <- instances) yield instance
-        for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(currentElementInfo.name, currentScope.clone, instance)
+        for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(name, currentScope.clone, instance)
         newInstances
       }
 
@@ -374,26 +374,41 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("inside novel assignment")
         println("assignee is "+assignee)
         println("new value is "+newValue)
-        val (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
+        var (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
         println("in novel returned is " +returned)
         var newValueName = ""
         returned match{
           case Some(Array(arrayContent)) =>
             println("got an array "+arrayContent)
-          case Some(name) =>
-            newValueName = name.toString
+          case Some(alias) =>
+            alias match{
+              case _:Alias =>
+                val newAlias = alias.asInstanceOf[Alias]
+                println("acquired a new alias")
+                //this should be something new returned from a function which is not already in instances
+                //so we want to this as a new instance
+                newInstances += Instance(currentElementInfo.name, Set(), Set(State("init",0)))
+                println("new inst are "+newInstances)
+                addInMissingAlias(newInstances, assignee.toString)
+                println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
+
+              case _ =>
+                newValueName = alias.toString
+                //check if new value is protocolled object already existing
+                getClosestScopeAlias(newValueName, newInstances) match{
+                  case Some(alias) =>
+                    println(s"found protocolled object from alias $alias")
+                    //add assignee as new alias to existing instance
+                    alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                  case None => println("did not find protocolled object")
+                }
+            }
+
             println("got name "+name)
           case _ =>
             println("got nothing returned")
         }
-        //check if new value is protocolled object already existing
-        getClosestScopeAlias(newValueName, newInstances) match{
-          case Some(alias) =>
-            println(s"found protocolled object from alias $alias")
-            //add assignee as new alias to existing instance
-            alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
-          case None => println("did not find protocolled object")
-        }
+
         newInstances
       }
 
@@ -481,21 +496,39 @@ class MyComponent(val global: Global) extends PluginComponent {
           case Ident(TermName(objectName)) =>
             println("matched raw ident")
             checkObject(objectName, instances)
-            (instances,0, Some(objectName))
+            var returned: Option[Alias] = None
+            getClosestScopeAlias(objectName, instances)match{
+              case Some(alias) =>
+                returned = Some(alias)
+              case None =>
+            }
+            (instances,0, returned)
           case Select(location, expr) =>
             println("matched raw select")
             var exprString = expr.toString()
             if(exprString.lastIndexOf(".") != -1)
               exprString = exprString.substring(exprString.lastIndexOf(".")+1)
             checkObject(exprString, instances)
-            (instances,0, Some(exprString.trim))
+            var returned: Option[Alias] = None
+            getClosestScopeAlias(exprString.trim, instances)match{
+              case Some(alias) =>
+                returned = Some(alias)
+              case None =>
+            }
+            (instances,0, returned)
           case Block(List(expr), Literal(Constant(()))) =>
             println("matched raw block")
             var exprString = expr.toString()
             if(exprString.lastIndexOf(".") != -1)
               exprString = exprString.substring(exprString.lastIndexOf(".")+1)
             checkObject(exprString, instances)
-            (instances,0, Some(exprString))
+            var returned: Option[Alias] = None
+            getClosestScopeAlias(exprString.trim, instances)match{
+              case Some(alias) =>
+                returned = Some(alias)
+              case None =>
+            }
+            (instances,0, returned)
           //default case
           case q"$name" =>
             println("matched name")
