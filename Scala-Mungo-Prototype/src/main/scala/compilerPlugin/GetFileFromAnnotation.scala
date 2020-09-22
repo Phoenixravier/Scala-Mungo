@@ -385,12 +385,20 @@ class MyComponent(val global: Global) extends PluginComponent {
               case _:Alias =>
                 val newAlias = alias.asInstanceOf[Alias]
                 println("acquired a new alias")
-                //this should be something new returned from a function which is not already in instances
-                //so we want to this as a new instance
-                newInstances += Instance(currentElementInfo.name, Set(), Set(State("init",0)))
-                println("new inst are "+newInstances)
-                addInMissingAlias(newInstances, assignee.toString)
-                println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
+                //if already exists then add to list
+                getClosestScopeAlias(newAlias.name, newInstances) match{
+                  case Some(alias) =>
+                    println(s"found protocolled object from alias $alias")
+                    //add assignee as new alias to existing instance
+                    alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                  case None =>
+                    //otherwise add a new instance
+                    newInstances += Instance(currentElementInfo.name, Set(), Set(State("init",0)))
+                    println("new inst are "+newInstances)
+                    addInMissingAlias(newInstances, assignee.toString)
+                    println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
+                }
+
 
               case _ =>
                 newValueName = alias.toString
@@ -822,7 +830,24 @@ class MyComponent(val global: Global) extends PluginComponent {
             currentScope.push(functionName.toString())
             val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
             newInstances = newInstancesAndReturned._1
-            val returned = if(function.returnType.toString() == "Unit") None else newInstancesAndReturned._2
+            var returned = newInstancesAndReturned._2
+            returned match{
+              case Some(alias) =>
+                alias match{
+                  case _:Alias =>
+                    var newAlias = alias.asInstanceOf[Alias]
+                    returned =
+                      if(function.returnType.toString() == currentElementInfo.name
+                          && paramNameScopeToAlias.contains((newAlias.name, newAlias.scope)))
+                        Some(newAlias.name)
+                      else if(function.returnType.toString() == currentElementInfo.name)
+                        newInstancesAndReturned._2
+                      else newInstancesAndReturned._2
+                  case _ =>
+                }
+
+              case None =>
+            }
             currentScope.pop()
             //renaming parameters on exit
             newInstances = replaceAliases(paramNameScopeToAlias, instances)
