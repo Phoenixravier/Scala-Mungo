@@ -402,8 +402,6 @@ class MyComponent(val global: Global) extends PluginComponent {
                     addInMissingAlias(newInstances, assignee.toString)
                     println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
                 }
-
-
               case _ =>
                 newValueName = alias.toString
                 //check if new value is protocolled object already existing

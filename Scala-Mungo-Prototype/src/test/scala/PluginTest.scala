@@ -13,6 +13,8 @@ import scala.tools.nsc.{Global, Settings}
 
 
 class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{
+  //region <protocol vars init>
+
   var protocolWalkTwiceIllegal = ""
   var protocolWithNotAMethod = ""
   var protocolWithoutEnd = ""
@@ -20,6 +22,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var cannotWalkProtocol = ""
   var walkComeAliveWalkLoopProtocol = ""
   var decisionWalkProtocol = ""
+  //endregion
 
   /** Create protocol files before testing */
   override def beforeAll(): Unit = {
@@ -143,6 +146,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     deleteFile("decisionWalkProtocol.scala")
   }
 
+  //region <BASIC>
   "plugin" should "only recognise the typestate annotation" in {
     val userCode =
       """
@@ -457,11 +461,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
     assert(actualException.getMessage === "Methods Set(walk(), notAMethod()) defined in \"withNotAMethodProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class Cat")
   }
+  //endregion
 
-  /* -----------------
-         FOR LOOPS
-   -------------------*/
-
+  //region <FOR LOOPS>
   "plugin" should "throw an exception if an instance violates its protocol inside a for loop" in {
     val userCode =
       """
@@ -596,11 +598,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
   }
+  //endregion
 
-  /* -----------------
-     FOR LOOP GENERATORS
-   -------------------*/
-
+  //region <FOR LOOP GENERATORS>
   "plugin" should "throw an exception if an instance violates its protocol in the to generator of a for loop" in {
     val userCode =
       """
@@ -1228,11 +1228,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-  /* -----------------
-         WHILE LOOPS
-   -------------------*/
-
+  //region <WHILE LOOPS>
   "plugin" should "throw an exception if an instance after being in a valid while loop violates its protocol" in {
     val userCode =
       """
@@ -1426,11 +1424,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 0))), "comeAlive()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-  /* -----------------
-         MIXED LOOPS
-   -------------------*/
-
+  //region <MIXED LOOPS>
   "plugin" should "throw an exception when inner loop causes a violation" in {
     val userCode =
       """
@@ -1468,12 +1464,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-
-
-  /* -----------------
-         FUNCTIONS
-   -------------------*/
+  //region <FUNCTIONS>
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function" in {
     val userCode =
@@ -1961,10 +1954,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
   }
+  //endregion
 
-  /* -----------------
-       RETURN VALUES
-   -------------------*/
+  //region <RETURN VALUES>
 
   "plugin" should "throw an exception if an instance could violate its protocol after a method giving multiple states in main" in {
     val userCode =
@@ -2029,10 +2021,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-  /* -----------------
-         IF ELSE
-   -------------------*/
+  //region <IF ELSE>
 
   "plugin" should "throw an exception if an instance could violate its protocol after an if else statement in main" in {
     val userCode =
@@ -2398,11 +2389,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-  /* ------------------------------
-     CODE IN CLASSES AND OBJECTS
-   --------------------------------*/
-
+  //region <CODE IN CLASSES AND OBJECTS>
   "plugin" should "throw an exception if an instance violates its protocol inside a class construtor" in {
     val userCode =
       """
@@ -2704,11 +2693,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
-  /* ------------------------------
-          TRY CATCH FINALLY
-   --------------------------------*/
-
+  //region <TRY CATCH FINALLY>
   "plugin" should "not throw an exception if an instance doesn't violate its protocol inside a try catch" in {
     val userCode =
       """
@@ -2778,11 +2765,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
   }
+  //endregion
 
-  /* ------------------------------
-          RETURNING THINGS
-   --------------------------------*/
-
+  //region <RETURNING THINGS AND ALIASING>
   "plugin" should "throw an exception if an aliased instance violated its protocol" in {
     val userCode =
       """
@@ -2812,7 +2797,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2847,7 +2832,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2961,7 +2946,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -3035,7 +3020,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3073,11 +3058,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
+  //endregion
 
+
+  //region <Utility functions>
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={
     val sources = List(new BatchSourceFile("<test>", code))
@@ -3112,7 +3100,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
 
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
-
+  //endregion
 }
 
 
