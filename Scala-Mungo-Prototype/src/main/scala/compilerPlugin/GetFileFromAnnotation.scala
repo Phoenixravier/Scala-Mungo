@@ -34,6 +34,10 @@ case class Alias(var name:String, var scope: mutable.Stack[String], instance:Ins
 
 /** Holds an instance classname, its aliases and its current possible states */
 case class Instance(var className: String, var aliases:Set[Alias], var currentStates:Set[State]){
+  def getAliasNames(): Set[String] ={
+    for(alias <- aliases) yield alias.name
+  }
+
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
     currentStates -= stateToRemove
     currentStates += stateToAdd
@@ -69,9 +73,9 @@ case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Arr
 }
 
 /** Error for when a protocol is violated */
-class protocolViolatedException(instanceName:String, className:String, states:SortedSet[State], methodName:String,
+class protocolViolatedException(aliasNames:SortedSet[String], className:String, states:SortedSet[State], methodName:String,
                                 file:String, line:Int)
-  extends Exception(s"Invalid transition in instance $instanceName of type $className " +
+  extends Exception(s"Invalid transition in instance with alias(es) $aliasNames of type $className " +
     s"from state(s) $states with method $methodName in file $file at line $line")
 
 /** Error for when the user defines their protocol wrong */
@@ -119,7 +123,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         //find all the classes, objects and functions in the code so we can jump to them later
         classAndObjectTraverser.traverse(unit.body)
         functionTraverser.traverse(unit.body)
-        println(functionTraverser.functions)
+        //println(functionTraverser.functions)
         checkCode()
       }
 
@@ -393,7 +397,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                     alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
                   case None =>
                     //otherwise add a new instance
-                    newInstances += Instance(currentElementInfo.name, Set(), Set(State("init",0)))
+                    newInstances += Instance(currentElementInfo.name, Set(), newAlias.instance.currentStates)
                     println("new inst are "+newInstances)
                     addInMissingAlias(newInstances, assignee.toString)
                     println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
@@ -1019,8 +1023,8 @@ class MyComponent(val global: Global) extends PluginComponent {
                         newStates = for(x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
                     println("new states are "+newStates)
                     for(state <- newStates if state.name == Undefined) {
-                      throw new protocolViolatedException(aliasName, elementName, sortSet(alias.instance.currentStates),
-                        methodName, line.pos.source.toString(), line.pos.line)
+                      throw new protocolViolatedException(sortSet(alias.instance.getAliasNames()), elementName,
+                        sortSet(alias.instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
                     }
                     newSetOfStates = newSetOfStates ++ newStates
                   }

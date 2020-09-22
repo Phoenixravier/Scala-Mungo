@@ -2,10 +2,12 @@
 [debug] Input file mappings:
 [debug] 	ProtocolDSL
 [debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL
-[debug] 	ProtocolDSL\Example$.class
-[debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\Example$.class
-[debug] 	ProtocolDSL\Example.class
-[debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\Example.class
+[debug] 	ProtocolDSL\CatProtocol$.class
+[debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\CatProtocol$.class
+[debug] 	ProtocolDSL\CatProtocol$delayedInit$body.class
+[debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\CatProtocol$delayedInit$body.class
+[debug] 	ProtocolDSL\CatProtocol.class
+[debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\CatProtocol.class
 [debug] 	ProtocolDSL\Method$.class
 [debug] 	  C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\protocolDir\target\scala-2.13\classes\ProtocolDSL\Method$.class
 [debug] 	ProtocolDSL\Method.class
