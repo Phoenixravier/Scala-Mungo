@@ -11,8 +11,12 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
 object doMainThings extends App{
-  val cat1 = createCat()
+  var cat = new Cat(1)
+  var cat1, cat2 = new Cat(0)
+  cat1 = cat
   cat1.walk()
+  cat2 = cat
+  cat2.walk()
 
   def createCat(): Cat ={
     val kitty = new Cat(1)
@@ -84,7 +88,7 @@ object Trash{
 
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
-case class Cat(var id:Int){
+case class Cat(var id:Int=0){
   println("init "+id)
 
 

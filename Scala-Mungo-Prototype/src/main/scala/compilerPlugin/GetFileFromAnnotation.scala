@@ -305,64 +305,45 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
       def processAssignment(assignee: Trees#Tree, newValue: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-        println("assignee is "+assignee)
         var (newInstances, returnedAssignee) = checkInsideFunctionBody(assignee, instances)
-        println(s"returned ass is $returnedAssignee")
-        var assigneeName = ""
-        returnedAssignee match{
-          case Some(variableName) =>
-            assigneeName = variableName.toString
-          case _ =>
-        }
-        println("new value is "+newValue)
         val newInstancesAndReturned = checkInsideFunctionBody(newValue, instances)
         newInstances = newInstancesAndReturned._1
         val returned = newInstancesAndReturned._2
-        println("in process ass, returned is " +returned)
-        var newValueName = ""
-        returned match{
-          case Some(Array(arrayContent)) =>
-            println("got an array "+arrayContent)
-          case Some(name) =>
-            newValueName = name.toString
-            println("got name "+name)
-          case _ =>
-            println("got nothing returned")
-        }
-        println(s"ass $assigneeName, new $newValueName")
-        //check if assignee is alias in current scope
-        (getClosestScopeAlias(assigneeName, newInstances), getClosestScopeAlias(newValueName, newInstances)) match{
-          case (Some(newAlias), Some(oldAlias)) =>
-            println(s"found new alias $newAlias in current scope in instance ${newAlias.instance}")
-            println(s"and found old alias $oldAlias")
-            //remove new alias from instances
-            newInstances = removeAlias(newInstances, newAlias.name)
-            //add new alias to instance from old alias
-            oldAlias.instance.aliases += Alias(newAlias.name, newAlias.scope, oldAlias.instance)
-          case (Some(newAlias), None) =>
-            println(s"found only the new alias $newAlias")
-            newValue match{
-              case q"new $expr" =>
-                println(s"new value is new $expr")
-                //remove new alias from instances
-                newInstances = removeAlias(newInstances, newAlias.name)
-                //add new instance
-                newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
-                newInstances = addInMissingAlias(newInstances, newAlias.name)
-              case _ =>
-                println("new value is sthg else")
-                //remove new alias from instances
-                newInstances = removeAlias(newInstances, newAlias.name)
+        (returnedAssignee, returned) match{
+          case (None, _) => return newInstances
+          case (Some(aliasOrName), None) =>
+            aliasOrName match{
+              case _:Alias =>
+                val assigneeAlias = aliasOrName.asInstanceOf[Alias]
+                newInstances = removeAlias(newInstances, assigneeAlias.name)
+              case _ => //assignee is not a protocolled alias so do nothing
             }
-          case (None, None) => println("did not find anything")
-          case (_,_) => println("nothing found")
-        }
-        //check if new value is protocolled object already existing
-        getClosestScopeAlias(newValueName, newInstances) match{
-          case Some(alias) =>
-            println(s"found protocolled object from alias $alias")
-
-          case None => println("did not find protocolled object")
+          case (Some(assigneeAliasOrName), Some(assignedAliasOrName)) =>
+            (assigneeAliasOrName, assignedAliasOrName) match {
+              case (_:Alias, _:Alias) =>
+                val assigneeAlias = assigneeAliasOrName.asInstanceOf[Alias]
+                val assignedAlias = assignedAliasOrName.asInstanceOf[Alias]
+                getClosestScopeAlias(assignedAlias.name, newInstances) match{
+                  case Some(assignedAlias) =>
+                    newInstances = removeAlias(newInstances, assigneeAlias.name)
+                    assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                  case None =>
+                    newInstances = removeAlias(newInstances, assigneeAlias.name)
+                    newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
+                    addInMissingAlias(newInstances, assigneeAlias.name)
+                }
+              case (_:String,_) =>
+              case (_:Alias, _:String) =>
+                val assigneeAlias = assigneeAliasOrName.asInstanceOf[Alias]
+                val assignedName = assignedAliasOrName.asInstanceOf[String]
+                getClosestScopeAlias(assignedName, newInstances) match{
+                  case Some(assignedAlias) =>
+                    newInstances = removeAlias(newInstances, assigneeAlias.name)
+                    assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                  case None =>
+                }
+            }
+          case _ =>
         }
         newInstances
       }
@@ -375,50 +356,36 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def processNovelAssignment(assignee: TermName, newValue: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-        println("inside novel assignment")
-        println("assignee is "+assignee)
-        println("new value is "+newValue)
         var (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
-        println("in novel returned is " +returned)
-        var newValueName = ""
         returned match{
           case Some(Array(arrayContent)) =>
-            println("got an array "+arrayContent)
-          case Some(alias) =>
-            alias match{
+          case Some(aliasOrName) =>
+            aliasOrName match{
               case _:Alias =>
-                val newAlias = alias.asInstanceOf[Alias]
-                println("acquired a new alias")
-                //if already exists then add to list
-                getClosestScopeAlias(newAlias.name, newInstances) match{
+                val alias = aliasOrName.asInstanceOf[Alias]
+                //check if alias already exists
+                getClosestScopeAlias(alias.name, newInstances) match{
                   case Some(alias) =>
-                    println(s"found protocolled object from alias $alias")
-                    //add assignee as new alias to existing instance
+                    //if already exists then add to list of aliases
                     alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
                   case None =>
-                    //otherwise add a new instance
-                    newInstances += Instance(currentElementInfo.name, Set(), newAlias.instance.currentStates)
-                    println("new inst are "+newInstances)
+                    //otherwise add as new instance
+                    newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
                     addInMissingAlias(newInstances, assignee.toString)
-                    println(s"after adding alias with name ${assignee.toString}, instances are $newInstances")
                 }
               case _ =>
-                newValueName = alias.toString
+                val newValueName = aliasOrName.toString
                 //check if new value is protocolled object already existing
                 getClosestScopeAlias(newValueName, newInstances) match{
                   case Some(alias) =>
-                    println(s"found protocolled object from alias $alias")
                     //add assignee as new alias to existing instance
                     alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
-                  case None => println("did not find protocolled object")
+                  case None =>
                 }
             }
-
-            println("got name "+name)
           case _ =>
-            println("got nothing returned")
+            //if nothing is being assigned then do nothing
         }
-
         newInstances
       }
 
