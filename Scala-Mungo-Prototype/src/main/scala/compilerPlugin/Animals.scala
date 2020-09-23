@@ -74,7 +74,7 @@ object doMainThings extends App{
       println("on alert")
     }
   }
-  
+
 }
 
 object Trash{

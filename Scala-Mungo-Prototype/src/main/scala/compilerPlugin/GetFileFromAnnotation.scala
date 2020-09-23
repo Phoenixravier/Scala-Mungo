@@ -171,7 +171,6 @@ class MyComponent(val global: Global) extends PluginComponent {
                 throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
                   s"check you have an end statement at the end of the protocol")
               val (transitions, states, returnValuesArray) = getDataFromFile("protocolClasses\\EncodedData.ser")
-              //rmProtocolDir()
               checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
               val methodToIndices = createMethodToIndicesMap(returnValuesArray)
               currentElementInfo = ElementInfo(name, scope, transitions, states, methodToIndices, isObject)
@@ -1300,11 +1299,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         val className = filename.substring(filename.lastIndexOf("\\")+1, filename.lastIndexOf("."))
         println(className)
         s"executeUserProtocol.bat $filename $className".!
-      }
-
-      /** Removes protocolDir from the project */
-      def rmProtocolDir(): Unit ={
-        s"cleanUp.bat".!
       }
 
       /** Returns protocol data from a file */
