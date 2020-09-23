@@ -167,11 +167,11 @@ class MyComponent(val global: Global) extends PluginComponent {
               //execute the DSL in the protocol file and serialize the data into a file
               executeFile(filename)
               //retrieve the serialized data
-              if(!Files.exists(Paths.get("protocolDir\\EncodedData.ser")))
+              if(!Files.exists(Paths.get("protocolClasses\\EncodedData.ser")))
                 throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
                   s"check you have an end statement at the end of the protocol")
-              val (transitions, states, returnValuesArray) = getDataFromFile("protocolDir\\EncodedData.ser")
-              rmProtocolDir()
+              val (transitions, states, returnValuesArray) = getDataFromFile("protocolClasses\\EncodedData.ser")
+              //rmProtocolDir()
               checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
               val methodToIndices = createMethodToIndicesMap(returnValuesArray)
               currentElementInfo = ElementInfo(name, scope, transitions, states, methodToIndices, isObject)
@@ -308,40 +308,53 @@ class MyComponent(val global: Global) extends PluginComponent {
         var (newInstances, returnedAssignee) = checkInsideFunctionBody(assignee, instances)
         val newInstancesAndReturned = checkInsideFunctionBody(newValue, instances)
         newInstances = newInstancesAndReturned._1
-        val returned = newInstancesAndReturned._2
-        (returnedAssignee, returned) match{
+        val returnedAssigned = newInstancesAndReturned._2
+        println(s"returned assignee is $returnedAssignee and returned assigned is $returnedAssigned")
+        (returnedAssignee, returnedAssigned) match{
           case (None, _) => return newInstances
           case (Some(aliasOrName), None) =>
             aliasOrName match{
-              case _:Alias =>
-                val assigneeAlias = aliasOrName.asInstanceOf[Alias]
-                newInstances = removeAlias(newInstances, assigneeAlias.name)
+              //assigned is not a protocolled instance so remove assignee from instances
+              case _:ArrayBuffer[Alias] =>
+                val assigneeAliases = aliasOrName.asInstanceOf[ArrayBuffer[Alias]]
+                for(assigneeAlias <- assigneeAliases)
+                  newInstances = removeAlias(newInstances, assigneeAlias.name)
               case _ => //assignee is not a protocolled alias so do nothing
             }
           case (Some(assigneeAliasOrName), Some(assignedAliasOrName)) =>
             (assigneeAliasOrName, assignedAliasOrName) match {
-              case (_:Alias, _:Alias) =>
-                val assigneeAlias = assigneeAliasOrName.asInstanceOf[Alias]
-                val assignedAlias = assignedAliasOrName.asInstanceOf[Alias]
-                getClosestScopeAlias(assignedAlias.name, newInstances) match{
-                  case Some(assignedAlias) =>
-                    newInstances = removeAlias(newInstances, assigneeAlias.name)
-                    assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
-                  case None =>
-                    newInstances = removeAlias(newInstances, assigneeAlias.name)
-                    newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
-                    addInMissingAlias(newInstances, assigneeAlias.name)
-                }
+              case (_:ArrayBuffer[Alias], _:ArrayBuffer[Alias]) =>
+                val assigneeAliases = assigneeAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
+                val assignedAliases = assignedAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
+                for(assigneeAlias <- assigneeAliases)
+                  for(assignedAlias <- assignedAliases) {
+                    getClosestScopeAliases(assignedAlias.name, newInstances) match {
+                      case Some(assignedAliases) =>
+                        for (assignedAlias <- assignedAliases) {
+                          newInstances = removeAlias(newInstances, assigneeAlias.name)
+                          assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                        }
+                      case None =>
+                        newInstances = removeAlias(newInstances, assigneeAlias.name)
+                        newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
+                        addInMissingAlias(newInstances, assigneeAlias.name)
+                    }
+                  }
               case (_:String,_) =>
-              case (_:Alias, _:String) =>
-                val assigneeAlias = assigneeAliasOrName.asInstanceOf[Alias]
+              case (_:ArrayBuffer[Alias], _:String) =>
+                val assigneeAliases = assigneeAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
                 val assignedName = assignedAliasOrName.asInstanceOf[String]
-                getClosestScopeAlias(assignedName, newInstances) match{
-                  case Some(assignedAlias) =>
-                    newInstances = removeAlias(newInstances, assigneeAlias.name)
-                    assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
-                  case None =>
+                for(assigneeAlias <- assigneeAliases) {
+                  getClosestScopeAliases(assignedName, newInstances) match {
+                    case Some(assignedAliases) =>
+                      for (assignedAlias <- assignedAliases) {
+                        newInstances = removeAlias(newInstances, assigneeAlias.name)
+                        assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                      }
+                    case None =>
+                  }
                 }
+              case (_,_) =>
             }
           case _ =>
         }
@@ -359,27 +372,31 @@ class MyComponent(val global: Global) extends PluginComponent {
         var (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
         returned match{
           case Some(Array(arrayContent)) =>
-          case Some(aliasOrName) =>
-            aliasOrName match{
-              case _:Alias =>
-                val alias = aliasOrName.asInstanceOf[Alias]
-                //check if alias already exists
-                getClosestScopeAlias(alias.name, newInstances) match{
-                  case Some(alias) =>
-                    //if already exists then add to list of aliases
-                    alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
-                  case None =>
-                    //otherwise add as new instance
-                    newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
-                    addInMissingAlias(newInstances, assignee.toString)
+          case Some(aliasesOrName) =>
+            aliasesOrName match{
+              case _:ArrayBuffer[Alias] =>
+                val aliases = aliasesOrName.asInstanceOf[ArrayBuffer[Alias]]
+                for(alias <- aliases) {
+                  //check if alias already exists
+                  getClosestScopeAliases(alias.name, newInstances) match {
+                    case Some(aliases) =>
+                      //if already exists then add to list of aliases
+                      for (alias <- aliases)
+                        alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                    case None =>
+                      //otherwise add as new instance
+                      newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
+                      addInMissingAlias(newInstances, assignee.toString)
+                  }
                 }
               case _ =>
-                val newValueName = aliasOrName.toString
+                val newValueName = aliasesOrName.toString
                 //check if new value is protocolled object already existing
-                getClosestScopeAlias(newValueName, newInstances) match{
-                  case Some(alias) =>
+                getClosestScopeAliases(newValueName, newInstances) match{
+                  case Some(aliases) =>
                     //add assignee as new alias to existing instance
-                    alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                    for(alias <- aliases)
+                      alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
                   case None =>
                 }
             }
@@ -473,12 +490,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           case Ident(TermName(objectName)) =>
             println("matched raw ident")
             checkObject(objectName, instances)
-            var returned: Option[Alias] = None
-            getClosestScopeAlias(objectName, instances)match{
-              case Some(alias) =>
-                returned = Some(alias)
-              case None =>
-            }
+            val returned = getClosestScopeAliases(objectName, instances)
             (instances,0, returned)
           case Select(location, expr) =>
             println("matched raw select")
@@ -486,12 +498,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             if(exprString.lastIndexOf(".") != -1)
               exprString = exprString.substring(exprString.lastIndexOf(".")+1)
             checkObject(exprString, instances)
-            var returned: Option[Alias] = None
-            getClosestScopeAlias(exprString.trim, instances)match{
-              case Some(alias) =>
-                returned = Some(alias)
-              case None =>
-            }
+            val returned = getClosestScopeAliases(exprString.trim, instances)
             (instances,0, returned)
           case Block(List(expr), Literal(Constant(()))) =>
             println("matched raw block")
@@ -499,12 +506,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             if(exprString.lastIndexOf(".") != -1)
               exprString = exprString.substring(exprString.lastIndexOf(".")+1)
             checkObject(exprString, instances)
-            var returned: Option[Alias] = None
-            getClosestScopeAlias(exprString.trim, instances)match{
-              case Some(alias) =>
-                returned = Some(alias)
-              case None =>
-            }
+            val returned = getClosestScopeAliases(exprString.trim, instances)
             (instances,0, returned)
           //default case
           case q"$name" =>
@@ -702,13 +704,17 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @param instances
        * @return
        */
-      def getClosestScopeAlias(name:String, instances:Set[Instance]): Option[Alias] ={
-        if(instances.isEmpty) return None
+      def getClosestScopeAliases(name:String, instances:Set[Instance]): Option[ArrayBuffer[Alias]] = {
+        if (instances.isEmpty) return None
         val curScope = currentScope.clone()
-        while(curScope.nonEmpty){
-          for(instance <- instances)
-            for(alias <- instance.aliases if alias.name == name && alias.scope == curScope)
-              return Option(alias)
+        while (curScope.nonEmpty) {
+          var aliases:ArrayBuffer[Alias] = ArrayBuffer()
+          for (instance <- instances) {
+            for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
+              aliases += alias
+            }
+          }
+          if(aliases.nonEmpty) return Option(aliases)
           curScope.pop()
         }
         None
@@ -799,6 +805,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             currentScope.push(functionName.toString())
             val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
             newInstances = newInstancesAndReturned._1
+            //figuring out what is returned
             var returned = newInstancesAndReturned._2
             returned match{
               case Some(alias) =>
@@ -824,6 +831,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             return (newInstances, returned)
           }
         }
+        println("instances at the end of deal with function are "+instances)
         (instances, None)
       }
 
@@ -893,14 +901,16 @@ class MyComponent(val global: Global) extends PluginComponent {
         for(arg <- args){
           var argString = arg.toString()
           if(argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".")+1)
-          getClosestScopeAlias(argString, instances) match{
-            case Some(alias) =>
-              println(s"found alias $alias in parameters")
+          getClosestScopeAliases(argString, instances) match{
+            case Some(aliases) =>
+              println(s"found aliases $aliases in parameters")
               val paramScope = currentScope.clone().push(functionName)
               val paramName = parameters(argCounter)(0)
-              paramNameToAliasName += (paramName, paramScope) -> (alias.name, alias.scope)
-              alias.name = paramName
-              alias.scope = paramScope
+              for(alias <- aliases) {
+                paramNameToAliasName += (paramName, paramScope) -> (alias.name, alias.scope)
+                alias.name = paramName
+                alias.scope = paramScope
+              }
             case None =>
           }
           argCounter += 1
@@ -969,33 +979,35 @@ class MyComponent(val global: Global) extends PluginComponent {
           val aliasName = methodCallInfo(1)
           println("instances inside update are "+instances)
           println("alias name to find within those is "+aliasName)
-          getClosestScopeAlias(aliasName, instances) match{
-            case Some(alias) =>
-              println("got instance"+alias)
-              println("it has "+ alias.instance.currentStates)
-              println("method to indices is "+currentElementInfo.methodToIndices)
-              breakable {
-                var newSetOfStates:Set[State] = Set()
-                for(state <- alias.instance.currentStates) {
-                  if (state.name == Unknown) break
-                  if (methodToStateIndices.contains(methodName)) {
-                    println("found method name "+methodName)
-                    val indexSet = methodToStateIndices(methodName)
-                    println("index set is "+indexSet)
-                    var newStates:Set[State] = Set[State]()
-                    newStates += currentElementInfo.transitions(state.index)(indexSet.min)
-                    if(indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Undefined)
-                        newStates = for(x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
-                    println("new states are "+newStates)
-                    for(state <- newStates if state.name == Undefined) {
-                      throw new protocolViolatedException(sortSet(alias.instance.getAliasNames()), elementName,
-                        sortSet(alias.instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+          getClosestScopeAliases(aliasName, instances) match{
+            case Some(aliases) =>
+              for(alias <- aliases) {
+                println("got instance" + alias)
+                println("it has " + alias.instance.currentStates)
+                println("method to indices is " + currentElementInfo.methodToIndices)
+                breakable {
+                  var newSetOfStates: Set[State] = Set()
+                  for (state <- alias.instance.currentStates) {
+                    if (state.name == Unknown) break
+                    if (methodToStateIndices.contains(methodName)) {
+                      println("found method name " + methodName)
+                      val indexSet = methodToStateIndices(methodName)
+                      println("index set is " + indexSet)
+                      var newStates: Set[State] = Set[State]()
+                      newStates += currentElementInfo.transitions(state.index)(indexSet.min)
+                      if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Undefined)
+                        newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
+                      println("new states are " + newStates)
+                      for (state <- newStates if state.name == Undefined) {
+                        throw new protocolViolatedException(sortSet(alias.instance.getAliasNames()), elementName,
+                          sortSet(alias.instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+                      }
+                      newSetOfStates = newSetOfStates ++ newStates
                     }
-                    newSetOfStates = newSetOfStates ++ newStates
+                    else alias.instance.currentStates = Set(State(Unknown, -2))
                   }
-                  else alias.instance.currentStates = Set(State(Unknown, -2))
+                  alias.instance.currentStates = newSetOfStates
                 }
-                alias.instance.currentStates = newSetOfStates
               }
             case None =>
           }
@@ -1091,10 +1103,17 @@ class MyComponent(val global: Global) extends PluginComponent {
 
       def removeAlias(instances:Set[Instance], aliasName:String): Set[Instance] ={
         var newInstances = for(instance <- instances) yield instance
-        for (newInstance <- newInstances if newInstance.containsAliasInfo(aliasName, currentScope)) {
-          newInstance.aliases -= Alias(aliasName, currentScope, newInstance)
-          newInstances = cleanInstances(newInstances)
+        getClosestScopeAliases(aliasName, newInstances) match{
+          case Some(aliases) =>
+            for(alias <- aliases) {
+              for (newInstance <- newInstances if newInstance.containsAliasInfo(alias.name, alias.scope)) {
+                newInstance.aliases -= Alias(aliasName, alias.scope, newInstance)
+                newInstances = cleanInstances(newInstances)
+              }
+            }
+          case None =>
         }
+        println(s"instances after removing $aliasName are "+newInstances)
         newInstances
       }
 
@@ -1268,15 +1287,19 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
       def cleanInstances(instances:Set[Instance]): Set[Instance]={
+        println("instances before cleaning are "+instances)
         var newInstances = for(instance <- instances) yield instance
         for(instance <- newInstances if instance.aliases.isEmpty) newInstances -= instance
+        println("instances after cleaning are "+newInstances)
         newInstances
       }
 
       /** Creates an sbt project, copies in the dsl and the user protocol and executes it, giving serialized data in a the project folder*/
       def executeFile(filename:String): Unit ={
         println(filename)
-        s"executeUserProtocol.bat $filename".!
+        val className = filename.substring(filename.lastIndexOf("\\")+1, filename.lastIndexOf("."))
+        println(className)
+        s"executeUserProtocol.bat $filename $className".!
       }
 
       /** Removes protocolDir from the project */
@@ -1289,8 +1312,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         val ois = new ObjectInputStream(new FileInputStream(filename))
         val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
         ois.close
-        val file = new File(filename)
-        file.delete
         stock
       }
     }

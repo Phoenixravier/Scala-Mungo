@@ -39,9 +39,10 @@ COULD HAVE
 - [ ] Make work on more than a single file
 - [ ] Make things faster
 
+************NOV****************
+- [ ] Scala-stMungo
 
 ************DEC****************
-- [ ] Scala-stMungo
 - [ ] Case study 
 
 ### In Progress
