@@ -1296,7 +1296,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       /** Creates an sbt project, copies in the dsl and the user protocol and executes it, giving serialized data in a the project folder*/
       def executeFile(filename:String): Unit ={
         println(filename)
-        val className = filename.substring(filename.lastIndexOf("\\")+1, filename.lastIndexOf("."))
+        var className = filename.substring(filename.indexOf("\"")+1)
+        println(className)
+        className = className.substring(className.lastIndexOf("\\")+1, className.lastIndexOf("."))
         println(className)
         s"executeUserProtocol.bat $filename $className".!
       }
