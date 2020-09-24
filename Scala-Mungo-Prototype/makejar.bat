@@ -4,6 +4,8 @@ IF NOT EXIST classes mkdir classes
 
 copy src\main\scala\compilerPlugin\scalac-plugin.xml classes
 IF NOT EXIST classes\ProtocolDSL call scalac -d classes src\main\scala\ProtocolDSL\ProtocolLangClasses.scala
+IF NOT EXIST classes\compilerPlugin call scalac -d classes -classpath classes src\main\scala\compilerPlugin\PluginClasses.scala
+call scalac -d classes -classpath classes src\main\scala\compilerPlugin\Util.scala
 call scalac -d classes -classpath classes src\main\scala\compilerPlugin\GetFileFromAnnotation.scala
 
 cd classes

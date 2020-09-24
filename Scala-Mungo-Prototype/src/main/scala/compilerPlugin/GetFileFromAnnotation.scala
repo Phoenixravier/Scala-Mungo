@@ -1,7 +1,6 @@
 
 package compilerPlugin
 
-import java.io.{File, FileInputStream, ObjectInputStream}
 import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
@@ -9,77 +8,10 @@ import ProtocolDSL.{ReturnValue, State}
 import scala.collection.{SortedSet, mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
-import scala.sys.process._
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import scala.tools.nsc.{Global, Phase}
 import scala.util.control.Breaks._
-
-/** Holds an alias' name and scope */
-case class Alias(var name:String, var scope: mutable.Stack[String], instance:Instance){
-  override def toString(): String={
-    s"$name ${scope.reverse.mkString(".")} ${instance.className}"
-  }
-
-  override def equals(alias:Any): Boolean ={
-    alias match{
-      case a:Alias => a.canEqual(this) && a.name.equals(name) &&  a.scope.equals(scope)
-      case _ => false
-    }
-  }
-
-  override def hashCode():Int={
-    name.hashCode + scope.hashCode
-  }
-}
-
-/** Holds an instance classname, its aliases and its current possible states */
-case class Instance(var className: String, var aliases:Set[Alias], var currentStates:Set[State]){
-  def getAliasNames(): Set[String] ={
-    for(alias <- aliases) yield alias.name
-  }
-
-  def updateState(stateToRemove:State, stateToAdd:State): Unit ={
-    currentStates -= stateToRemove
-    currentStates += stateToAdd
-  }
-
-  def containsAliasInfo(aliasName:String, aliasScope:mutable.Stack[String]): Boolean ={
-    aliases.contains(Alias(aliasName, aliasScope, this))
-  }
-
-
-  override def toString(): String={
-    s"$className $aliases $currentStates"
-  }
-
-  override def equals(instance:Any): Boolean ={
-    instance match{
-      case i:Instance => i.canEqual(this) && i.aliases.equals(aliases) &&  i.className.equals(className)
-      case _ => false
-    }
-  }
-
-  override def hashCode():Int={
-    aliases.hashCode + className.hashCode
-  }
-}
-
-/** Holds information about a class or an object */
-case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Array[Array[State]], states:Array[State],
-                       methodToIndices:mutable.HashMap[String, Set[Int]], isObject:Boolean=false){
-  override def toString(): String={
-    s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $isObject"
-  }
-}
-
-/** Error for when a protocol is violated */
-class protocolViolatedException(aliasNames:SortedSet[String], className:String, states:SortedSet[State], methodName:String,
-                                file:String, line:Int)
-  extends Exception(s"Invalid transition in instance with alias(es) $aliasNames of type $className " +
-    s"from state(s) $states with method $methodName in file $file at line $line")
-
-/** Error for when the user defines their protocol wrong */
-class badlyDefinedProtocolException(message:String) extends Exception(message)
+import scala.util.matching.Regex
 
 /** My plugin */
 class GetFileFromAnnotation(val global: Global) extends Plugin {
@@ -93,10 +25,7 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 class MyComponent(val global: Global) extends PluginComponent {
   import global._
 
-  /** Sorts a set */
-  def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
-
-  case class Function(name: String, params: ArrayBuffer[Array[String]], returnType:Trees#Tree, body: Tree, scope: mutable.Stack[String]) {
+  case class Function(name: String, params: ArrayBuffer[Array[String]], returnType:Trees#Tree, body: Trees#Tree, scope: mutable.Stack[String]) {
     override def toString(): String = {
       s"name: $name parameters: $params return type: $returnType scope: $scope body: $body"
     }
@@ -108,9 +37,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** Phase which is ran by the plugin */
     class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
       var compilationUnit:CompilationUnit=_
-      var currentScope:mutable.Stack[String] = mutable.Stack()
-      val Undefined = "_Undefined_"
-      val Unknown = "_Unknown_"
       var currentElementInfo: ElementInfo=_
       override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -165,14 +91,14 @@ class MyComponent(val global: Global) extends PluginComponent {
           getFilenameFromTypestateAnnotation(annotation) match{
             case Some(filename) => { //a correct Typestate annotation is being used
               //execute the DSL in the protocol file and serialize the data into a file
-              executeFile(filename)
+              Util.executeFile(filename)
               //retrieve the serialized data
               if(!Files.exists(Paths.get("protocolClasses\\EncodedData.ser")))
                 throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
                   s"check you have an end statement at the end of the protocol")
-              val (transitions, states, returnValuesArray) = getDataFromFile("protocolClasses\\EncodedData.ser")
+              val (transitions, states, returnValuesArray) = Util.getDataFromFile("protocolClasses\\EncodedData.ser")
               checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
-              val methodToIndices = createMethodToIndicesMap(returnValuesArray)
+              val methodToIndices = Util.createMethodToIndicesMap(returnValuesArray)
               currentElementInfo = ElementInfo(name, scope, transitions, states, methodToIndices, isObject)
               println("checking class "+currentElementInfo.name)
               checkElementIsUsedCorrectly()
@@ -184,19 +110,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         None
       }
 
-      /** Creates a hashmap from method names (e.g. "walk(String)")
-       * to indices at which it is present in the transitions array (including all the return values it might have)
-       *
-       * @param returnValuesArray:Array[ReturnValue]
-       * @return mutable.Hashmap[String, Set[Int]]
-       */
-      def createMethodToIndicesMap(returnValuesArray:Array[ReturnValue]): mutable.HashMap[String, Set[Int]] ={
-        var methodToIndices:mutable.HashMap[String, Set[Int]] = mutable.HashMap()
-        for(returnValue <- returnValuesArray){
-          methodToIndices += (stripReturnValue(returnValue.parentMethod.name) -> returnValue.parentMethod.indices)
-        }
-        methodToIndices
-      }
 
       /** Checks that a class or object is following its protocol
        * Goes through the code to find either the object with App or the main function and thereby gets the entrypoint
@@ -204,23 +117,14 @@ class MyComponent(val global: Global) extends PluginComponent {
        *
        * Limited at the moment
        *
-       * TODO Deal with code inside object which contains main function
-       *  Make work on more than a single file
-       *  Take into account linearity
-       *  Deal with return values when they are protocolled objects (aliasing)
-       *  Deal with objects returned by a function
-       *  Deal with code on itself in constructor
-       *  Deal with companion objects
-       *  Deal with special cases of loops (known counts)
-       *  Deal with match statements (unless this is already dealt with by if else)
        * */
       def checkElementIsUsedCorrectly(): Unit ={
         for(line@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body){
           breakable {
             for (parent <- parents) {
               if (parent.toString() == "App") {
-                currentScope = getScope(line)
-                currentScope.push(tname.toString())
+                Util.currentScope = getScope(line)
+                Util.currentScope.push(tname.toString())
                 checkInsideObjectBody(body)
                 break
               }
@@ -228,11 +132,11 @@ class MyComponent(val global: Global) extends PluginComponent {
             for (definition <- body) {
               definition match {
                 case mainLine@q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
-                  currentScope = getScope(line)
+                  Util.currentScope = getScope(line)
                   if (getParameters(paramss) == "Array[String]") {
                     checkObject(tname.toString())
-                    currentScope.push(tname.toString())
-                    currentScope.push("main")
+                    Util.currentScope.push(tname.toString())
+                    Util.currentScope.push("main")
                     checkInsideFunctionBody(expr)
                   }
                 case _ =>
@@ -252,7 +156,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         var instances = for (instance <- givenInstances) yield instance
         if(currentElementInfo.isObject) {
           instances +=Instance(currentElementInfo.name, Set(), Set(currentElementInfo.states(0)))
-          for(instance <- instances if instance.aliases.isEmpty) instance.aliases += Alias(currentElementInfo.name, currentScope.clone, instance)
+          for(instance <- instances if instance.aliases.isEmpty) instance.aliases += Alias(currentElementInfo.name, Util.currentScope.clone, instance)
         }
         for (line <- code)
             instances = checkInsideFunctionBody(line, instances)._1
@@ -273,7 +177,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         var instances = for (instance <- givenInstances) yield instance
         if(currentElementInfo.isObject) { //TODO deal with the fact this happens every time this function is called
           instances +=Instance(currentElementInfo.name, Set(), Set(currentElementInfo.states(0)))
-          for(instance <- instances if instance.aliases.isEmpty) instance.aliases += Alias(currentElementInfo.name, currentScope.clone, instance)
+          for(instance <- instances if instance.aliases.isEmpty) instance.aliases += Alias(currentElementInfo.name, Util.currentScope.clone, instance)
         }
         var returned: Option[Any] = None
         var nbOfLinesToSkip = 0
@@ -297,78 +201,74 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
 
-      def addInMissingAlias(instances: Set[Instance], name: String):Set[Instance] = {
-        var newInstances = for(instance <- instances) yield instance
-        for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(name, currentScope.clone, instance)
-        newInstances
-      }
-
-      def processAssignment(assignee: Trees#Tree, newValue: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-        var (newInstances, returnedAssignee) = checkInsideFunctionBody(assignee, instances)
-        val newInstancesAndReturned = checkInsideFunctionBody(newValue, instances)
-        newInstances = newInstancesAndReturned._1
+      def processAssignment(assignee: String, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
+        println("in process assignment")
+        println("assignee is "+assignee)
+        println("assigned is "+assigned)
+        //var (newInstances, returnedAssignee) = checkInsideFunctionBody(assignee, instances)
+        val newInstancesAndReturned = checkInsideFunctionBody(assigned, instances)
+        var newInstances = newInstancesAndReturned._1
         val returnedAssigned = newInstancesAndReturned._2
-        println(s"returned assignee is $returnedAssignee and returned assigned is $returnedAssigned")
-        (returnedAssignee, returnedAssigned) match{
-          case (None, _) => return newInstances
-          case (Some(aliasOrName), None) =>
-            aliasOrName match{
-              //assigned is not a protocolled instance so remove assignee from instances
-              case _:ArrayBuffer[Alias] =>
-                val assigneeAliases = aliasOrName.asInstanceOf[ArrayBuffer[Alias]]
+        println(s"returned assignee is $assignee and returned assigned is $returnedAssigned")
+        getClosestScopeAliases(assignee, newInstances) match{
+          case Some(aliases) =>
+            returnedAssigned match{
+              case Some(assignedAliasOrName) =>
+                assignedAliasOrName match {
+                  case _: ArrayBuffer[Alias] =>
+                    val assigneeAliases = aliases.asInstanceOf[ArrayBuffer[Alias]]
+                    val assignedAliases = assignedAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
+                    for (assigneeAlias <- assigneeAliases) {
+                      for (assignedAlias <- assignedAliases) {
+                        getClosestScopeAliases(assignedAlias.name, newInstances) match {
+                          case Some(assignedAliases) =>
+                            for (assignedAlias <- assignedAliases) {
+                              newInstances = removeAlias(newInstances, assigneeAlias.name)
+                              assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                            }
+                          case None =>
+                            newInstances = removeAlias(newInstances, assigneeAlias.name)
+                            newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
+                            Util.addInMissingAlias(newInstances, assigneeAlias.name)
+                        }
+                      }
+                    }
+                  case _:String =>
+                    val assigneeAliases = aliases.asInstanceOf[ArrayBuffer[Alias]]
+                    val assignedName = assignedAliasOrName.asInstanceOf[String]
+                    for(assigneeAlias <- assigneeAliases) {
+                      getClosestScopeAliases(assignedName, newInstances) match {
+                        case Some(assignedAliases) =>
+                          for (assignedAlias <- assignedAliases) {
+                            newInstances = removeAlias(newInstances, assigneeAlias.name)
+                            assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
+                          }
+                        case None =>
+                      }
+                    }
+                  case _ =>
+                }
+              case None =>
+                val assigneeAliases = aliases.asInstanceOf[ArrayBuffer[Alias]]
                 for(assigneeAlias <- assigneeAliases)
                   newInstances = removeAlias(newInstances, assigneeAlias.name)
-              case _ => //assignee is not a protocolled alias so do nothing
+
             }
-          case (Some(assigneeAliasOrName), Some(assignedAliasOrName)) =>
-            (assigneeAliasOrName, assignedAliasOrName) match {
-              case (_:ArrayBuffer[Alias], _:ArrayBuffer[Alias]) =>
-                val assigneeAliases = assigneeAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
-                val assignedAliases = assignedAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
-                for(assigneeAlias <- assigneeAliases)
-                  for(assignedAlias <- assignedAliases) {
-                    getClosestScopeAliases(assignedAlias.name, newInstances) match {
-                      case Some(assignedAliases) =>
-                        for (assignedAlias <- assignedAliases) {
-                          newInstances = removeAlias(newInstances, assigneeAlias.name)
-                          assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
-                        }
-                      case None =>
-                        newInstances = removeAlias(newInstances, assigneeAlias.name)
-                        newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
-                        addInMissingAlias(newInstances, assigneeAlias.name)
-                    }
-                  }
-              case (_:String,_) =>
-              case (_:ArrayBuffer[Alias], _:String) =>
-                val assigneeAliases = assigneeAliasOrName.asInstanceOf[ArrayBuffer[Alias]]
-                val assignedName = assignedAliasOrName.asInstanceOf[String]
-                for(assigneeAlias <- assigneeAliases) {
-                  getClosestScopeAliases(assignedName, newInstances) match {
-                    case Some(assignedAliases) =>
-                      for (assignedAlias <- assignedAliases) {
-                        newInstances = removeAlias(newInstances, assigneeAlias.name)
-                        assignedAlias.instance.aliases += Alias(assigneeAlias.name, assigneeAlias.scope, assignedAlias.instance)
-                      }
-                    case None =>
-                  }
-                }
-              case (_,_) =>
-            }
-          case _ =>
+          case None =>
         }
         newInstances
       }
 
-      /**
+      /** Processes a val assignee = assigned statement
+       * Checks if assigned is an existing alias and if so adds assignee to its list of aliases
        *
        * @param assignee Always comes as a new val or var
-       * @param newValue
+       * @param assigned
        * @param instances
        * @return
        */
-      def processNovelAssignment(assignee: TermName, newValue: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-        var (newInstances, returned) = checkInsideFunctionBody(newValue, instances)
+      def processNovelAssignment(assignee: TermName, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
+        var (newInstances, returned) = checkInsideFunctionBody(assigned, instances)
         returned match{
           case Some(Array(arrayContent)) =>
           case Some(aliasesOrName) =>
@@ -381,11 +281,11 @@ class MyComponent(val global: Global) extends PluginComponent {
                     case Some(aliases) =>
                       //if already exists then add to list of aliases
                       for (alias <- aliases)
-                        alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                        alias.instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
                     case None =>
                       //otherwise add as new instance
                       newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
-                      addInMissingAlias(newInstances, assignee.toString)
+                      Util.addInMissingAlias(newInstances, assignee.toString)
                   }
                 }
               case _ =>
@@ -395,7 +295,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                   case Some(aliases) =>
                     //add assignee as new alias to existing instance
                     for(alias <- aliases)
-                      alias.instance.aliases += Alias(assignee.toString(), currentScope.clone(), alias.instance)
+                      alias.instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
                   case None =>
                 }
             }
@@ -414,15 +314,16 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int, Option[Any]) ={
         println(s"checking line $line at line number "+line.pos.line)
+        Util.printBanner()
         println(showRaw(line))
         line match {
           //definitions to skip over (object, class, function)
           case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
-            (instances, getLengthOfTree(line)-1, None)
+            (instances, Util.getLengthOfTree(line)-1, None)
           case q"$mod class $pname[..$tpara] $actMods(...$para) extends { ..$defs } with ..$prnts { $self => ..$sts }" =>
-            (instances, getLengthOfTree(line)-1, None)
+            (instances, Util.getLengthOfTree(line)-1, None)
           case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr"=>
-            (instances, getLengthOfTree(line)-1, None)
+            (instances, Util.getLengthOfTree(line)-1, None)
           //new instance declarations (val and var)
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
             var newInstances = processNewInstance(tname, classNm, instances)
@@ -441,26 +342,27 @@ class MyComponent(val global: Global) extends PluginComponent {
             (instances,0, None)
           case q"$assignee = $newValue" =>
             println("in assignment "+line)
-            val newInstances = processAssignment(assignee, newValue, instances)
-            (newInstances,0, None)
+            println("assignee1 is "+assignee)
+            val newInstances = processAssignment(assignee.toString, newValue, instances)
+            (instances,0, None)
           //loops
           case q"for (..$enums) $expr" =>
             println("matched for loop in process line")
             val newInstances = dealWithForLoop(enums, instances, expr)
-            (newInstances, getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
+            (newInstances, Util.getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
           case q"for (..$enums) yield $expr" =>
             println("matched for yield")
             val newInstances = dealWithForLoop(enums, instances, expr)
-            (newInstances, getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
+            (newInstances, Util.getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
             //while(true) and dowhile(true)
           case LabelDef(TermName(name), List(), block @ Block(statements, Apply(Ident(TermName(name2)), List())))
             if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>{
             val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
-            (newInstances, getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
+            (newInstances, Util.getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
           }
           case q"while ($cond) $loopContents" =>{
             val newInstances = dealWithWhileLoop(cond, instances, loopContents)
-            (newInstances, getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
+            (newInstances, Util.getLengthOfTree(line)-1, None) //-1 because we are processing the current one already
           }
           case q"do $loopContents while ($cond)" =>{
             val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
@@ -470,21 +372,23 @@ class MyComponent(val global: Global) extends PluginComponent {
           case func@Apply(Ident(functionName), args) =>{
             val (newInstances, returned) = dealWithFunction(func, functionName, args, instances)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, getLengthOfTree(line)-1, returned) //because we are processing the current one already
+            (updatedInstances, 0, returned) //because we are processing the current one already
           }
           case func@Apply(Select(instanceCalledOn, functionName), args) =>{
+            println("called on is spawned on line "+line)
             val (newInstances, returned) = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
             val updatedInstances = updateStateIfNeeded(newInstances, line)
-            (updatedInstances, getLengthOfTree(line)-1, returned) //because we are processing the current one already
+            (updatedInstances, 0, returned) //because we are processing the current one already
           }
           case q"if ($cond) $ifBody else $elseBody" =>
             val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
-            (newInstances,getLengthOfTree(line)-1, Some(returned))
+            println("returned from ifelse is "+returned)
+            (newInstances,Util.getLengthOfTree(line)-1, Some(returned))
           case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
             (instances, 0, Some(line))
           case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
             val newInstances = checkTryCatchFinally(tryBody, cases, finallyBody, instances)
-            (newInstances,getLengthOfTree(line)-1, None)
+            (newInstances,Util.getLengthOfTree(line)-1, None)
           //All three next cases are to check for solitary object name on a line
           case Ident(TermName(objectName)) =>
             println("matched raw ident")
@@ -530,7 +434,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
           for(instance <- newInstances if instanceToInterimStates.contains(instance))
             instanceToInterimStates(instance) += instance.currentStates
-        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        } while(!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
         //go through condition of the while one last time before exiting as that is how the program will execute
         newInstances = checkInsideFunctionBody(cond, newInstances)._1
         //assigns interim states to the instances
@@ -553,7 +457,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           newInstances = checkInsideFunctionBody(cond, newInstances)._1
           for(instance <- newInstances if instanceToInterimStates.contains(instance))
             instanceToInterimStates(instance) += instance.currentStates
-        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        } while(!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
         //assigns interim states to the instances
         for(instance <- newInstances if instanceToInterimStates.contains(instance)){
           for(setOfStates <- instanceToInterimStates(instance))
@@ -562,7 +466,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances
       }
 
-      def checkInsideEnums(enums: Seq[Trees#Tree], instances: Set[Instance]): Set[Instance] = {
+      def checkInsideForLoopGenerator(enums: Seq[Trees#Tree], instances: Set[Instance]): Set[Instance] = {
         var newInstances = for(instance <- instances) yield instance
         enums match{
           case List(fq"$pat <- $beginning until $end") =>
@@ -590,9 +494,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         //loop
         do{
           //go through condition of the for
-          printBanner()
+          Util.printBanner()
           println("before checking for loop generator "+enums)
-          newInstances = checkInsideEnums(enums, newInstances)
+          newInstances = checkInsideForLoopGenerator(enums, newInstances)
           println("after checking for loop generator")
           //go through loop body
           newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
@@ -601,7 +505,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           for(instance <- newInstances if instanceToInterimStates.contains(instance))
             instanceToInterimStates(instance) += instance.currentStates
           println("right before check for duplicates, map is "+instanceToInterimStates)
-        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        } while(!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
         //assigns interim states to the instances
         for(instance <- newInstances if instanceToInterimStates.contains(instance)){
           for(setOfStates <- instanceToInterimStates(instance))
@@ -643,6 +547,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         for (instance <- newInstances) elseInstances += Instance(instance.className, instance.aliases, instance.currentStates)
         val (newIfInstances, returnedIf) = checkInsideFunctionBody(ifBody, ifInstances)
         val (newElseInstances, returnedElse) = checkInsideFunctionBody(elseBody, elseInstances)
+        println(s"returned from if is $returnedIf, returned from else is $returnedElse")
         (mergeInstanceStates(newIfInstances, newElseInstances), Array(returnedIf, returnedElse))
       }
 
@@ -662,7 +567,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         if (classTree.toString == className) {
           newInstances = removeAlias(newInstances, instanceTree.toString())
           newInstances += Instance(className, Set(), Set(states(0)))
-          for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(instanceTree.toString(), currentScope.clone, instance)
+          for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(instanceTree.toString(), Util.currentScope.clone, instance)
         }
         newInstances
       }
@@ -705,7 +610,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def getClosestScopeAliases(name:String, instances:Set[Instance]): Option[ArrayBuffer[Alias]] = {
         if (instances.isEmpty) return None
-        val curScope = currentScope.clone()
+        val curScope = Util.currentScope.clone()
         while (curScope.nonEmpty) {
           var aliases:ArrayBuffer[Alias] = ArrayBuffer()
           for (instance <- instances) {
@@ -728,7 +633,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       def getClosestScopeObject(objectName: String): Option[ClassOrObject] ={
         val classesAndObjects = classAndObjectTraverser.classesAndObjects
         if(classesAndObjects.isEmpty) return None
-        val curScope = currentScope.clone()
+        val curScope = Util.currentScope.clone()
         while(curScope.nonEmpty){
           for(element <- classesAndObjects){
             if(element.name == objectName && element.scope == curScope){
@@ -755,12 +660,11 @@ class MyComponent(val global: Global) extends PluginComponent {
              if(!element.initialised && element.isObject && element.name == calledOnString
                && element.scope == getScope(calledOn))) {
           element.initialised = true
-          currentScope.push(calledOnString)
+          Util.currentScope.push(calledOnString)
           checkInsideObjectBody(element.body, instances)
-          currentScope.pop()
+          Util.currentScope.pop()
         }
       }
-
 
       def replaceAliases(paramNameScopeToAlias: mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])], instances: Set[Instance]): Set[Instance] = {
         for((parameter, alias) <- paramNameScopeToAlias) {
@@ -773,8 +677,10 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
 
       /** Checks function calls.
-       * Firstly it checks if the function is new x and therefore the code inside a class should be analysed.
-       * Secondly it checks if an object is being called on for the first time and its code should be analysed.
+       * First it checks if the function is an assignment in which case it just returns to let the assignment
+       *  be dealt with in the assignment function
+       * Then it checks if the function is new x and therefore the code inside a class should be analysed.
+       * Then it checks if an object is being called on for the first time and its code should be analysed.
        * Then it goes to analyse inside the function body, renaming the instances to parameter names if needed.
        *
        * @param funcCall
@@ -786,11 +692,26 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance], calledOn:Tree=null):(Set[Instance], Option[Any]) = {
         println("found function call "+funcCall)
+        funcCall match{
+          case Apply(Select(arg1, TermName(functionName)), List(arg3)) =>
+            val regex = ".*_\\$eq".r
+            regex.findPrefixMatchOf(functionName) match{
+              case Some(mat) =>
+                println("value is "+mat)
+                println("called on is "+calledOn)
+                println("found assignment, going into function")
+                val value = mat.toString
+                processAssignment(value.substring(0, value.length-4), arg3, instances)
+                return (instances, None)
+              case None =>
+            }
+          case _ =>
+        }
         println("checking parameters "+args)
         var newInstances = for(instance <- instances) yield instance
         //checks parameters
         for(arg <- args) checkInsideFunctionBody(arg, instances)
-        println("after checking parameters")
+        println(s"after checking parameters for function call $funcCall with name $functionName")
         newInstances = checkNewFunction(funcCall, instances, args)
         checkObjectFunctionCall(calledOn, instances)
         //finding function definition
@@ -801,7 +722,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             //handling parameters on entry
             val paramNameScopeToAlias = handleFunctionParameters(args, function.params,function.name, instances)
             //checking inside the function body
-            currentScope.push(functionName.toString())
+            Util.currentScope.push(functionName.toString())
             val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
             newInstances = newInstancesAndReturned._1
             //figuring out what is returned
@@ -810,7 +731,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               case Some(alias) =>
                 alias match{
                   case _:Alias =>
-                    var newAlias = alias.asInstanceOf[Alias]
+                    val newAlias = alias.asInstanceOf[Alias]
                     returned =
                       if(function.returnType.toString() == currentElementInfo.name
                           && paramNameScopeToAlias.contains((newAlias.name, newAlias.scope)))
@@ -823,7 +744,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
               case None =>
             }
-            currentScope.pop()
+            Util.currentScope.pop()
             //renaming parameters on exit
             newInstances = replaceAliases(paramNameScopeToAlias, instances)
             println(s"the deal with function returns $returned")
@@ -833,8 +754,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("instances at the end of deal with function are "+instances)
         (instances, None)
       }
-
-
 
       /** Checks if the object given has been seen before. If not, executes the code inside it.
        *
@@ -847,9 +766,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         getClosestScopeObject(objectName) match{
           case Some(obj) =>
             obj.initialised = true
-            currentScope.push(objectName)
+            Util.currentScope.push(objectName)
             checkInsideObjectBody(obj.body, instances)
-            currentScope.pop()
+            Util.currentScope.pop()
           case _ =>
         }
       }
@@ -874,9 +793,9 @@ class MyComponent(val global: Global) extends PluginComponent {
                      if(!element.isObject && element.name == elementNameString
                        && element.scope == getScope(elementName))) {
                   val paramNameScopeToAlias = handleFunctionParameters(args, element.params, element.name, instances)
-                  currentScope.push(element.name)
+                  Util.currentScope.push(element.name)
                   checkInsideObjectBody(element.body, instances)
-                  currentScope.pop()
+                  Util.currentScope.pop()
                   newInstances = replaceAliases(paramNameScopeToAlias, instances)
                 }
               case _ =>
@@ -903,7 +822,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           getClosestScopeAliases(argString, instances) match{
             case Some(aliases) =>
               println(s"found aliases $aliases in parameters")
-              val paramScope = currentScope.clone().push(functionName)
+              val paramScope = Util.currentScope.clone().push(functionName)
               val paramName = parameters(argCounter)(0)
               for(alias <- aliases) {
                 paramNameToAliasName += (paramName, paramScope) -> (alias.name, alias.scope)
@@ -943,18 +862,12 @@ class MyComponent(val global: Global) extends PluginComponent {
               instanceToInterimStates(updatedInstance)(instanceToInterimStates(updatedInstance).length - 1) = updatedInstance.currentStates
             }
           }
-        } while(!duplicatesInAllListsOfMap(instanceToInterimStates))
+        } while(!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
         for(instance <- newInstances if instanceToInterimStates.contains(instance)){
           for(setOfStates <- instanceToInterimStates(instance))
             instance.currentStates = instance.currentStates ++ setOfStates
         }
         newInstances
-      }
-
-      /** Checks to see if there are duplicates in all the lists of a map(Instance -> list) */
-      def duplicatesInAllListsOfMap(map:mutable.HashMap[Instance, ListBuffer[Set[State]]]):Boolean={
-        for((instance, list) <- map) for((instance, list) <- map if list.diff(list.distinct).isEmpty) return false
-        true
       }
 
       /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
@@ -987,23 +900,23 @@ class MyComponent(val global: Global) extends PluginComponent {
                 breakable {
                   var newSetOfStates: Set[State] = Set()
                   for (state <- alias.instance.currentStates) {
-                    if (state.name == Unknown) break
+                    if (state.name == Util.Unknown) break
                     if (methodToStateIndices.contains(methodName)) {
                       println("found method name " + methodName)
                       val indexSet = methodToStateIndices(methodName)
                       println("index set is " + indexSet)
                       var newStates: Set[State] = Set[State]()
                       newStates += currentElementInfo.transitions(state.index)(indexSet.min)
-                      if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Undefined)
+                      if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Util.Undefined)
                         newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
                       println("new states are " + newStates)
-                      for (state <- newStates if state.name == Undefined) {
-                        throw new protocolViolatedException(sortSet(alias.instance.getAliasNames()), elementName,
-                          sortSet(alias.instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+                      for (state <- newStates if state.name == Util.Undefined) {
+                        throw new protocolViolatedException(Util.sortSet(alias.instance.getAliasNames()), elementName,
+                          Util.sortSet(alias.instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
                       }
                       newSetOfStates = newSetOfStates ++ newStates
                     }
-                    else alias.instance.currentStates = Set(State(Unknown, -2))
+                    else alias.instance.currentStates = Set(State(Util.Unknown, -2))
                   }
                   alias.instance.currentStates = newSetOfStates
                 }
@@ -1016,9 +929,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("instances at the end of update if needed are "+instances)
         instances
       }
-
-
-
+      
       /** Traverses a tree and collects (methodName, aliasName) from method application statements
        *
        */
@@ -1050,21 +961,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         }
       }
-
-      case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:mutable.Stack[String],
-                               isObject:Boolean=false, var initialised:Boolean=false){
-        override def toString(): String={ s"$name ${showParams(params)} $scope $initialised" }
-
-        def showParams(params:ArrayBuffer[Array[String]]):String={
-          var parameters = ""
-          for(param <- params) {
-            for(par <- param)
-              parameters += par+": "
-            parameters += " ; "
-          }
-          parameters
-        }
-      }
+      
 
       /** Traverses a tree and collects classes and objects found */
       object classAndObjectTraverser extends Traverser{
@@ -1100,6 +997,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
 
+      /** Removes alias from instances */
       def removeAlias(instances:Set[Instance], aliasName:String): Set[Instance] ={
         var newInstances = for(instance <- instances) yield instance
         getClosestScopeAliases(aliasName, newInstances) match{
@@ -1107,7 +1005,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             for(alias <- aliases) {
               for (newInstance <- newInstances if newInstance.containsAliasInfo(alias.name, alias.scope)) {
                 newInstance.aliases -= Alias(aliasName, alias.scope, newInstance)
-                newInstances = cleanInstances(newInstances)
+                newInstances = Util.cleanInstances(newInstances)
               }
             }
           case None =>
@@ -1134,50 +1032,20 @@ class MyComponent(val global: Global) extends PluginComponent {
         objectScope
       }
 
-      /** Gets the length of a tree in nb of lines */
-      def getLengthOfTree(tree:Trees#Tree): Int ={
-        var length = 0
-        for(line <- tree) length +=1
-        length
-      }
-
-      /** From a scope implemented as a stack, gets a string formatted with dots */
-      def getScopeString(scopeStack:mutable.Stack[String]): String ={
-        scopeStack.reverse.mkString(".")
-      }
-
       /** Gets a parameter string as formatted in a function definition from a tree of them */
       def getParametersFromTree(params:List[List[Tree]]): String={
         params match{
           case List(List()) => "()"
-          case List(List(value)) => keepOnlyMethodName(value.tpe.toString()).mkString("(","",")")
+          case List(List(value)) => Util.keepOnlyMethodName(value.tpe.toString()).mkString("(","",")")
           case List(values) => {
             var parameters:ArrayBuffer[String] = ArrayBuffer()
             for(elem <- values){
-              parameters += keepOnlyMethodName(elem.tpe.toString)
+              parameters += Util.keepOnlyMethodName(elem.tpe.toString)
             }
             parameters.mkString("(",",",")")
           }
           case _ => ""
         }
-      }
-
-      /** Takes a string a strips everything after ( from it */
-      def keepOnlyMethodName(method:String): String ={
-        if(method.contains('(')) method.substring(0,method.indexOf('('))
-        else method
-      }
-
-      /** Prints something easy to see while debugging, use above an interesting print statement */
-      def printBanner(): Unit ={
-        println("------------------")
-        println("LOOK HERE")
-        println("------------------")
-      }
-
-      /** Just a dummy function to check an object's type */
-      def ckType(s:String): Unit ={
-        println("hi")
       }
 
       /** Checks that methods in return values are a subset of those in stats
@@ -1192,22 +1060,12 @@ class MyComponent(val global: Global) extends PluginComponent {
         println(s"\n$classMethodSignatures")
         var protocolMethodSignatures: Set[String] = Set()
         for(i <- returnValuesArray.indices){
-          protocolMethodSignatures += stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
+          protocolMethodSignatures += Util.stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
         }
         println(protocolMethodSignatures)
         if(!(protocolMethodSignatures subsetOf classMethodSignatures)) throw new badlyDefinedProtocolException(
           s"Methods $protocolMethodSignatures defined in $filename are not a subset of methods " +
             s"$classMethodSignatures defined in class $elementName")
-      }
-
-
-
-      /** Gets rid of the return value in a method name string and keeps the parenthesis at the end */
-      def stripReturnValue(methodName:String): String ={
-        if(!(methodName.contains(':') || methodName.contains("()"))) methodName+"()"
-        else if(methodName.contains(':') && !methodName.contains("(") && !methodName.contains(")")) methodName.substring(0,methodName.indexOf(':'))+"()"
-        else if(methodName(methodName.length-1) == ')') methodName
-        else methodName.substring(0,methodName.indexOf(')')+1)
       }
 
       /** Checks if an annotation is a Typestate annotation and returns the filename if so
@@ -1236,7 +1094,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         for(line <- methodBody){
           line match{
             case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => {
-              val parameters = getParameters(paramss) //RED UNDERLINING IS WRONG HERE
+              val parameters = getParameters(paramss) 
               methodNames += tname+s"($parameters)"
             }
             case _ =>
@@ -1268,6 +1126,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           case _ => ""
         }
       }
+      
 
       /** Gets parameters from a tree as their name and type in a string array */
       def getParametersWithInstanceNames(params:List[List[ValDef]]): ArrayBuffer[Array[String]] ={
@@ -1284,34 +1143,10 @@ class MyComponent(val global: Global) extends PluginComponent {
           case _ => ArrayBuffer()
         }
       }
-
-      def cleanInstances(instances:Set[Instance]): Set[Instance]={
-        println("instances before cleaning are "+instances)
-        var newInstances = for(instance <- instances) yield instance
-        for(instance <- newInstances if instance.aliases.isEmpty) newInstances -= instance
-        println("instances after cleaning are "+newInstances)
-        newInstances
-      }
-
-      /** Creates an sbt project, copies in the dsl and the user protocol and executes it, giving serialized data in a the project folder*/
-      def executeFile(filename:String): Unit ={
-        println(filename)
-        var className = filename.substring(filename.indexOf("\"")+1)
-        println(className)
-        className = className.substring(className.lastIndexOf("\\")+1, className.lastIndexOf("."))
-        println(className)
-        s"executeUserProtocol.bat $filename $className".!
-      }
-
-      /** Returns protocol data from a file */
-      def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-        val ois = new ObjectInputStream(new FileInputStream(filename))
-        val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
-        ois.close
-        stock
-      }
     }
 }
+
+
 
 
 
