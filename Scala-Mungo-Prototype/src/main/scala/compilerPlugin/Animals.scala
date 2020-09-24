@@ -14,11 +14,9 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 object doMainThings{
   def main(args: Array[String]): Unit = {
     var cat = new Cat()
-    var cat1, cat2 = new Cat()
-    cat1 = cat
-    cat1.walk()
-    cat2 = cat
-    cat2.walk()
+    var cat1 = new Cat()
+    var x =1
+    val cat2 = if(x==1) cat else cat1
   }
 
   /*

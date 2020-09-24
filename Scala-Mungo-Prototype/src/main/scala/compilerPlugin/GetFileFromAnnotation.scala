@@ -200,7 +200,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         (instances, returned)
       }
 
-
       def processAssignment(assignee: String, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
         println("in process assignment")
         println("assignee is "+assignee)
