@@ -19,6 +19,10 @@ object doMainThings{
     val cat2 = if(x==1) cat else cat1
   }
 
+  def createCat(): Unit ={
+    createCat()
+  }
+
   /*
   //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{

@@ -46,7 +46,7 @@ COULD HAVE
 - [ ] Case study 
 
 ### In Progress
-- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, yield (aliasing)
+- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else, yield (aliasing)
 
 ### Done ✓
 

@@ -5,13 +5,13 @@ import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 
-import scala.collection.{SortedSet, mutable}
+import scala.collection.{mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import scala.tools.nsc.{Global, Phase}
 import scala.util.control.Breaks._
-import scala.util.matching.Regex
+import scala.reflect.{ClassTag, classTag}
 
 /** My plugin */
 class GetFileFromAnnotation(val global: Global) extends Plugin {
@@ -267,39 +267,76 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def processNovelAssignment(assignee: TermName, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-        var (newInstances, returned) = checkInsideFunctionBody(assigned, instances)
-        returned match{
-          case Some(Array(arrayContent)) =>
+        println("in process novel assignment")
+        println("assignee is "+assignee)
+        println("assigned is "+assigned)
+        var (newInstances, returnedAssigned) = checkInsideFunctionBody(assigned, instances)
+        println("returnedAssigned is "+returnedAssigned)
+        returnedAssigned match{
           case Some(aliasesOrName) =>
-            aliasesOrName match{
-              case _:ArrayBuffer[Alias] =>
-                val aliases = aliasesOrName.asInstanceOf[ArrayBuffer[Alias]]
-                for(alias <- aliases) {
-                  //check if alias already exists
-                  getClosestScopeAliases(alias.name, newInstances) match {
-                    case Some(aliases) =>
-                      //if already exists then add to list of aliases
-                      for (alias <- aliases)
-                        alias.instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
-                    case None =>
-                      //otherwise add as new instance
-                      newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
-                      Util.addInMissingAlias(newInstances, assignee.toString)
-                  }
-                }
-              case _ =>
-                val newValueName = aliasesOrName.toString
-                //check if new value is protocolled object already existing
-                getClosestScopeAliases(newValueName, newInstances) match{
-                  case Some(aliases) =>
-                    //add assignee as new alias to existing instance
-                    for(alias <- aliases)
-                      alias.instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
-                  case None =>
-                }
-            }
+            newInstances = dealWithAssignedToNovel(assignee, newInstances, aliasesOrName)
           case _ =>
             //if nothing is being assigned then do nothing
+        }
+        newInstances
+      }
+
+      private def dealWithAssignedToNovel(assignee: global.TermName, instances: Set[Instance], aliasesOrName: Any):Set[Instance] = {
+        println("in the function")
+        var newInstances = for(instance <- instances) yield instance
+        aliasesOrName match {
+          case _: ArrayBuffer[Alias] =>
+            println("matched arraybuffer")
+            val aliases = aliasesOrName.asInstanceOf[ArrayBuffer[Alias]]
+            for (alias <- aliases) {
+
+              //check if alias already exists
+              getClosestScopeAliases(alias.name, newInstances) match {
+                case Some(aliases) =>
+                  println("found an existing alias "+aliases)
+                  //if already exists then add to list of aliases
+                  for (alias <- aliases) {
+                    println(s"before allocating $alias with new alias ${assignee.toString}, instances" +
+                      s"are $newInstances")
+                    println(s"instance of $alias is ${alias.instance} and aliases is ${alias.instance.aliases}")
+
+                    newInstances.find(instance => instance.containsAliasInfo(alias.name, alias.scope)) match{
+                      case Some(instance) =>
+                        instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
+                      case None =>
+                    }
+                    println(s"afterwards, instance of $alias is ${alias.instance} and aliases is ${alias.instance.aliases}")
+                  }
+                  println("instances after dealing with this are "+newInstances)
+                case None =>
+                  //otherwise add as new instance
+                  newInstances += Instance(currentElementInfo.name, Set(), alias.instance.currentStates)
+                  Util.addInMissingAlias(newInstances, assignee.toString)
+              }
+            }
+          case _: String =>
+            println("matched string")
+            val newValueName = aliasesOrName.toString
+            //check if new value is protocolled object already existing
+            getClosestScopeAliases(newValueName, newInstances) match {
+              case Some(aliases) =>
+                //add assignee as new alias to existing instance
+                for (alias <- aliases)
+                  alias.instance.aliases += Alias(assignee.toString(), Util.currentScope.clone(), alias.instance)
+              case None =>
+            }
+          case _: Array[Option[Any]] =>
+            var ifElseResult = aliasesOrName.asInstanceOf[Array[Option[Any]]]
+            for (option <- ifElseResult) {
+              option match {
+                case Some(ifElseAliasesOrName) =>
+                  println(s"putting $assignee and $ifElseAliasesOrName through the function again")
+                  newInstances = dealWithAssignedToNovel(assignee, instances, ifElseAliasesOrName)
+                case None =>
+              }
+            }
+          case _ =>
+            println("matched nothing")
         }
         newInstances
       }
@@ -313,6 +350,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def processLine(line:Trees#Tree, instances: Set[Instance]): (Set[Instance], Int, Option[Any]) ={
         println(s"checking line $line at line number "+line.pos.line)
+        println(s"instances before checking line are $instances")
         Util.printBanner()
         println(showRaw(line))
         line match {
@@ -325,6 +363,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             (instances, Util.getLengthOfTree(line)-1, None)
           //new instance declarations (val and var)
           case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
+            println("found a new val statement")
             var newInstances = processNewInstance(tname, classNm, instances)
             (newInstances,0, None)
           case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
@@ -334,16 +373,16 @@ class MyComponent(val global: Global) extends PluginComponent {
           case q"val $assignee = $newValue" =>
             println("matched equals with val")
             val newInstances = processNovelAssignment(assignee, newValue, instances)
-            (newInstances,0, None)
+            (newInstances, Util.getLengthOfTree(line)-1, None)
           case q"var $assignee = $newValue" =>
-            println("matched equals with val")
+            println("matched equals with var")
             val newInstances = processNovelAssignment(assignee, newValue, instances)
-            (instances,0, None)
+            (instances, Util.getLengthOfTree(line)-1, None)
           case q"$assignee = $newValue" =>
             println("in assignment "+line)
             println("assignee1 is "+assignee)
             val newInstances = processAssignment(assignee.toString, newValue, instances)
-            (instances,0, None)
+            (instances, Util.getLengthOfTree(line)-1, None)
           //loops
           case q"for (..$enums) $expr" =>
             println("matched for loop in process line")
@@ -380,6 +419,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             (updatedInstances, 0, returned) //because we are processing the current one already
           }
           case q"if ($cond) $ifBody else $elseBody" =>
+            println("dealing with if else")
             val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
             println("returned from ifelse is "+returned)
             (newInstances,Util.getLengthOfTree(line)-1, Some(returned))
