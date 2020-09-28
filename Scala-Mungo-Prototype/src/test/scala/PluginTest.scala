@@ -14,7 +14,6 @@ import scala.tools.nsc.{Global, Settings}
 
 class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{
   //region <protocol vars init>
-
   var protocolWalkTwiceIllegal = ""
   var protocolWithNotAMethod = ""
   var protocolWithoutEnd = ""
