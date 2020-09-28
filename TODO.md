@@ -12,13 +12,15 @@ func{
 Object is created every time checkInsideFunctionBody is called
 ************SEP***************
 MUST HAVE
-- [ ] Deal with code on itself in constructor
-- [ ] Deal with parameters which are new Cat
-- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+
+- [ ] Recursive functions
 - [ ] Deal with companion objects
-- [ ] Deal with match statements
-- [ ] Deal with Lamdba functions
 - [ ] Deal with apply function
+- [ ] Deal with code on itself in constructor
+- [ ] Deal with parameters/returned things which are "new Class"
+- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+- [ ] Deal with Lamdba functions
+
 
 SHOULD HAVE
 - [ ] Deal with special cases of for loops (known counts)
@@ -45,8 +47,10 @@ COULD HAVE
 ************DEC****************
 - [ ] Case study 
 
+
 ### In Progress
-- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
+- [ ] Deal with match statements
+
 
 ### Done ✓
 
@@ -70,3 +74,4 @@ COULD HAVE
 - [x] Deal with code inside object which contains main function 
 - [x] Deal with while(true) and do while(true) as special cases
 - [x] Deal with code inside parameters and conditions
+- [x] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
