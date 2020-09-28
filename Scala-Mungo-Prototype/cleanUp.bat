@@ -1,1 +1,0 @@
-@RD /S /Q "protocolDir"

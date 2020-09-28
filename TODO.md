@@ -2,17 +2,25 @@
 
 
 ### Todo
+BUGS
+I think the function code will fail if there is a variable with 
+the same name as a new variable in an earlier scope.
+cat
+func{
+	val cat = new Cat()
+}
+Object is created every time checkInsideFunctionBody is called
 ************SEP***************
 MUST HAVE
-- [ ] Take into account linearity
-- [ ] Deal with return values when they are protocolled instances, assignments, yield (aliasing)
-- [ ] Deal with code on itself in constructor
-- [ ] Deal with parameters which are new Cat or a function which returns a Cat
-- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+
+- [ ] Recursive functions
 - [ ] Deal with companion objects
-- [ ] Deal with match statements
-- [ ] Deal with Lamdba functions
 - [ ] Deal with apply function
+- [ ] Deal with code on itself in constructor
+- [ ] Deal with parameters/returned things which are "new Class"
+- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+- [ ] Deal with Lamdba functions
+
 
 SHOULD HAVE
 - [ ] Deal with special cases of for loops (known counts)
@@ -20,6 +28,9 @@ SHOULD HAVE
 - [ ] Deal with foreach and other map like things
 - [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with try-catch (advanced, handling exceptions)
+- [ ] Deal with globals (have special scope like GLOBAL?)
+- [ ] Deal with collections (for-yield assignment)
+- [ ] Deal with class attributes
 
 COULD HAVE
 - [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
@@ -30,12 +41,15 @@ COULD HAVE
 - [ ] Make work on more than a single file
 - [ ] Make things faster
 
+************NOV****************
+- [ ] Scala-stMungo
 
 ************DEC****************
-- [ ] Scala-stMungo
 - [ ] Case study 
 
+
 ### In Progress
+- [ ] Deal with match statements
 
 
 ### Done ✓
@@ -60,3 +74,4 @@ COULD HAVE
 - [x] Deal with code inside object which contains main function 
 - [x] Deal with while(true) and do while(true) as special cases
 - [x] Deal with code inside parameters and conditions
+- [x] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
