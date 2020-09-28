@@ -1,4 +1,3 @@
-
 package compilerPlugin
 
 import java.nio.file.{Files, Paths}
@@ -11,6 +10,7 @@ import scala.reflect.api.Trees
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import scala.tools.nsc.{Global, Phase}
 import scala.util.control.Breaks._
+import scala.tools.nsc._
 
 /** My plugin */
 class GetFileFromAnnotation(val global: Global) extends Plugin {
@@ -262,7 +262,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances
       }
 
-      private def dealWithAssignedToNovel(assignee: global.TermName, instances: Set[Instance], aliasInfoOrName: Any):Set[Instance] = {
+      private def dealWithAssignedToNovel(assignee: global.TermName, instances: Set[Instance], aliasInfoOrName: Any): Set[Instance] = {
         println("in the function")
         println("aliasInfoOrName is "+aliasInfoOrName)
         println("class is "+aliasInfoOrName.getClass)
@@ -1177,6 +1177,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 }
+
+
 
 
 

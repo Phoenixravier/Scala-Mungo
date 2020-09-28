@@ -9,7 +9,8 @@ import scala.collection.SortedSet
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.ConsoleReporter
-import scala.tools.nsc.{Global, Settings}
+import scala.tools.nsc.Settings
+import scala.tools.nsc._
 
 
 class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{
@@ -3239,6 +3240,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
   //endregion
 }
+
+
 
 
 
