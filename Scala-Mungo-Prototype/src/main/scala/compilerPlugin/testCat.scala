@@ -1,33 +1,23 @@
+/*
 package compilerPlugin
 
-import scala.util.Random
 
-/*
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
-sealed trait DeathState
-case object Dead extends DeathState
-case object Alive extends DeathState
-case object Unsure extends DeathState
 
-@Typestate(filename = "MyProtocol.scala")
-object Cat{
+@Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
+class Cat{
   def comeAlive(): Unit = println("The cat is alive")
-  def walk(): Unit = println("walking")
-  def die():DeathState = {
-    val randomGenerator = Random
-    val randomNumber = randomGenerator.nextDouble()
-    println(randomNumber)
-    if(randomNumber < 0.25) Dead
-    else if(randomNumber < 0.5) Alive
-    else if(randomNumber < 0.75) Unsure
-    else null
-  }
+  def walk(): Boolean = true
 }
 
-object Main extends App {
-  Cat.comeAlive()
-  Cat.walk()
-  Cat.comeAlive()
+object doMain extends App{
+  val cat = new Cat()
+  var cat1 = new Cat()
+  var x = 1
+  var cat2 = if(x==1) cat else cat1
+  cat.walk()
+  cat1.walk()
+  cat2.walk()
 }
 */

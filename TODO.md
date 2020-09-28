@@ -27,7 +27,7 @@ SHOULD HAVE
 - [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with try-catch (advanced, handling exceptions)
 - [ ] Deal with globals (have special scope like GLOBAL?)
-- [ ] Deal with collections
+- [ ] Deal with collections (for-yield assignment)
 - [ ] Deal with class attributes
 
 COULD HAVE
@@ -46,7 +46,7 @@ COULD HAVE
 - [ ] Case study 
 
 ### In Progress
-- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else, yield (aliasing)
+- [ ] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
 
 ### Done ✓
 

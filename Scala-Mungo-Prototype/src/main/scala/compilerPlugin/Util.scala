@@ -89,7 +89,7 @@ object Util {
   /** Searches through instances for an instance with an empty set and adds the alias there */
   def addInMissingAlias(instances: Set[Instance], name: String):Set[Instance] = {
     val newInstances = for(instance <- instances) yield instance
-    for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(name, currentScope.clone, instance)
+    for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(name, currentScope.clone)
     newInstances
   }
 

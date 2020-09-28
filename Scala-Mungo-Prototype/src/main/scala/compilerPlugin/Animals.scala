@@ -1,29 +1,26 @@
 package compilerPlugin
 
-
-import java.io.{FileNotFoundException, FileOutputStream, IOException, ObjectOutputStream}
-
-
-
-import scala.language.postfixOps
-import scala.util.control.Breaks.{break, breakable}
-
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
-object doMainThings{
-  def main(args: Array[String]): Unit = {
-    var cat = new Cat()
-    var cat1 = new Cat()
-    var x =1
-    val cat2 = if(x==1) cat else cat1
-  }
+@Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
+class Cat{
+  def comeAlive(): Unit = println("The cat is alive")
+  def walk(): Boolean = true
+}
 
-  def createCat(): Unit ={
-    createCat()
-  }
+object Main extends App{
+  val cat = new Cat()
+  var cat1 = new Cat()
+  var x =1
+  var cat2 = if(x==1) cat else cat1
+  cat.walk()
+  cat1.walk()
+  cat2.walk()
+}
 
-  /*
+//import scala.language.postfixOps
+/*
   //@Typestate(filename="src\\main\\scala\\ProtocolDSL\\DogProtocol.scala")
   object Dog extends Serializable{
     def walk():Unit = println("Jee kävelemme!")
@@ -38,9 +35,7 @@ object doMainThings{
       println("on alert")
     }
   }
-  */
 
-}
 
 @Typestate(filename="src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 case class Cat(var id:Int=0){
@@ -57,7 +52,11 @@ case class Cat(var id:Int=0){
     false
   }
   def sleep():Unit = println("Sleeping")
+
+
 }
+*/
+
 
 
 

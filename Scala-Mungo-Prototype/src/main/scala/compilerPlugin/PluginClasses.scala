@@ -7,9 +7,9 @@ import scala.collection.{SortedSet, mutable}
 import scala.reflect.api.Trees
 
 /** Holds an alias' name and scope */
-case class Alias(var name:String, var scope: mutable.Stack[String], instance:Instance){
+case class Alias(var name:String, var scope: mutable.Stack[String]){
   override def toString(): String={
-    s"$name ${scope.reverse.mkString(".")} ${instance.className}"
+    s"$name ${scope.reverse.mkString(".")}"
   }
 
   override def equals(alias:Any): Boolean ={
@@ -30,13 +30,18 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
     for(alias <- aliases) yield alias.name
   }
 
+  def updateAlias(aliasToRemove:Alias, aliasToAdd:Alias): Unit ={
+    aliases -= aliasToRemove
+    aliases += aliasToAdd
+  }
+
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
     currentStates -= stateToRemove
     currentStates += stateToAdd
   }
 
   def containsAliasInfo(aliasName:String, aliasScope:mutable.Stack[String]): Boolean ={
-    aliases.contains(Alias(aliasName, aliasScope, this))
+    aliases.contains(Alias(aliasName, aliasScope))
   }
 
 

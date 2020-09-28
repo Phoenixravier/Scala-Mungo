@@ -395,7 +395,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
 
     assert(actualException.getMessage ===
       "The protocol at \"withoutEndProtocol.scala\" could not be processed, " +
-        "check you have an end statement at the end of the protocol")
+        "check you have an end statement at the end of the protocol and that the name of the file is the " +
+        "same as the name of the protocol and that the path given for the protocol is correct")
   }
 
   "plugin" should "deal with multiple classes with multiple protocols" in {
@@ -3125,6 +3126,77 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance aliased via if/else violated its protocol" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat()
+        |  var cat1 = new Cat()
+        |  var x = 1
+        |  var cat2 = if(x==1) cat else cat1
+        |  cat.walk()
+        |  cat1.walk()
+        |  cat2.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance aliased via if/else violated its protocol in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  var cat1 = new Cat()
+        |  var x = 1
+        |  var cat2 = if(x==1) cat else cat1
+        |  cat.walk()
+        |  cat1.walk()
+        |  cat2.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
