@@ -229,7 +229,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                     removeAliases(assigneeInstancesToUpdate, assigneeAliasInfo._1)
                     newInstances += Instance(currentElementInfo.name, Set(Alias(aliasInfo._1, aliasInfo._2)), states)
                   case _ =>
-                    throw new Exception("Went somewhere unexoected")
+                    throw new Exception("Went somewhere unexpected")
                 }
               case None =>
                 removeAliases(assigneeInstancesToUpdate, assigneeAliasInfo._1)
@@ -320,6 +320,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances
       }
 
+
+
       /** Checks a line and returns possibly updated instances.
        *  Has different cases for different types of line
        *
@@ -406,7 +408,14 @@ class MyComponent(val global: Global) extends PluginComponent {
             (instances, 0, Some(line))
           case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
             val newInstances = checkTryCatchFinally(tryBody, cases, finallyBody, instances)
-            (newInstances,Util.getLengthOfTree(line)-1, None)
+            (newInstances, Util.getLengthOfTree(line)-1, None)
+          case q"$expr match { case ..$cases }" =>
+            println("before function")
+            val newInstances = processMatchStatement(expr, cases, instances)
+            println("Found a match statement")
+            println("expr is "+expr)
+            println("cases are "+cases)
+            (newInstances, Util.getLengthOfTree(line)-1, None)
           //All three next cases are to check for solitary object name on a line
           case Ident(TermName(objectName)) =>
             println("matched raw ident")
@@ -437,6 +446,46 @@ class MyComponent(val global: Global) extends PluginComponent {
             println("nothing matched this line")
             (instances,0, None)
         }
+      }
+
+      def processCaseStatements(cases: List[global.CaseDef], instances: Set[Instance], instancesToMerge: Set[Instance]): Set[Instance] = {
+        //copy instances into newInstances properly like in if/else code
+        println("in recursive process case function")
+        var caseInstances:Set[Instance] = Set()
+        for (instance <- instances) caseInstances += Instance(instance.className, instance.aliases, instance.currentStates)
+        //this needs to actually process what is inside the case statement rather than the entire statement
+        val newInstances = checkInsideFunctionBody(cases.head.body, caseInstances)._1
+        if(cases.tail.nonEmpty)
+          return processCaseStatements(cases.tail, instances, newInstances)
+        else
+          return mergeInstanceStates(newInstances, instancesToMerge)
+      }
+
+      def processMatchStatement(expr: Trees#Tree, cases: List[CaseDef], instances: Set[Instance]): Set[Instance] = {
+        println("in process match stmt function")
+        var newInstances = for(instance <- instances) yield instance
+        //first go through the expr
+        val newInstancesAndReturned = checkInsideFunctionBody(expr, instances)
+        newInstances = newInstancesAndReturned._1
+        newInstances = processCaseStatements(cases, newInstances, newInstances)
+        //then go through each case statement with initial instances each time
+        for(caseStmt <- cases) {
+          println("case stmt is "+caseStmt)
+          caseStmt match{
+            case cq"$pat if $cond => $expr" =>
+              newInstances = checkInsideFunctionBody(pat)._1
+              newInstances = checkInsideFunctionBody(expr)._1
+              println("matched case stmt")
+              println("pat is "+pat)
+              println("cond is "+cond)
+              println("expr is "+expr)
+            case _=>
+              throw new Exception("Did not find a case statement inside a match statement")
+          }
+
+        }
+        //and then merge them
+        newInstances
       }
 
       def dealWithWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree) = {

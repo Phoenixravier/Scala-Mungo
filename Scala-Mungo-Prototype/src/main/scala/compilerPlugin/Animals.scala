@@ -6,17 +6,25 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
   def comeAlive(): Unit = println("The cat is alive")
-  def walk(): Boolean = true
+  def walk(): Boolean = {
+    println("in walking function")
+    true
+  }
 }
 
 object Main extends App{
   val cat = new Cat()
-  var cat1 = new Cat()
-  var x =1
-  var cat2 = if(x==1) cat else cat1
-  cat.walk()
-  cat1.walk()
-  cat2.walk()
+  cat.walk() match{
+    case _:Boolean =>
+      cat.walk()
+    case true =>
+      cat.walk()
+      println("not walking")
+    case false =>
+      cat.walk()
+    case _ =>
+      println("great")
+  }
 }
 
 //import scala.language.postfixOps
