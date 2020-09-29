@@ -3202,6 +3202,149 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
 
   //endregion
 
+  //region <Match statements>
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a match statement" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat()
+        |  cat.walk() match{
+        |   case true =>
+        |     cat.walk()
+        |   case false =>
+        |     cat.walk()
+        |   case _ =>
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a match statement in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  cat.walk() match{
+        |   case true =>
+        |     cat.walk()
+        |   case false =>
+        |     cat.walk()
+        |   case _ =>
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "not throw an exception if an instance does not violates its protocol inside a match statement" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat()
+        |  cat match{
+        |   case _:Cat =>
+        |     cat.walk()
+        |   case `cat` =>
+        |     cat.walk()
+        |   case _ =>
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance does not violates its protocol inside a match statement in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  cat match{
+        |   case _:Cat =>
+        |     cat.walk()
+        |   case `cat` =>
+        |     cat.walk()
+        |   case _ =>
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  //endregion
 
   //region <Utility functions>
 

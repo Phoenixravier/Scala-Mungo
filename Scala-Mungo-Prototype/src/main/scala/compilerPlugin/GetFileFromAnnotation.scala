@@ -46,8 +46,10 @@ class MyComponent(val global: Global) extends PluginComponent {
       def apply(unit: CompilationUnit): Unit = {
         compilationUnit = unit
         //find all the classes, objects and functions in the code so we can jump to them later
-        classAndObjectTraverser.traverse(unit.body)
         functionTraverser.traverse(unit.body)
+        println("functions worked "+functionTraverser.functions)
+        classAndObjectTraverser.traverse(unit.body)
+
         //println(functionTraverser.functions)
         checkCode()
       }
@@ -269,7 +271,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         var newInstances = for(instance <- instances) yield instance
         aliasInfoOrName match {
           case _: (Any, Any) =>
-            val aliasTuple = aliasInfoOrName.asInstanceOf[Tuple2[Any, Any]]
+            val aliasTuple = aliasInfoOrName.asInstanceOf[(Any, Any)]
             aliasTuple._1 match{
               //function returns case
               case _: Option[(String, mutable.Stack[String])] =>
@@ -400,7 +402,9 @@ class MyComponent(val global: Global) extends PluginComponent {
             (updatedInstances, 0, returned) //because we are processing the current one already
           }
           case q"if ($cond) $ifBody else $elseBody" =>
-            println("dealing with if else")
+            println("dealing with if else "+line)
+            println("if body is "+ifBody)
+            println("else body is "+elseBody)
             val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
             println("returned from ifelse is "+returned)
             (newInstances,Util.getLengthOfTree(line)-1, Some(returned))
@@ -608,11 +612,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       def dealWithIfElse(condition: Trees#Tree, ifBody: Trees#Tree, elseBody: Trees#Tree, instances:Set[Instance]):(Set[Instance], Array[Option[Any]]) = {
         var newInstances = for(instance <- instances) yield instance
         newInstances = checkInsideFunctionBody(condition, newInstances)._1
+
         var ifInstances:Set[Instance] = Set()
         for (instance <- newInstances) ifInstances += Instance(instance.className, instance.aliases, instance.currentStates)
+
         var elseInstances:Set[Instance] = Set()
         for (instance <- newInstances) elseInstances += Instance(instance.className, instance.aliases, instance.currentStates)
+        println("going into if body "+ifBody)
         val (newIfInstances, returnedIf) = checkInsideFunctionBody(ifBody, ifInstances)
+        println("going into else body "+elseBody)
         val (newElseInstances, returnedElse) = checkInsideFunctionBody(elseBody, elseInstances)
         println(s"returned from if is $returnedIf, returned from else is $returnedElse")
         (mergeInstanceStates(newIfInstances, newElseInstances), Array(returnedIf, returnedElse))
@@ -628,10 +636,12 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @return
        */
       def processNewInstance(instanceTree:TermName, classTree:Tree, instances:Set[Instance]):Set[Instance]= {
+        println("processing new instance")
         val className = currentElementInfo.name
         val states = currentElementInfo.states
         var newInstances = for (instance <- instances) yield instance
-        if (classTree.toString == className) {
+        println(s"tree name is ${classTree.toString} and class name is $className")
+        if (classTree.toString.contains(className)) {
           newInstances = removeAliases(newInstances, instanceTree.toString())
           newInstances += Instance(className, Set(), Set(states(0)))
           for(instance <- newInstances if instance.aliases.isEmpty)
@@ -1050,15 +1060,19 @@ class MyComponent(val global: Global) extends PluginComponent {
       object classAndObjectTraverser extends Traverser{
         var classesAndObjects = ListBuffer[ClassOrObject]()
         override def traverse(tree: Tree): Unit = {
+          println("tree is "+tree)
           tree match{
             case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
+              println("matched object def "+obj)
               classesAndObjects += ClassOrObject(tname.toString, ArrayBuffer(), body, getScope(obj), isObject = true)
               super.traverse(obj)
             case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+              println("matched class def "+cla)
               val parameters = getParametersWithInstanceNames(paramss)
               classesAndObjects += ClassOrObject(tpname.toString(), parameters, stats, getScope(cla))
               super.traverse(cla)
             case _ =>
+              println("matched nothing")
               super.traverse(tree)
           }
         }
