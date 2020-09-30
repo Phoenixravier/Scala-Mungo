@@ -5,12 +5,14 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
+  var age:Int=_
   def comeAlive(): Unit = println("The cat is alive")
   def walk(): Boolean = {
     println("in walking function")
     true
   }
 }
+
 
 object Main extends App{
   val cat = new Cat()

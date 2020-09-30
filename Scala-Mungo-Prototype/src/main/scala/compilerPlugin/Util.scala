@@ -55,9 +55,17 @@ object Util {
 
   /** Gets rid of the return value in a method name string and keeps the parenthesis at the end */
   def stripReturnValue(methodName:String): String ={
-    if(!(methodName.contains(':') || methodName.contains("()"))) methodName+"()"
+    println("inside strip value")
+    //case walk -> walk()
+    if(!(methodName.contains(':') || methodName.contains("()") || (methodName.contains("(") && methodName.contains(")")))){
+      println("matched first")
+      methodName+"()"
+    }
+      //cases walk:Int and walk: -> walk()
     else if(methodName.contains(':') && !methodName.contains("(") && !methodName.contains(")")) methodName.substring(0,methodName.indexOf(':'))+"()"
+    //cases walk() and walk(Int) -> walk() and walk(Int)
     else if(methodName(methodName.length-1) == ')') methodName
+      //cases walk():Int and walk(Int):Int -> walk() and walk(Int)
     else methodName.substring(0,methodName.indexOf(')')+1)
   }
 

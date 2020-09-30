@@ -15,6 +15,7 @@ import scala.tools.nsc._
 
 class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{
   //region <protocol vars init>
+
   var protocolWalkTwiceIllegal = ""
   var protocolWithNotAMethod = ""
   var protocolWithoutEnd = ""
@@ -22,6 +23,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var cannotWalkProtocol = ""
   var walkComeAliveWalkLoopProtocol = ""
   var decisionWalkProtocol = ""
+  var pairsProtocol = ""
   //endregion
 
   /** Create protocol files before testing */
@@ -127,6 +129,25 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |""".stripMargin
     writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
+
+    pairsProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object pairsProtocol extends ProtocolLang with App{
+        | in("init")
+        | when ("setLeft(Int)") goto "leftInitialised"
+        |
+        | in("leftInitialised")
+        | when("setRight(Int)") goto "allInitialised"
+        |
+        | in("allInitialised")
+        | when("sum()") goto "allInitialised"
+        |
+        | end()
+        |}
+        |""".stripMargin
+    writeFile("pairsProtocol.scala", Seq(pairsProtocol))
   }
 
   /** Delete protocol files after testing */
@@ -139,6 +160,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     deleteFile("walkComeAliveWalkLoopProtocol.scala")
     deleteFile("decisionWalkProtocol.scala")
   }
+
+  //region <Tests>
 
   //region <BASIC>
   "plugin" should "only recognise the typestate annotation" in {
@@ -3200,6 +3223,146 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "not throw an exception in the valid pairs example" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "pairsProtocol.scala")
+        |class Pair{
+        |  var left:Int=_
+        |  var right:Int=_
+        |  def setLeft(num:Int): Unit = left = num
+        |  def setRight(num:Int): Unit = right = num
+        |  def sum(): Int = left + right
+        |}
+        |
+        |object Main extends App{
+        |  val p = new Pair()
+        |  val p2 = p
+        |  p.setLeft(1)
+        |  p2.setRight(2)
+        |  val result = p.sum()
+        |  println(result)
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception in the vaild pairs example in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "pairsProtocol.scala")
+        |class Pair{
+        |  var left:Int=_
+        |  var right:Int=_
+        |  def setLeft(num:Int): Unit = left = num
+        |  def setRight(num:Int): Unit = right = num
+        |  def sum(): Int = left + right
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val p = new Pair()
+        |  val p2 = p
+        |  p.setLeft(1)
+        |  p2.setRight(2)
+        |  val result = p.sum()
+        |  println(result)
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "throw an exception in the invalid pairs example" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "pairsProtocol.scala")
+        |class Pair{
+        |  var left:Int=_
+        |  var right:Int=_
+        |  def setLeft(num:Int): Unit = left = num
+        |  def setRight(num:Int): Unit = right = num
+        |  def sum(): Int = left + right
+        |}
+        |
+        |object Main extends App{
+        |  val p = new Pair()
+        |  val p2 = p
+        |  p.setLeft(1)
+        |  p.sum()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "Pair",
+      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception in the invalid pairs example in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "pairsProtocol.scala")
+        |class Pair{
+        |  var left:Int=_
+        |  var right:Int=_
+        |  def setLeft(num:Int): Unit = left = num
+        |  def setRight(num:Int): Unit = right = num
+        |  def sum(): Int = left + right
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val p = new Pair()
+        |  val p2 = p
+        |  p.setLeft(1)
+        |  p.sum()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "Pair",
+      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   //endregion
 
   //region <Match statements>
@@ -3243,7 +3406,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     val userCode =
       """
         |package compilerPlugin
-        |import java.io.FileNotFoundException
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -3313,7 +3475,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     val userCode =
       """
         |package compilerPlugin
-        |import java.io.FileNotFoundException
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -3343,6 +3504,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
   }
+
+  //endregion
 
   //endregion
 

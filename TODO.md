@@ -12,12 +12,10 @@ func{
 Object is created every time checkInsideFunctionBody is called
 ************SEP***************
 MUST HAVE
-
-- [ ] Recursive functions
+- [ ] Deal with parameters/returned things which are "new Class"
 - [ ] Deal with companion objects
 - [ ] Deal with apply function
 - [ ] Deal with code on itself in constructor
-- [ ] Deal with parameters/returned things which are "new Class"
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with Lamdba functions
 
@@ -33,7 +31,7 @@ SHOULD HAVE
 - [ ] Deal with class attributes
 
 COULD HAVE
-- [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
+- [ ] Add end to a protocol file if it doesn't have end in it
 
 
 ************OCT****************
@@ -49,8 +47,8 @@ COULD HAVE
 
 
 ### In Progress
-- [ ] Deal with match statements
-
+- [ ] Recursive functions
+- [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
 
 ### Done ✓
 
@@ -75,3 +73,4 @@ COULD HAVE
 - [x] Deal with while(true) and do while(true) as special cases
 - [x] Deal with code inside parameters and conditions
 - [x] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
+- [x] Deal with match statements

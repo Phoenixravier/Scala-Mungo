@@ -24,7 +24,9 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 class MyComponent(val global: Global) extends PluginComponent {
   import global._
 
-  case class Function(name: String, params: ArrayBuffer[Array[String]], returnType:Trees#Tree, body: Trees#Tree, scope: mutable.Stack[String]) {
+  case class Function(name: String, params: ArrayBuffer[Array[String]],
+                      returnType:Trees#Tree, body: Trees#Tree, scope: mutable.Stack[String],
+                      stateCash:Map[(String, Set[State]), Set[State]]) { //might replace string with elementInfo for more precision (on build)
     override def toString(): String = {
       s"name: $name parameters: $params return type: $returnType scope: $scope body: $body"
     }
@@ -47,7 +49,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         compilationUnit = unit
         //find all the classes, objects and functions in the code so we can jump to them later
         functionTraverser.traverse(unit.body)
-        println("functions worked "+functionTraverser.functions)
         classAndObjectTraverser.traverse(unit.body)
 
         //println(functionTraverser.functions)
@@ -469,26 +470,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("in process match stmt function")
         var newInstances = for(instance <- instances) yield instance
         //first go through the expr
-        val newInstancesAndReturned = checkInsideFunctionBody(expr, instances)
+        val newInstancesAndReturned = checkInsideFunctionBody(expr, instances) //have this as two lines because just ._1 wasn't working here oddly
         newInstances = newInstancesAndReturned._1
         newInstances = processCaseStatements(cases, newInstances, newInstances)
-        //then go through each case statement with initial instances each time
-        for(caseStmt <- cases) {
-          println("case stmt is "+caseStmt)
-          caseStmt match{
-            case cq"$pat if $cond => $expr" =>
-              newInstances = checkInsideFunctionBody(pat)._1
-              newInstances = checkInsideFunctionBody(expr)._1
-              println("matched case stmt")
-              println("pat is "+pat)
-              println("cond is "+cond)
-              println("expr is "+expr)
-            case _=>
-              throw new Exception("Did not find a case statement inside a match statement")
-          }
-
-        }
-        //and then merge them
         newInstances
       }
 
@@ -768,6 +752,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        */
       def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances:Set[Instance], calledOn:Tree=null):(Set[Instance], Option[Any]) = {
         println("found function call "+funcCall)
+        //check for an assignment function
         funcCall match{
           case Apply(Select(arg1, TermName(functionName)), List(arg3)) =>
             val regex = ".*_\\$eq".r
@@ -795,6 +780,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         for (function <- functionTraverser.functions){
           if(function.name == functionName.toString() && function.scope == functionScope) {
             println("matched functions, found body "+function.body)
+
             //handling parameters on entry
             val paramNameScopeToAlias = handleFunctionParameters(args, function.params,function.name, instances)
             //checking inside the function body
@@ -903,7 +889,7 @@ class MyComponent(val global: Global) extends PluginComponent {
        * @param instances
        * @return
        */
-      def handleFunctionParameters(args:List[global.Tree], parameters:ArrayBuffer[Array[String]],functionName:String, instances:Set[Instance]): mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])] ={
+      def handleFunctionParameters(args:List[global.Tree], parameters:ArrayBuffer[Array[String]], functionName:String, instances:Set[Instance]): mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])] ={
         var paramNameToAliasName = new mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]
         var argCounter = 0
         for(arg <- args){
@@ -1086,7 +1072,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             case  func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
               val parameters = getParametersWithInstanceNames(paramss)
               if(tname.toString() != "<init>")
-                functions += Function(tname.toString(), parameters, tpt, expr, getScope(func))
+                functions += Function(tname.toString(), parameters, tpt, expr, getScope(func), Map[(String, Set[State]), Set[State]]())
               super.traverse(expr)
             case _ =>
               super.traverse(tree)
