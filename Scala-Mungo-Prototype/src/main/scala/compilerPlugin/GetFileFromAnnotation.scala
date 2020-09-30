@@ -26,7 +26,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
   case class Function(name: String, params: ArrayBuffer[Array[String]],
                       returnType:Trees#Tree, body: Trees#Tree, scope: mutable.Stack[String],
-                      stateCash:Map[(String, Set[State]), Set[State]]) { //might replace string with elementInfo for more precision (on build)
+                      stateCash:Map[(String, String, Set[State]), Set[State]]) { //might replace string with elementInfo for more precision (on build)
     override def toString(): String = {
       s"name: $name parameters: $params return type: $returnType scope: $scope body: $body"
     }
@@ -1072,7 +1072,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             case  func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
               val parameters = getParametersWithInstanceNames(paramss)
               if(tname.toString() != "<init>")
-                functions += Function(tname.toString(), parameters, tpt, expr, getScope(func), Map[(String, Set[State]), Set[State]]())
+                functions += Function(tname.toString(), parameters, tpt, expr, getScope(func), Map[(String, String, Set[State]), Set[State]]())
               super.traverse(expr)
             case _ =>
               super.traverse(tree)
