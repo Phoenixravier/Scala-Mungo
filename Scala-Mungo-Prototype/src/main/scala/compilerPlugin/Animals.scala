@@ -17,12 +17,13 @@ class Cat{
 
 object Main extends App{
   val cat = new Cat()
-  val cat1 = new Cat()
-  var cat2 = new Cat()
-  var x=0
-  cat2 = if(x==1) cat1 else cat
-  cat2.walk()
+  val cat1 = makeCatWalk(cat)
   cat1.walk()
+
+  def makeCatWalk(cat:Cat):Cat ={
+    cat.walk()
+    cat
+  }
 }
 
 //import scala.language.postfixOps

@@ -454,6 +454,8 @@ class MyComponent(val global: Global) extends PluginComponent {
               exprString = exprString.substring(exprString.lastIndexOf(".")+1)
             checkObject(exprString, instances)
             val returned = getClosestScopeAliasInfo(exprString.trim, instances)
+
+            println("inside raw select, returned is "+returned)
             (instances,0, returned)
           case Block(List(expr), Literal(Constant(()))) =>
             println("matched raw block")
@@ -789,7 +791,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         var newInstances = for(instance <- instances) yield instance
         //checks parameters
         println("checking inside parameters "+args)
-        for(arg <- args) checkInsideFunctionBody(arg, instances)
+        for(arg <- args) checkInsideFunctionBody(arg, instances) //TODO store return values or these to use as the actual parameters
+
         println(s"after checking parameters for function call $funcCall with name $functionName")
         //checks for "new Class()" constructor function
         newInstances = checkNewFunction(funcCall, instances, args)
@@ -800,41 +803,39 @@ class MyComponent(val global: Global) extends PluginComponent {
         for (function <- functionTraverser.functions){
           if(function.name == functionName.toString() && function.scope == functionScope) {
             println("matched functions, found body "+function.body)
-
-            //renaming instance parameters on entry and placing in map for recovery later
-            val maps = renameFunctionParameters(args, function.params,function.name, instances)
-            val functionToGivenParams = maps._1
-            val givenToFunctionParams = maps._2
-            //cache stuff
-            println("param renaming struct is "+functionToGivenParams)
-            var statesBeforeFunction = Map[(String, mutable.Stack[String]), Set[State]]()
-            var canMutateStates = true
-            for((paramInfo, aliasInfo) <- functionToGivenParams) {
-              var instancesToCheck = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-              println("instances to check is "+instancesToCheck)
-              for(instance <- instancesToCheck){
-                statesBeforeFunction += (paramInfo -> instance.currentStates)
-                println("updated states before function is "+statesBeforeFunction)
-                println(s"function state cache is ${function.stateCache}")
-                if(!function.stateCache.contains(currentElementInfo.name, paramInfo._1, instance.currentStates)) {
-                  println("setting can mutate to false")
-                  canMutateStates = false
-                }
-              }
-            }
-
-            if(canMutateStates){
-              for((paramInfo, aliasInfo) <- functionToGivenParams){
-                println("instances in can mutate are "+instances)
+              //renaming instance parameters on entry and placing in map for recovery later
+              val maps = renameFunctionParameters(args, function.params, function.name, instances)
+              val functionToGivenParams = maps._1
+              val givenToFunctionParams = maps._2
+              //cache stuff
+              println("param renaming struct is " + functionToGivenParams)
+              var statesBeforeFunction = Map[(String, mutable.Stack[String]), Set[State]]()
+              var canMutateStates = true
+              for ((paramInfo, aliasInfo) <- functionToGivenParams) {
                 var instancesToCheck = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-                for(instance <- instancesToCheck){
-                  instance.currentStates = function.stateCache(currentElementInfo.name, paramInfo._1, instance.currentStates)
+                println("instances to check is " + instancesToCheck)
+                for (instance <- instancesToCheck) {
+                  statesBeforeFunction += (paramInfo -> instance.currentStates)
+                  println("updated states before function is " + statesBeforeFunction)
+                  println(s"function state cache is ${function.stateCache}")
+                  if (!function.stateCache.contains(currentElementInfo.name, paramInfo._1, instance.currentStates)) {
+                    println("setting can mutate to false")
+                    canMutateStates = false
+                  }
                 }
               }
-              println("skipping")
-              return(newInstances, function.returned)
-            }
 
+              if (canMutateStates && functionToGivenParams.nonEmpty) {
+                for ((paramInfo, aliasInfo) <- functionToGivenParams) {
+                  println("instances in can mutate are " + instances)
+                  var instancesToCheck = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
+                  for (instance <- instancesToCheck) {
+                    instance.currentStates = function.stateCache(currentElementInfo.name, paramInfo._1, instance.currentStates)
+                  }
+                }
+                println("skipping")
+                return (newInstances, function.returned)
+              }
             //checking inside the function body
             Util.currentScope.push(functionName.toString())
             val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
