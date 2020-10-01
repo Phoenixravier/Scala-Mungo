@@ -1,5 +1,6 @@
 package compilerPlugin
 
+
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
@@ -16,17 +17,12 @@ class Cat{
 
 object Main extends App{
   val cat = new Cat()
-  cat.walk() match{
-    case _:Boolean =>
-      cat.walk()
-    case true =>
-      cat.walk()
-      println("not walking")
-    case false =>
-      cat.walk()
-    case _ =>
-      println("great")
-  }
+  val cat1 = new Cat()
+  var cat2 = new Cat()
+  var x=0
+  cat2 = if(x==1) cat1 else cat
+  cat2.walk()
+  cat1.walk()
 }
 
 //import scala.language.postfixOps

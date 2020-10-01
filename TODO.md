@@ -10,6 +10,8 @@ func{
 	val cat = new Cat()
 }
 Object is created every time checkInsideFunctionBody is called
+
+
 ************SEP***************
 MUST HAVE
 - [ ] Deal with parameters/returned things which are "new Class"
@@ -37,7 +39,7 @@ COULD HAVE
 ************OCT****************
 - [ ] Build
 - [ ] Make work on more than a single file
-- [ ] Make things faster
+- [x] Make things faster
 
 ************NOV****************
 - [ ] Scala-stMungo
@@ -47,8 +49,10 @@ COULD HAVE
 
 
 ### In Progress
-- [ ] Recursive functions
+- [ ] Deal with duplicate aliases in a function call
 - [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
+- [ ] Recursive functions
+
 
 ### Done ✓
 
