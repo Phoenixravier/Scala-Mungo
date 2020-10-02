@@ -34,6 +34,7 @@ SHOULD HAVE
 
 COULD HAVE
 - [ ] Add end to a protocol file if it doesn't have end in it
+- [ ] Make caching work with duplicate parameters
 
 
 ************OCT****************

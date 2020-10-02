@@ -3131,6 +3131,215 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "throw an exception if an instance assigned to itself violated its protocol" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat1 = new Cat()
+        |  cat1 = cat1
+        |  cat1.walk()
+        |  cat1.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance assigned to itself violated its protocol in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  var cat1 = new Cat()
+        |  cat1 = cat1
+        |  cat1.walk()
+        |  cat1.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance assigned to itself in an if/else violated its protocol" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat1 = new Cat()
+        |  var x =1
+        |  cat1 = if(x == 0)cat1 else cat1
+        |  cat1.walk()
+        |  cat1.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance assigned to itself in an if/else violated its protocol in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  var cat1 = new Cat()
+        |  var cat2 = new Cat()
+        |  var x =1
+        |  cat1 = if(x == 0) cat1 else cat2
+        |  cat2.walk()
+        |  cat1.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance assigned to itself from a function violated its protocol" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat1 = new Cat()
+        |  cat1 = makeCatWalk(cat1)
+        |  cat1.walk()
+        |
+        |  def makeCatWalk(cat:Cat):Cat ={
+        |   cat.walk()
+        |   cat
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance assigned to itself from a function violated its protocol in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |import java.io.FileNotFoundException
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  var cat1 = new Cat()
+        |  cat1 = makeCatWalk(cat1)
+        |  cat1.walk()
+        |
+        |  def makeCatWalk(cat:Cat):Cat ={
+        |   cat.walk()
+        |   cat
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   "plugin" should "throw an exception if an instance aliased via val = if/else violated its protocol" in {
     val userCode =
       """
@@ -3231,7 +3440,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3268,7 +3477,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }

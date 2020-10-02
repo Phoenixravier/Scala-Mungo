@@ -1,5 +1,7 @@
 package compilerPlugin
 
+import compilerPlugin.Main.cat
+
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
@@ -17,12 +19,13 @@ class Cat{
 
 object Main extends App{
   val cat = new Cat()
-  val cat1 = makeCatWalk(cat)
-  cat1.walk()
+  val cat1 = new Cat()
+  val cat2 = new Cat()
+  makeCatWalk(cat, cat1, cat2)
 
-  def makeCatWalk(cat:Cat):Cat ={
-    cat.walk()
-    cat
+
+  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
+    makeCatWalk(cat, kitty, kat)
   }
 }
 

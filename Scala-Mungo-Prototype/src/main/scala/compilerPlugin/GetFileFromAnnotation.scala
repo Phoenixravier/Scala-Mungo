@@ -219,41 +219,65 @@ class MyComponent(val global: Global) extends PluginComponent {
             val assigneeInstancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(assigneeAliasInfo._1, assigneeAliasInfo._2))
             returnedAssigned match{
               case Some(assignedAliasInfoOrName) =>
-                newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+
                 newInstances = dealWithAssignedTo(assigneeAliasInfo, assigneeInstancesToUpdate, newInstances, assignedAliasInfoOrName)
               case None =>
                 newInstances = removeAliases(assigneeInstancesToUpdate, assigneeAliasInfo._1)
             }
           case None =>
         }
-        println("at the end of precess assignment, instaances are "+newInstances)
+        println("at the end of process assignment, instances are "+newInstances)
         newInstances
       }
 
       def dealWithAssignedTo(assigneeAliasInfo: (String, mutable.Stack[String]),assigneeInstancesToUpdate: Set[Instance],
-                             instances: Set[Instance], assignedAliasInfoOrName: Any): Set[Instance] = {
+                             instances: Set[Instance], assignedAliasInfoOrName: Any, alreadyRemoved:Boolean=false): Set[Instance] = {
         var newInstances = for(instance <- instances) yield instance
         assignedAliasInfoOrName match {
-          //returned an alias with this info
-          case _: (String, mutable.Stack[String]) =>
-            val assignedAliasInfo = assignedAliasInfoOrName.asInstanceOf[(String, mutable.Stack[String])]
-            val assignedInstancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(assignedAliasInfo._1, assignedAliasInfo._2))
-            for(instance <- assignedInstancesToUpdate)
-              instance.aliases += Alias(assigneeAliasInfo._1, assigneeAliasInfo._2)
-          //returned an alias and states with this info, returned from a function
-          case _:((String, mutable.Stack[String]), Set[State]) =>
-            val aliasInfoAndStates = assignedAliasInfoOrName.asInstanceOf[((String, mutable.Stack[String]), Set[State])]
-            val aliasInfo = aliasInfoAndStates._1.asInstanceOf[(String, mutable.Stack[String])]
-            val states = aliasInfoAndStates._2
-            newInstances += Instance(currentElementInfo.name, Set(Alias(aliasInfo._1, aliasInfo._2)), states)
+            //returned from a function an alias which already existed
+          case _:String =>
+            val aliasName = assignedAliasInfoOrName.asInstanceOf[String]
+            if(aliasName == assigneeAliasInfo._1)
+              return newInstances
+            if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+            //already existing alias returned from function
+            getClosestScopeAliasInfo(aliasName, newInstances) match{
+              case Some(aliasInfo) =>
+                var instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+                for(instance <- instancesToUpdate)
+                  instance.aliases += Alias(assigneeAliasInfo.toString(), Util.currentScope.clone())
+              case None =>
+            }
+          case _: (Any, Any) =>
+            val aliasTuple = assignedAliasInfoOrName.asInstanceOf[(Any, Any)]
+            aliasTuple._1 match {
+              //returned an alias with this info
+              case _: (String) =>
+                val assignedAliasInfo = assignedAliasInfoOrName.asInstanceOf[(String, mutable.Stack[String])]
+                if (assigneeAliasInfo == assignedAliasInfo)
+                  return newInstances
+                if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+                val assignedInstancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(assignedAliasInfo._1, assignedAliasInfo._2))
+                for (instance <- assignedInstancesToUpdate)
+                  instance.aliases += Alias(assigneeAliasInfo._1, assigneeAliasInfo._2)
+              //returned an alias and states with this info, returned a new alias from a function
+              case _: ((String, mutable.Stack[String])) =>
+                if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+                val aliasInfoAndStates = assignedAliasInfoOrName.asInstanceOf[((String, mutable.Stack[String]), Set[State])]
+                val aliasInfo = aliasInfoAndStates._1.asInstanceOf[(String, mutable.Stack[String])]
+                val states = aliasInfoAndStates._2
+                newInstances += Instance(currentElementInfo.name, Set(Alias(aliasInfo._1, aliasInfo._2)), states)
+            }
           //if else case
           case _: Array[Option[Any]] =>
             var ifElseResult = assignedAliasInfoOrName.asInstanceOf[Array[Option[Any]]]
+            var removed = false
             for (option <- ifElseResult) {
               option match {
                 case Some(ifElseAliasInfosOrName) =>
                   println(s"putting $ifElseAliasInfosOrName through the function again")
-                  newInstances = dealWithAssignedTo(assigneeAliasInfo, assigneeInstancesToUpdate, newInstances, ifElseAliasInfosOrName)
+                  newInstances = dealWithAssignedTo(assigneeAliasInfo, assigneeInstancesToUpdate, newInstances, ifElseAliasInfosOrName, removed)
+                  removed = true
                   println("instances are now "+newInstances)
                 case None =>
               }
@@ -291,6 +315,16 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("class is "+aliasInfoOrName.getClass)
         var newInstances = for(instance <- instances) yield instance
         aliasInfoOrName match {
+          case _:String =>
+            val aliasName = aliasInfoOrName.asInstanceOf[String]
+            //already existing alias returned from function
+            getClosestScopeAliasInfo(aliasName, newInstances) match{
+              case Some(aliasInfo) =>
+                var instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+                for(instance <- instancesToUpdate)
+                  instance.aliases += Alias(assignee.toString(), Util.currentScope.clone())
+              case None =>
+            }
           case _: (Any, Any) =>
             val aliasTuple = aliasInfoOrName.asInstanceOf[(Any, Any)]
             aliasTuple._1 match{
@@ -758,6 +792,13 @@ class MyComponent(val global: Global) extends PluginComponent {
         instances
       }
 
+      def hasMoreValuesThanKeys(givenToFunctionParams: mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]):Boolean = {
+        for((givenParam, functionParams) <- givenToFunctionParams){
+          if(functionParams.size > 1) return true
+        }
+        false
+      }
+
       /** Checks function calls.
        * First it checks if the function is an assignment in which case it just returns to let the assignment
        *  be dealt with in the assignment function
@@ -807,6 +848,8 @@ class MyComponent(val global: Global) extends PluginComponent {
               val maps = renameFunctionParameters(args, function.params, function.name, instances)
               val functionToGivenParams = maps._1
               val givenToFunctionParams = maps._2
+              val hasDuplicateParameters = hasMoreValuesThanKeys(givenToFunctionParams)
+            println("there are duplicate parameters yes no "+hasDuplicateParameters)
               //cache stuff
               println("param renaming struct is " + functionToGivenParams)
               var statesBeforeFunction = Map[(String, mutable.Stack[String]), Set[State]]()
@@ -819,13 +862,15 @@ class MyComponent(val global: Global) extends PluginComponent {
                   println("updated states before function is " + statesBeforeFunction)
                   println(s"function state cache is ${function.stateCache}")
                   if (!function.stateCache.contains(currentElementInfo.name, paramInfo._1, instance.currentStates)) {
+                    function.stateCache += ((currentElementInfo.name, paramInfo._1, instance.currentStates) -> null)
                     println("setting can mutate to false")
                     canMutateStates = false
                   }
+                  else if(function.stateCache(currentElementInfo.name, paramInfo._1, instance.currentStates) == null) return (newInstances, function.returned)
                 }
               }
-
-              if (canMutateStates && functionToGivenParams.nonEmpty) {
+              println("map of param to given is "+functionToGivenParams)
+              if (canMutateStates && functionToGivenParams.nonEmpty && !hasDuplicateParameters) {
                 for ((paramInfo, aliasInfo) <- functionToGivenParams) {
                   println("instances in can mutate are " + instances)
                   var instancesToCheck = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
@@ -853,7 +898,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                         println("function returns a protocolled object")
                         //instance created outside the function
                         if(functionToGivenParams.contains((aliasInfo._1, aliasInfo._2))) {
-                          Some(aliasInfo._1)
+                          Some(functionToGivenParams(aliasInfo._1, aliasInfo._2))
                         }
                         //instance created inside the function
                         else {
@@ -878,14 +923,16 @@ class MyComponent(val global: Global) extends PluginComponent {
             //renaming parameters on exit
             newInstances = renameAliasesBack(functionToGivenParams, instances)
             println("after renaming, instances are "+newInstances)
-            //add new state transitions to cache
-            for((paramInfo, previousStates)<- statesBeforeFunction){
-              val aliasInfo = functionToGivenParams(paramInfo)
-              //get alias name corresponding to param name
-              newInstances.find(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)) match{
-                case Some(instanceWithNextStates) =>
-                  function.stateCache += ((currentElementInfo.name, paramInfo._1, previousStates) -> instanceWithNextStates.currentStates)
-                case None =>
+            if(!hasDuplicateParameters) {
+              //add new state transitions to cache
+              for ((paramInfo, previousStates) <- statesBeforeFunction) {
+                val aliasInfo = functionToGivenParams(paramInfo)
+                //get alias name corresponding to param name
+                newInstances.find(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)) match {
+                  case Some(instanceWithNextStates) =>
+                    function.stateCache += ((currentElementInfo.name, paramInfo._1, previousStates) -> instanceWithNextStates.currentStates)
+                  case None =>
+                }
               }
             }
             println(s"the deal with function returns $returned")
@@ -959,7 +1006,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       def renameFunctionParameters(args:List[global.Tree], parameters:ArrayBuffer[Array[String]], functionName:String, instances:Set[Instance]):
               (mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])],
                  mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]) ={
-        var paramNameToAliasName = new mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]
+        var functionToGivenParams = new mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]
         var givenToFunctionParam = new mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]
         //construct maps
         var argCounter = 0
@@ -971,7 +1018,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             case Some(aliasInfo) =>
               println(s"found aliases with info $aliasInfo in parameters")
               val paramName = parameters(argCounter)(0)
-              paramNameToAliasName += (paramName, paramScope) -> (aliasInfo._1, aliasInfo._2)
+              functionToGivenParams += (paramName, paramScope) -> (aliasInfo._1, aliasInfo._2)
               givenToFunctionParam.get(aliasInfo._1, aliasInfo._2) match{
                 case Some(setOfParams) =>
                   println("before update, map is"+givenToFunctionParam)
@@ -996,7 +1043,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               instance.updateAlias(Alias(aliasInfo._1, aliasInfo._2), Alias(paramInfo._1, paramInfo._2))
           }
         }
-        (paramNameToAliasName, givenToFunctionParam)
+        (functionToGivenParams, givenToFunctionParam)
       }
 
       /** Handles any for or while loop.
