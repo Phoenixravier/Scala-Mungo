@@ -14,7 +14,7 @@ Object is created every time checkInsideFunctionBody is called
 
 ************SEP***************
 MUST HAVE
-- [ ] Deal with parameters/returned things which are "new Class"
+
 - [ ] Deal with companion objects
 - [ ] Deal with apply function
 - [ ] Deal with code on itself in constructor
@@ -50,9 +50,7 @@ COULD HAVE
 
 
 ### In Progress
-- [ ] Deal with duplicate aliases in a function call
-- [ ] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
-- [ ] Recursive functions
+- [ ] Deal with parameters/returned things which are "new Class"
 
 
 ### Done ✓
@@ -79,3 +77,6 @@ COULD HAVE
 - [x] Deal with code inside parameters and conditions
 - [x] Take into account linearity and deal with return values when they are protocolled instances, assignments, if/else (aliasing)
 - [x] Deal with match statements
+- [x] Deal with duplicate aliases in a function call
+- [x] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
+- [x] Recursive functions

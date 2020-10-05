@@ -22,10 +22,11 @@ object Main extends App{
   val cat1 = new Cat()
   val cat2 = new Cat()
   makeCatWalk(cat, cat1, cat2)
-
+  cat1.walk()
 
   def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
     makeCatWalk(cat, kitty, kat)
+    cat
   }
 }
 

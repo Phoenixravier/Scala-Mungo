@@ -1585,6 +1585,44 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "throw an exception if an instance violates its protocol inside a function with duplicate parameters" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val cat2 = new Cat()
+        |  makeCatsWalk(cat2, cat2)
+        |
+        |  def makeCatsWalk(cat:Cat, kat:Cat) ={
+        |      cat.walk()
+        |      kat.walk()
+        |    }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function" in {
     val userCode =
       """
@@ -3765,6 +3803,202 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   //endregion
+
+
+  //region <RECURSION>
+  "plugin" should "not throw an exception if a recursive method taking protocolled values is present" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat()
+        |  val cat1 = new Cat()
+        |  val cat2 = new Cat()
+        |  makeCatWalk(cat, cat1, cat2)
+        |  cat1.walk()
+        |  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
+        |    makeCatWalk(cat, kitty, kat)
+        |    cat
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if a recursive method taking protocolled values is present in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  val cat1 = new Cat()
+        |  val cat2 = new Cat()
+        |  makeCatWalk(cat, cat1, cat2)
+        |  cat1.walk()
+        |  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
+        |    makeCatWalk(cat, kitty, kat)
+        |    cat
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if a recursive method taking duplicate protocolled values is present" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat()
+        |  val cat2 = new Cat()
+        |  makeCatWalk(cat, cat2, cat2)
+        |  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
+        |    makeCatWalk(cat, kitty, kat)
+        |    cat
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if a recursive method taking duplicate protocolled values is present in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  val cat = new Cat()
+        |  val cat2 = new Cat()
+        |  makeCatWalk(cat, cat2, cat2)
+        |  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
+        |    makeCatWalk(cat, kitty, kat)
+        |    cat
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if a recursive method is present" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  makeCatWalk()
+        |  def makeCatWalk():String ={
+        |    makeCatWalk()
+        |
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if a recursive method is present in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |  makeCatWalk()
+        |  def makeCatWalk():String ={
+        |    makeCatWalk()
+        |  }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+
 
   //endregion
 
