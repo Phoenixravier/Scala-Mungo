@@ -221,13 +221,11 @@ class MyComponent(val global: Global) extends PluginComponent {
       println(s"returned assigned is $returnedAssigned")
       getClosestScopeAliasInfo(assignee, newInstances) match {
         case Some(assigneeAliasInfo) =>
-          val assigneeInstancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(assigneeAliasInfo._1, assigneeAliasInfo._2))
           returnedAssigned match {
             case Some(assignedAliasInfoOrName) =>
-
-              newInstances = dealWithAssignedTo(assigneeAliasInfo, assigneeInstancesToUpdate, newInstances, assignedAliasInfoOrName)
+              newInstances = dealWithAssignedTo(assigneeAliasInfo, newInstances, assignedAliasInfoOrName)
             case None =>
-              newInstances = removeAliases(assigneeInstancesToUpdate, assigneeAliasInfo._1)
+              newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
           }
         case None =>
       }
@@ -235,7 +233,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       newInstances
     }
 
-    def dealWithAssignedTo(assigneeAliasInfo: (String, mutable.Stack[String]), assigneeInstancesToUpdate: Set[Instance],
+    def dealWithAssignedTo(assigneeAliasInfo: (String, mutable.Stack[String]),
                            instances: Set[Instance], assignedAliasInfoOrName: Any, alreadyRemoved: Boolean = false): Set[Instance] = {
       var newInstances = for (instance <- instances) yield instance
       assignedAliasInfoOrName match {
@@ -244,6 +242,10 @@ class MyComponent(val global: Global) extends PluginComponent {
           val aliasName = assignedAliasInfoOrName.asInstanceOf[String]
           if (aliasName == assigneeAliasInfo._1)
             return newInstances
+          if(aliasName == "new") {
+            if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+            newInstances += Instance(currentElementInfo.name, Set(Alias(aliasName, Util.currentScope)), Set(State("init", 0)))
+          }
           if (!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
           //already existing alias returned from function
           getClosestScopeAliasInfo(aliasName, newInstances) match {
@@ -281,7 +283,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             option match {
               case Some(ifElseAliasInfosOrName) =>
                 println(s"putting $ifElseAliasInfosOrName through the function again")
-                newInstances = dealWithAssignedTo(assigneeAliasInfo, assigneeInstancesToUpdate, newInstances, ifElseAliasInfosOrName, removed)
+                newInstances = dealWithAssignedTo(assigneeAliasInfo, newInstances, ifElseAliasInfosOrName, removed)
                 removed = true
                 println("instances are now " + newInstances)
               case None =>
@@ -322,6 +324,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       aliasInfoOrName match {
         case _: String =>
           val aliasName = aliasInfoOrName.asInstanceOf[String]
+          if(aliasName == "new"){
+            newInstances += Instance(currentElementInfo.name, Set(Alias(assignee.toString(), Util.currentScope)), Set(State("init", 0)))
+          }
           //already existing alias returned from function
           getClosestScopeAliasInfo(aliasName, newInstances) match {
             case Some(aliasInfo) =>
@@ -457,13 +462,10 @@ class MyComponent(val global: Global) extends PluginComponent {
           (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
         case q"if ($cond) $ifBody else $elseBody" =>
           println("dealing with if else " + line)
-          println("if body is " + ifBody)
-          println("else body is " + elseBody)
           val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
           println("returned from ifelse is " + returned.mkString("Array(", ", ", ")"))
           (newInstances, Util.getLengthOfTree(line) - 1, Some(returned))
-        case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-          (instances, 0, Some(line))
+
         case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
           val newInstances = /*_*/checkTryCatchFinally(tryBody, cases, finallyBody, instances)/*_*/
           (newInstances, Util.getLengthOfTree(line) - 1, None)
@@ -474,6 +476,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           println("expr is " + expr)
           println("cases are " + cases)
           (newInstances, Util.getLengthOfTree(line) - 1, None)
+
         //All three next cases are to check for solitary object name on a line
         case Ident(TermName(objectName)) =>
           println("matched raw ident")
@@ -487,7 +490,6 @@ class MyComponent(val global: Global) extends PluginComponent {
             exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
           checkObject(exprString, instances)
           val returned = getClosestScopeAliasInfo(exprString.trim, instances)
-
           println("inside raw select, returned is " + returned)
           (instances, 0, returned)
         case Block(List(expr), Literal(Constant(()))) =>
@@ -534,22 +536,22 @@ class MyComponent(val global: Global) extends PluginComponent {
     def dealWithWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
       //initialisations
       var newInstances = for (instance <- instances) yield instance
-      var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
-      for (instance <- newInstances) instanceToInterimStates += instance -> ListBuffer(instance.currentStates)
+      var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
+      for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer(instance.currentStates)
       //loop
       do {
         //go through condition of the while
         newInstances = checkInsideFunctionBody(cond, newInstances)._1
         //go through loop body
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
-        for (instance <- newInstances if instanceToInterimStates.contains(instance))
-          instanceToInterimStates(instance) += instance.currentStates
+        for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+          instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
       } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
       //go through condition of the while one last time before exiting as that is how the program will execute
       newInstances = checkInsideFunctionBody(cond, newInstances)._1
       //assigns interim states to the instances
-      for (instance <- newInstances if instanceToInterimStates.contains(instance))
-        for (setOfStates <- instanceToInterimStates(instance))
+      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+        for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
           instance.currentStates = instance.currentStates ++ setOfStates
       newInstances
     }
@@ -557,20 +559,20 @@ class MyComponent(val global: Global) extends PluginComponent {
     def dealWithDoWhileLoop(cond: Trees#Tree, instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
       //initialisations
       var newInstances = for (instance <- instances) yield instance
-      var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
-      for (instance <- newInstances) instanceToInterimStates += instance -> ListBuffer()
+      var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
+      for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer()
       //loop
       do {
         //go through loop body
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
         //go through condition of the while
         newInstances = checkInsideFunctionBody(cond, newInstances)._1
-        for (instance <- newInstances if instanceToInterimStates.contains(instance))
-          instanceToInterimStates(instance) += instance.currentStates
+        for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+          instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
       } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
       //assigns interim states to the instances
-      for (instance <- newInstances if instanceToInterimStates.contains(instance)) {
-        for (setOfStates <- instanceToInterimStates(instance))
+      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases))) {
+        for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
           instance.currentStates = instance.currentStates ++ setOfStates
       }
       newInstances
@@ -598,8 +600,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     def dealWithForLoop(enums: Seq[Trees#Tree], instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
       //initialisations
       var newInstances = for (instance <- instances) yield instance
-      var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
-      for (instance <- newInstances) instanceToInterimStates += instance -> ListBuffer(instance.currentStates)
+      var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
+      for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer(instance.currentStates)
       println("after instantiation, map is " + instanceToInterimStates)
       //loop
       do {
@@ -612,13 +614,13 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
         //update map with new states of the instances
         println("new instances are " + newInstances)
-        for (instance <- newInstances if instanceToInterimStates.contains(instance))
-          instanceToInterimStates(instance) += instance.currentStates
+        for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+          instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
         println("right before check for duplicates, map is " + instanceToInterimStates)
       } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
       //assigns interim states to the instances
-      for (instance <- newInstances if instanceToInterimStates.contains(instance)) {
-        for (setOfStates <- instanceToInterimStates(instance))
+      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases))) {
+        for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
           instance.currentStates = instance.currentStates ++ setOfStates
       }
       newInstances
@@ -675,7 +677,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param instances Instances to update
      * @return
      */
-      //TODO: This function will delete all aliases with the same name as a new instance, even those not in the same scope
     def processNewInstance(name: TermName, classTree: Tree, instances: Set[Instance]): Set[Instance] = {
       println("processing new instance")
       val className = currentElementInfo.name
@@ -831,16 +832,17 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return
      */
     def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances: Set[Instance], calledOn: Tree = null): (Set[Instance], Option[Any]) = {
-      //check for an assignment function
+      //check for an assignment function, don't want to check args in this case
       val isAssignmentAndInstances = isAssignmentFunction(funcCall, instances)
       if (isAssignmentAndInstances._1) return (isAssignmentAndInstances._2, None)
-      var newInstances = for (instance <- instances) yield instance
       //checks parameters
       for (arg <- args) checkInsideFunctionBody(arg, instances) //TODO grab the actual parameters from what is returned here e.g. if it is a function call
       //checks for "new Class()" constructor function
-      newInstances = checkNewFunction(funcCall, instances, args)
+      val isNewAndInstances = checkNewFunction(funcCall, instances, args)
+      if (isNewAndInstances._1) return (isNewAndInstances._2, Some("new"))
       //checks for Object constructor call
       checkObjectFunctionCall(calledOn, instances)
+      var newInstances = for (instance <- instances) yield instance
       //finding function definition
       val functionScope = getScope(funcCall, true)
       for (function <- functionTraverser.functions) {
@@ -1011,7 +1013,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param instances
      * @param args
      */
-    def checkNewFunction(funcCall: global.Apply, instances: Set[Instance], args: List[global.Tree]): Set[Instance] = {
+    def checkNewFunction(funcCall: global.Apply, instances: Set[Instance], args: List[global.Tree]): (Boolean, Set[Instance])= {
       var newInstances = for (instance <- instances) yield instance
       funcCall match {
         case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
@@ -1031,9 +1033,10 @@ class MyComponent(val global: Global) extends PluginComponent {
               }
             case _ =>
           }
+          return(true, newInstances)
         case _ =>
       }
-      newInstances
+      (false, newInstances)
     }
 
     /** For the parameter list given, checks if they match any of our defined instances. If so, renames the instance
@@ -1102,20 +1105,20 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def dealWithLoopContents(instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
       var newInstances = for (instance <- instances) yield instance
-      var instanceToInterimStates: mutable.HashMap[Instance, ListBuffer[Set[State]]] = mutable.HashMap()
-      for (instance <- newInstances) instanceToInterimStates += instance -> ListBuffer(instance.currentStates)
+      var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
+      for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer(instance.currentStates)
       do {
-        for (instance <- newInstances if instanceToInterimStates.contains(instance))
-          instanceToInterimStates(instance) += instance.currentStates
+        for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+          instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
         for (line <- loopContent) {
           newInstances = processLine(line, newInstances)._1
-          for (updatedInstance <- newInstances if instanceToInterimStates.contains(updatedInstance)) {
-            instanceToInterimStates(updatedInstance)(instanceToInterimStates(updatedInstance).length - 1) = updatedInstance.currentStates
+          for (updatedInstance <- newInstances if instanceToInterimStates.contains((updatedInstance.className, updatedInstance.aliases))) {
+            instanceToInterimStates((updatedInstance.className, updatedInstance.aliases))(instanceToInterimStates((updatedInstance.className, updatedInstance.aliases)).length - 1) = updatedInstance.currentStates
           }
         }
       } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
-      for (instance <- newInstances if instanceToInterimStates.contains(instance)) {
-        for (setOfStates <- instanceToInterimStates(instance))
+      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases))) {
+        for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
           instance.currentStates = instance.currentStates ++ setOfStates
       }
       newInstances

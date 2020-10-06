@@ -1,6 +1,5 @@
 package compilerPlugin
 
-import compilerPlugin.Main.cat
 
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
@@ -18,10 +17,11 @@ class Cat{
 
 
 object Main extends App{
-  val cat = new Cat()
+  var cat = new Cat()
   cat.walk()
   var x = 1
   val cat2 = if(x == 0) cat else new Cat
+  cat = null
 
 }
 

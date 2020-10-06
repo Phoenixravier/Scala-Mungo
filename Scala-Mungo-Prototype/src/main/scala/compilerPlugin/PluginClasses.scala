@@ -49,12 +49,15 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
     s"$className $aliases $currentStates"
   }
 
+  /*
   override def equals(instance:Any): Boolean ={
     instance match{
       case i:Instance => i.canEqual(this) && i.aliases.equals(aliases) &&  i.className.equals(className)
       case _ => false
     }
   }
+
+   */
 
   override def hashCode():Int={
     aliases.hashCode + className.hashCode

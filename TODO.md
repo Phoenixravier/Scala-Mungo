@@ -14,19 +14,18 @@ Object is created every time checkInsideFunctionBody is called
 
 ************SEP***************
 MUST HAVE
-
 - [ ] Deal with companion objects
 - [ ] Deal with apply function
 - [ ] Deal with code on itself in constructor
-- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
-- [ ] Deal with Lamdba functions
 
 
 SHOULD HAVE
+- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+- [ ] Deal with Lamdba functions
+- [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with special cases of for loops (known counts)
 - [ ] Deal with threading
 - [ ] Deal with foreach and other map like things
-- [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with try-catch (advanced, handling exceptions)
 - [ ] Deal with globals (have special scope like GLOBAL?)
 - [ ] Deal with collections (for-yield assignment)
@@ -34,13 +33,12 @@ SHOULD HAVE
 
 COULD HAVE
 - [ ] Add end to a protocol file if it doesn't have end in it
-- [ ] Make caching work with duplicate parameters
 
 
 ************OCT****************
 - [ ] Build
 - [ ] Make work on more than a single file
-- [x] Make things faster
+- [ ] Make code readable
 
 ************NOV****************
 - [ ] Scala-stMungo
@@ -80,3 +78,5 @@ COULD HAVE
 - [x] Deal with duplicate aliases in a function call
 - [x] Cash statex to statey for functions to make things faster so we don't have to do the entire check each time 
 - [x] Recursive functions
+- [x] Make things faster
+- [x] Make caching work with duplicate parameters
