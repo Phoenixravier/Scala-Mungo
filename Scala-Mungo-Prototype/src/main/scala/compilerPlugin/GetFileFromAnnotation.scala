@@ -244,7 +244,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             return newInstances
           if(aliasName == "new") {
             if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
-            newInstances += Instance(currentElementInfo.name, Set(Alias(aliasName, Util.currentScope)), Set(State("init", 0)))
+            newInstances += Instance(currentElementInfo.name, Set(Alias(aliasName, Util.currentScope.clone())), Set(State("init", 0)))
           }
           if (!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
           //already existing alias returned from function
@@ -325,7 +325,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         case _: String =>
           val aliasName = aliasInfoOrName.asInstanceOf[String]
           if(aliasName == "new"){
-            newInstances += Instance(currentElementInfo.name, Set(Alias(assignee.toString(), Util.currentScope)), Set(State("init", 0)))
+            newInstances = processNewInstance(assignee, newInstances)
+            newInstances += Instance(currentElementInfo.name, Set(Alias(assignee.toString(), Util.currentScope.clone())), Set(State("init", 0)))
           }
           //already existing alias returned from function
           getClosestScopeAliasInfo(aliasName, newInstances) match {
@@ -408,14 +409,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           (instances, Util.getLengthOfTree(line) - 1, None)
         case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr" =>
           (instances, Util.getLengthOfTree(line) - 1, None)
-        //new instance declarations (val and var)
-        case q"$mods val $tname: $tpt = new $classNm(...$exprss)" =>
-          println("found a new val statement")
-          val newInstances = /*_*/ processNewInstance(tname, classNm, instances) /*_*/
-          (newInstances, 0, None)
-        case q"$mods var $tname: $tpt = new $classNm(...$exprss)" =>
-          val newInstances = /*_*/ processNewInstance(tname, classNm, instances) /*_*/
-          (newInstances, 0, None)
         //assignment
         case q"val $assignee = $newValue" =>
           println("matched equals with val")
@@ -427,10 +420,9 @@ class MyComponent(val global: Global) extends PluginComponent {
           (newInstances, Util.getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           println("in assignment " + line)
-          println("assignee1 is " + assignee)
           val newInstances = processAssignment(assignee.toString, newValue, instances)
           (newInstances, Util.getLengthOfTree(line) - 1, None)
-        //loops
+        //for loops
         case q"for (..$enums) $expr" =>
           println("matched for loop in process line")
           val newInstances = dealWithForLoop(enums, instances, expr)
@@ -444,6 +436,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>
           val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
           (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
+        //while loops
         case q"while ($cond) $loopContents" =>
           val newInstances = dealWithWhileLoop(cond, instances, loopContents)
           (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
@@ -607,11 +600,11 @@ class MyComponent(val global: Global) extends PluginComponent {
       do {
         //go through condition of the for
         Util.printBanner()
-        println("before checking for loop generator " + enums)
         newInstances = checkInsideForLoopGenerator(enums, newInstances)
-        println("after checking for loop generator")
+        Util.currentScope.push("for")
         //go through loop body
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
+        Util.currentScope.pop()
         //update map with new states of the instances
         println("new instances are " + newInstances)
         for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
@@ -673,22 +666,17 @@ class MyComponent(val global: Global) extends PluginComponent {
      * If so, it replaces the old instance with a new one. If not it adds a new instance to the list.
      *
      * @param name Name of the new instance as a TermName
-     * @param classTree Name of the class as a Tree
      * @param instances Instances to update
      * @return
      */
-    def processNewInstance(name: TermName, classTree: Tree, instances: Set[Instance]): Set[Instance] = {
+    def processNewInstance(name: TermName, instances: Set[Instance]): Set[Instance] = {
       println("processing new instance")
       val className = currentElementInfo.name
       val states = currentElementInfo.states
       var newInstances = for (instance <- instances) yield instance
-      println(s"tree name is ${classTree.toString} and class name is $className")
-      if (classTree.toString.contains(className)) {
-        newInstances = Util.removeAliasesInScope(newInstances, name.toString(), Util.currentScope)
-        newInstances += Instance(className, Set(), Set(states(0)))
-        for (instance <- newInstances if instance.aliases.isEmpty)
-          instance.aliases += Alias(name.toString(), Util.currentScope.clone)
-      }
+      println(s"instances are $instances, removing aliases $name with scope ${Util.currentScope}")
+      newInstances = Util.removeAliasesInScope(newInstances, name.toString(), Util.currentScope)
+      newInstances += Instance(className, Set(Alias(name.toString(), Util.currentScope.clone)), Set(states(0)))
       newInstances
     }
 
@@ -1222,19 +1210,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       var classesAndObjects = ListBuffer[ClassOrObject]()
 
       override def traverse(tree: Tree): Unit = {
-        println("tree is " + tree)
         tree match {
           case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-            println("matched object def " + obj)
             classesAndObjects += ClassOrObject(tname.toString, ArrayBuffer(), body, getScope(obj), isObject = true)
             super.traverse(obj)
           case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-            println("matched class def " + cla)
             val parameters = /*_*/getParametersWithInstanceNames(paramss)/*_*/
             classesAndObjects += ClassOrObject(tpname.toString(), parameters, stats, getScope(cla))
             super.traverse(cla)
           case _ =>
-            println("matched nothing")
             super.traverse(tree)
         }
       }

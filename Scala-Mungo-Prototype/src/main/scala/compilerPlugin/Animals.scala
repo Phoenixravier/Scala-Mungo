@@ -21,7 +21,10 @@ object Main extends App{
   cat.walk()
   var x = 1
   val cat2 = if(x == 0) cat else new Cat
-  cat = null
+  for(i <- 1 to 10){
+    val cat2 = new Cat()
+    cat2.walk()
+  }
 
 }
 
