@@ -19,15 +19,10 @@ class Cat{
 
 object Main extends App{
   val cat = new Cat()
-  val cat1 = new Cat()
-  val cat2 = new Cat()
-  makeCatWalk(cat, cat1, cat2)
-  cat1.walk()
+  cat.walk()
+  var x = 1
+  val cat2 = if(x == 0) cat else new Cat
 
-  def makeCatWalk(cat:Cat, kitty:Cat, kat:Cat):Cat ={
-    makeCatWalk(cat, kitty, kat)
-    cat
-  }
 }
 
 //import scala.language.postfixOps
