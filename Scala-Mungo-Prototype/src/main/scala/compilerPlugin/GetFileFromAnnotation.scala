@@ -164,10 +164,9 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def checkInsideObjectBody(code: Seq[Trees#Tree], givenInstances: Set[Instance] = Set()): Set[Instance] = {
       var instances = for (instance <- givenInstances) yield instance
-      if (currentElementInfo.isObject) {
-        instances += Instance(currentElementInfo.name, Set(), Set(currentElementInfo.states(0)))
-        for (instance <- instances if instance.aliases.isEmpty)
-          instance.aliases += Alias(currentElementInfo.name, Util.currentScope.clone)
+      if (currentElementInfo.isObject && !currentElementInfo.isAssigned) {
+        instances += Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone)), Set(currentElementInfo.states(0)))
+        currentElementInfo.isAssigned = true
       }
       for (line <- code)
         instances = checkInsideFunctionBody(line, instances)._1
@@ -186,10 +185,9 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def checkInsideFunctionBody(code: Trees#Tree, givenInstances: Set[Instance] = Set()): (Set[Instance], Option[Any]) = {
       var instances = for (instance <- givenInstances) yield instance
-      if (currentElementInfo.isObject) { //TODO deal with the fact this happens every time this function is called
+      if (currentElementInfo.isObject && !currentElementInfo.isAssigned) { 
         instances += Instance(currentElementInfo.name, Set(), Set(currentElementInfo.states(0)))
-        for (instance <- instances if instance.aliases.isEmpty)
-          instance.aliases += Alias(currentElementInfo.name, Util.currentScope.clone)
+        currentElementInfo.isAssigned = true
       }
       var returned: Option[Any] = None
       var nbOfLinesToSkip = 0
@@ -970,7 +968,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       //checks for Object constructor call
       checkObjectFunctionCall(calledOn, instances)
       //endregion
-
       //finding function definition
       for (function <- functionTraverser.functions
            if function.name == functionName.toString() && function.scope == getScope(funcCall, dontCheckSymbolField = true)) {

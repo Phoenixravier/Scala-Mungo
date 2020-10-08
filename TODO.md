@@ -14,8 +14,8 @@ Object is created every time checkInsideFunctionBody is called
 
 ************SEP***************
 MUST HAVE
-- [ ] Deal with companion objects
 - [ ] Deal with apply function
+- [ ] Deal with companion objects
 - [ ] Deal with code on itself in constructor
 
 
@@ -72,7 +72,7 @@ SHOULD HAVE
 - [x] Write tests for the plugin
 - [x] Deal with If-Else statements 
 - [x] Deal with try-catch (basic)
-- [x] Does not deal with loops
+- [x] Deal with loops
 - [x] Does not deal with function calls
 - [x] Does not deal with return values (and subsequent path possibilities)
 - [x] Does not work with methods with parameters

@@ -44,23 +44,9 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
     aliases.contains(Alias(aliasName, aliasScope))
   }
 
-
   override def toString(): String={
     s"$className $aliases $currentStates"
   }
-
-/*
-
-
-  override def equals(instance:Any): Boolean ={
-    instance match{
-      case i:Instance => i.canEqual(this) && i.id.equals(id)
-      case _ => false
-    }
-  }
-
- */
-
 
   override def hashCode():Int={
     aliases.hashCode + className.hashCode
@@ -69,7 +55,7 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
 
 /** Holds information about a class or an object */
 case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Array[Array[State]], states:Array[State],
-                       methodToIndices:mutable.HashMap[String, Set[Int]], isObject:Boolean=false){
+                       methodToIndices:mutable.HashMap[String, Set[Int]], isObject:Boolean=false, var isAssigned:Boolean=false){
   override def toString(): String={
     s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $isObject"
   }
