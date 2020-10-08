@@ -125,6 +125,17 @@ object Util {
     Util.cleanInstances(newInstances)
   }
 
+  def removeAllAliasesInScope(instances: Set[Instance], scope:mutable.Stack[String]): Set[Instance] = {
+    var newInstances = for (instance <- instances) yield instance
+    for(instance <- newInstances){
+      for(alias <- instance.aliases){
+        if(alias.scope == scope)
+          instance.aliases -= alias
+      }
+    }
+    Util.cleanInstances(newInstances)
+  }
+
 
 
   def printDragon(): Unit ={

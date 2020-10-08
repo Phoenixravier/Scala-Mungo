@@ -18,13 +18,14 @@ class Cat{
 
 object Main extends App{
   var cat = new Cat()
-  cat.walk()
-  var x = 1
-  val cat2 = if(x == 0) cat else new Cat
-  for(i <- 1 to 10){
-    val cat2 = new Cat()
-    cat2.walk()
+  var cat1 = new Cat()
+
+  makeCatsWalk(cat, cat1)
+  makeCatsWalk(cat, cat1)
+  def makeCatsWalk(kat:Cat, kitty:Cat): Unit ={
+    kat.walk()
   }
+
 
 }
 

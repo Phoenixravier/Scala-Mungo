@@ -87,9 +87,9 @@ class MyComponent(val global: Global) extends PluginComponent {
      * Then it checks the methods in the protocol are a subset of those defined in the element.
      * Then it checks the protocol is followed
      *
-     * @param body The code to check
-     * @param name Name of the element
-     * @param tree The entire code
+     * @param body     The code to check
+     * @param name     Name of the element
+     * @param tree     The entire code
      * @param isObject Whether or not the element to check is an Object (as opposed to a Class)
      * @return
      */
@@ -142,7 +142,8 @@ class MyComponent(val global: Global) extends PluginComponent {
               case mainLine@q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
                 Util.currentScope = getScope(line)
                 /*_*/
-                if (getParameters(paramss) == "Array[String]") {/*_*/
+                if (getParameters(paramss) == "Array[String]") {
+                  /*_*/
                   checkObject(tname.toString())
                   Util.currentScope.push(tname.toString())
                   Util.currentScope.push("main")
@@ -179,7 +180,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** Checks the code inside the body of a function for protocol violations.
      * Goes line by line and skips lines if needed (for example when at a definition or a loop).
      *
-     * @param code The code to check
+     * @param code           The code to check
      * @param givenInstances Set of instances given to be updated (optional). Will create a new set if not
      * @return
      */
@@ -218,7 +219,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       val newInstancesAndReturned = checkInsideFunctionBody(assigned, instances)
       var newInstances = newInstancesAndReturned._1
       val returnedAssigned = newInstancesAndReturned._2
-      println(s"returned assigned is $returnedAssigned")
+      println("returned assigned is "+returnedAssigned)
       getClosestScopeAliasInfo(assignee, newInstances) match {
         case Some(assigneeAliasInfo) =>
           returnedAssigned match {
@@ -229,7 +230,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         case None =>
       }
-      println("at the end of process assignment, instances are " + newInstances)
       newInstances
     }
 
@@ -242,8 +242,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           val aliasName = assignedAliasInfoOrName.asInstanceOf[String]
           if (aliasName == assigneeAliasInfo._1)
             return newInstances
-          if(aliasName == "new") {
-            if(!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
+          if (aliasName == "new") {
+            if (!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
             newInstances += Instance(currentElementInfo.name, Set(Alias(aliasName, Util.currentScope.clone())), Set(State("init", 0)))
           }
           if (!alreadyRemoved) newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
@@ -298,13 +298,13 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** Processes a val assignee = assigned statement
      * Checks if assigned is an existing alias and if so adds assignee to its list of aliases
      *
-     * @param assignee In val/var x = y, this is x. Always comes as a new val or var.
-     * @param assigned In val/var x = y, this is y.
+     * @param assignee  In val/var x = y, this is x. Always comes as a new val or var.
+     * @param assigned  In val/var x = y, this is y.
      * @param instances The instances passed in to process the assignment with.
      * @return
      */
-    def processNovelAssignment(assignee: TermName, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
-      println("in process novel assignment")
+    def processNovelAssignment(assignee: String, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
+      println("in process novel assignment scope is" + Util.currentScope)
       var (newInstances, returnedAssigned) = checkInsideFunctionBody(assigned, instances)
       println("returnedAssigned is " + returnedAssigned)
       returnedAssigned match {
@@ -316,7 +316,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       newInstances
     }
 
-    private def dealWithAssignedToNovel(assignee: global.TermName, instances: Set[Instance], aliasInfoOrName: Any): Set[Instance] = {
+    private def dealWithAssignedToNovel(assignee: String, instances: Set[Instance], aliasInfoOrName: Any, dontRemoveNew: Boolean = false): Set[Instance] = {
       println("in the function")
       println("aliasInfoOrName is " + aliasInfoOrName)
       println("class is " + aliasInfoOrName.getClass)
@@ -324,16 +324,16 @@ class MyComponent(val global: Global) extends PluginComponent {
       aliasInfoOrName match {
         case _: String =>
           val aliasName = aliasInfoOrName.asInstanceOf[String]
-          if(aliasName == "new"){
-            newInstances = processNewInstance(assignee, newInstances)
-            newInstances += Instance(currentElementInfo.name, Set(Alias(assignee.toString(), Util.currentScope.clone())), Set(State("init", 0)))
+          if (aliasName == "new") {
+            newInstances = processNewInstance(assignee, newInstances, dontRemoveNew)
+            newInstances += Instance(currentElementInfo.name, Set(Alias(assignee, Util.currentScope.clone())), Set(State("init", 0)))
           }
           //already existing alias returned from function
           getClosestScopeAliasInfo(aliasName, newInstances) match {
             case Some(aliasInfo) =>
               val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               for (instance <- instancesToUpdate)
-                instance.aliases += Alias(assignee.toString(), Util.currentScope.clone())
+                instance.aliases += Alias(assignee, Util.currentScope.clone())
             case None =>
           }
         case _: (Any, Any) =>
@@ -350,7 +350,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                   println("got something returned from function")
                   //case where an instance was created inside a function and returned
                   //add new instance
-                  newInstances += Instance(currentElementInfo.name, Set(Alias(assignee.toString(), Util.currentScope.clone())), states)
+                  newInstances += Instance(currentElementInfo.name, Set(Alias(assignee, Util.currentScope.clone())), states)
                 case None =>
               }
             //normal case
@@ -363,12 +363,12 @@ class MyComponent(val global: Global) extends PluginComponent {
                   //if already exists then add to list of aliases
                   val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
                   for (instance <- instancesToUpdate)
-                    instance.aliases += Alias(assignee.toString(), Util.currentScope.clone())
+                    instance.aliases += Alias(assignee, Util.currentScope.clone())
                   println("instances after dealing with this are " + newInstances)
                 case None =>
                   //otherwise add as new instance
                   newInstances += Instance(currentElementInfo.name, Set(), Set(State("init", 0)))
-                  Util.addInMissingAlias(newInstances, assignee.toString)
+                  Util.addInMissingAlias(newInstances, assignee)
               }
           }
         //if else case
@@ -378,7 +378,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             option match {
               case Some(ifElseAliasInfosOrName) =>
                 println(s"putting $assignee and $ifElseAliasInfosOrName through the function again")
-                newInstances = dealWithAssignedToNovel(assignee, instances, ifElseAliasInfosOrName)
+                newInstances = dealWithAssignedToNovel(assignee, instances, ifElseAliasInfosOrName, true)
               case None =>
             }
           }
@@ -412,11 +412,11 @@ class MyComponent(val global: Global) extends PluginComponent {
         //assignment
         case q"val $assignee = $newValue" =>
           println("matched equals with val")
-          val newInstances = /*_*/processNovelAssignment(assignee, newValue, instances)/*_*/
+          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
           (newInstances, Util.getLengthOfTree(line) - 1, None)
         case q"var $assignee = $newValue" =>
           println("matched equals with var")
-          val newInstances = /*_*/processNovelAssignment(assignee, newValue, instances)/*_*/
+          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
           (newInstances, Util.getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           println("in assignment " + line)
@@ -460,11 +460,11 @@ class MyComponent(val global: Global) extends PluginComponent {
           (newInstances, Util.getLengthOfTree(line) - 1, Some(returned))
 
         case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
-          val newInstances = /*_*/checkTryCatchFinally(tryBody, cases, finallyBody, instances)/*_*/
+          val newInstances = /*_*/ checkTryCatchFinally(tryBody, cases, finallyBody, instances) /*_*/
           (newInstances, Util.getLengthOfTree(line) - 1, None)
         case q"$expr match { case ..$cases }" =>
           println("before function")
-          val newInstances = /*_*/processMatchStatement(expr, cases, instances)/*_*/
+          val newInstances = /*_*/ processMatchStatement(expr, cases, instances) /*_*/
           println("Found a match statement")
           println("expr is " + expr)
           println("cases are " + cases)
@@ -604,6 +604,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         Util.currentScope.push("for")
         //go through loop body
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
+        newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
         Util.currentScope.pop()
         //update map with new states of the instances
         println("new instances are " + newInstances)
@@ -622,10 +623,10 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** Handles try-catch in a basic manner, assuming no exceptions.
      * Just goes through try then finally bodies.
      *
-     * @param tryBody Code inside the try block.
-     * @param cases List of cases.
+     * @param tryBody     Code inside the try block.
+     * @param cases       List of cases.
      * @param finallyBody Code inside the finally block.
-     * @param instances Instances passed in to update.
+     * @param instances   Instances passed in to update.
      * @return
      */
     def checkTryCatchFinally(tryBody: Trees#Tree, cases: List[CaseDef], finallyBody: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
@@ -638,8 +639,8 @@ class MyComponent(val global: Global) extends PluginComponent {
      * goes through both paths and gets new states for the instances. Once this is done it merges the two possible
      * paths and instances now hold all possible states they could be in after going through either path.
      *
-     * @param ifBody Code inside the if block
-     * @param elseBody Code inside the else block
+     * @param ifBody    Code inside the if block
+     * @param elseBody  Code inside the else block
      * @param instances Instances to update
      * @return
      */
@@ -665,18 +666,21 @@ class MyComponent(val global: Global) extends PluginComponent {
      * is already defined in the list of instances.
      * If so, it replaces the old instance with a new one. If not it adds a new instance to the list.
      *
-     * @param name Name of the new instance as a TermName
+     * Boolean used so y = if()x else new Class does not delete y from the instance with x
+     *
+     * @param name      Name of the new instance
      * @param instances Instances to update
      * @return
      */
-    def processNewInstance(name: TermName, instances: Set[Instance]): Set[Instance] = {
+    def processNewInstance(name: String, instances: Set[Instance], dontRemove: Boolean = false): Set[Instance] = {
       println("processing new instance")
+      println("inside process new instances are " + instances)
       val className = currentElementInfo.name
       val states = currentElementInfo.states
       var newInstances = for (instance <- instances) yield instance
       println(s"instances are $instances, removing aliases $name with scope ${Util.currentScope}")
-      newInstances = Util.removeAliasesInScope(newInstances, name.toString(), Util.currentScope)
-      newInstances += Instance(className, Set(Alias(name.toString(), Util.currentScope.clone)), Set(states(0)))
+      if (!dontRemove) newInstances = Util.removeAliasesInScope(newInstances, name, Util.currentScope)
+      newInstances += Instance(className, Set(Alias(name, Util.currentScope.clone)), Set(states(0)))
       newInstances
     }
 
@@ -684,7 +688,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** For two sets of instances, if and instance is present in both of them, merges the different states
      * associated with it into one instance. Copies over the remaining instances which are only present once.
      *
-     * @param firstInstances First of the instance sets, to merge with hte second one
+     * @param firstInstances  First of the instance sets, to merge with hte second one
      * @param secondInstances Second of the instance sets, to merge with the first one
      * @return
      */
@@ -753,8 +757,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     /** Checks if the object (calledOn) is defined in the file and if it has not already been initialised, runs the
      * code inside the object.
      *
-     * @param calledOn The object that the method is called on and the one we want to check the constructor for if
-     *                 that hasn't been done already
+     * @param calledOn  The object that the method is called on and the one we want to check the constructor for if
+     *                  that hasn't been done already
      * @param instances Instances to update
      */
     def checkObjectFunctionCall(calledOn: global.Tree, instances: Set[Instance]): Unit = {
@@ -805,6 +809,132 @@ class MyComponent(val global: Global) extends PluginComponent {
       (false, instances)
     }
 
+    def assignParameters(instances: Set[Instance], parameters: ArrayBuffer[Array[String]], args: List[Tree]): Set[Instance] = {
+      var newInstances = for (instance <- instances) yield instance
+      var i = 0
+      for (param <- parameters) {
+        if (param.length > 1) {
+          if (param(1).contains(currentElementInfo.name)) {
+            newInstances = processNovelAssignment(param(0), args(i), newInstances)
+          }
+        }
+        i += 1
+      }
+      newInstances
+    }
+
+    def checkAndGetArguments(args: List[global.Tree], instances: Set[Instance]): (Array[Option[Any]], Set[Instance]) = {
+      var newInstances = for (instance <- instances) yield instance
+      var arguments = new Array[Option[Any]](args.length)
+      var i = 0
+      for (arg <- args) {
+        val instancesAndReturned = checkInsideFunctionBody(arg, instances)
+        newInstances = instancesAndReturned._1
+        arguments(i) = instancesAndReturned._2
+        i += 1
+      }
+      (arguments, newInstances)
+    }
+
+    def cacheContainsCurrentStates(map: Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]],
+                                   array2: ArrayBuffer[(String, Set[String], Set[State])]):
+    (Boolean, ArrayBuffer[(String, Set[String], Set[State])]) = {
+      for ((array, states) <- map) {
+        val set1 = array.toSet
+        val set2 = array2.toSet
+        if (set1.equals(set2)) return (true, array)
+      }
+      (false, null)
+    }
+
+    def createCacheEntry(givenToFunctionParams: mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]],
+                         instances: Set[Instance]): ArrayBuffer[(String, Set[String], Set[State])] = {
+      val cacheEntry = ArrayBuffer[(String, Set[String], Set[State])]()
+      for ((aliasInfo, paramInfos) <- givenToFunctionParams) {
+        var currentStates = Set[State]()
+        for (paramInfo <- paramInfos) {
+          println(s"checking for $paramInfo in " + instances)
+          val instancesToGetStatesFrom = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
+          println("instances to scrap are " + instancesToGetStatesFrom)
+          for (instance <- instancesToGetStatesFrom) {
+            currentStates ++= instance.currentStates
+          }
+        }
+        var paramNames = Set[String]()
+        for (paramInfo <- paramInfos) paramNames += paramInfo._1
+        cacheEntry.append((currentElementInfo.name, paramNames, currentStates))
+      }
+      cacheEntry
+    }
+
+    def mutateInstances(parameters: ArrayBuffer[(String, Set[String], Set[State])], instances: Set[Instance], function: Function): Set[Instance] = {
+      var newInstances = for (instance <- instances) yield instance
+      var i = 0
+      for ((element, parameterNames, states) <- parameters) {
+        for (paramName <- parameterNames) {
+          getClosestScopeAliasInfo(paramName, newInstances) match {
+            case Some(paramInfo) =>
+              val instancesToMutate = newInstances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
+              for (instance <- instancesToMutate) instance.currentStates = function.stateCache(parameters)(i)
+            case None =>
+          }
+        }
+        i += 1
+      }
+      newInstances
+    }
+
+    def findWhatToReturn(returned: Option[Any], instances: Set[Instance], function: Function,
+                         functionToGivenParams: mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]):
+                                        Option[Any] = {
+      var newInstances = for (instance <- instances) yield instance
+      var actualReturned = returned
+      returned match {
+        case Some(alias) =>
+          alias match {
+            case _: (String, mutable.Stack[String]) =>
+              val aliasInfo = alias.asInstanceOf[(String, mutable.Stack[String])]
+              actualReturned =
+                if (function.returnType.toString().contains(currentElementInfo.name)) {
+                  //instance created outside the function
+                  if (functionToGivenParams.contains((aliasInfo._1, aliasInfo._2))) {
+                    Some(functionToGivenParams(aliasInfo._1, aliasInfo._2))
+                  }
+                  //instance created inside the function
+                  else {
+                    newInstances.find(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)) match {
+                      case Some(instance) =>
+                        Some(returned, instance.currentStates)
+                      case None =>
+                        returned
+                    }
+                  }
+                }
+                else returned
+            case _ =>
+          }
+        case None =>
+      }
+      actualReturned
+    }
+
+    def findNextStates(cacheEntry: ArrayBuffer[(String, Set[String], Set[State])], newInstances: Set[Instance]): ArrayBuffer[Set[State]] = {
+      val nextStatesArray = ArrayBuffer[Set[State]]()
+      for ((element, parameterNames, states) <- cacheEntry) {
+        var nextStates = Set[State]()
+        for (paramName <- parameterNames) {
+          getClosestScopeAliasInfo(paramName, newInstances) match {
+            case Some(paramInfo) =>
+              val instancesWithNextStates = newInstances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
+              for (instance <- instancesWithNextStates) nextStates ++= instance.currentStates
+            case None =>
+          }
+        }
+        nextStatesArray.append(nextStates)
+      }
+      nextStatesArray
+    }
+
     /** Checks function calls.
      * First it checks if the function is an assignment in which case it just returns to let the assignment
      * be dealt with in the assignment function
@@ -820,571 +950,491 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return
      */
     def dealWithFunction(funcCall: global.Apply, functionName: global.Name, args: List[global.Tree], instances: Set[Instance], calledOn: Tree = null): (Set[Instance], Option[Any]) = {
+      println("inside deal with function")
+      //region <Checks>
+
       //check for an assignment function, don't want to check args in this case
       val isAssignmentAndInstances = isAssignmentFunction(funcCall, instances)
       if (isAssignmentAndInstances._1) return (isAssignmentAndInstances._2, None)
-      //checks parameters
-      for (arg <- args) checkInsideFunctionBody(arg, instances) //TODO grab the actual parameters from what is returned here e.g. if it is a function call
+
+      //checks and gets parameters
+      var (arguments, newInstances) = checkAndGetArguments(args, instances)
+
       //checks for "new Class()" constructor function
-      val isNewAndInstances = checkNewFunction(funcCall, instances, args)
-      if (isNewAndInstances._1) return (isNewAndInstances._2, Some("new"))
+      val isCurrentIsNewAndInstances = checkNewFunction(funcCall, args, instances)
+      if (isCurrentIsNewAndInstances._2) {
+        if (isCurrentIsNewAndInstances._1)
+          return (isCurrentIsNewAndInstances._3, Some("new"))
+        else return (isCurrentIsNewAndInstances._3, None)
+      }
       //checks for Object constructor call
       checkObjectFunctionCall(calledOn, instances)
-      var newInstances = for (instance <- instances) yield instance
+      //endregion
+
       //finding function definition
-      val functionScope = getScope(funcCall, true)
-      for (function <- functionTraverser.functions) {
-        if (function.name == functionName.toString() && function.scope == functionScope) {
-          //renaming instance parameters on entry and placing in map for recovery later
-          val mapsAndInstances = renameFunctionParameters(args, function.params, function.name, newInstances)
-          val functionToGivenParams = mapsAndInstances._1
-          val givenToFunctionParams = mapsAndInstances._2
-          newInstances = mapsAndInstances._3
-
-          //cache stuff
-          //make array of paramInfo, state
-          val parametersAndStates = ArrayBuffer[(String, Set[String], Set[State])]()
-          for ((aliasInfo, paramInfos) <- givenToFunctionParams) {
-            var currentStates = Set[State]()
-            println("all instances are "+newInstances)
-            for(paramInfo <- paramInfos) {
-              val instancesToGetStatesFrom = newInstances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-              println("instances to get states from are "+instancesToGetStatesFrom)
-              for (instance <- instancesToGetStatesFrom) {
-                currentStates ++= instance.currentStates
-              }
-              println("current states are "+currentStates)
-            }
-            var paramNames = Set[String]()
-            for(paramInfo <- paramInfos) paramNames += paramInfo._1
-            parametersAndStates.append((currentElementInfo.name, paramNames, currentStates))
-          }
-
-          def containsElementsIn(map:Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]],
-                                      array2:ArrayBuffer[(String, Set[String], Set[State])]):
-                                              (Boolean,ArrayBuffer[(String, Set[String], Set[State])])={
-            println("in contains")
-            for((array, states) <- map){
-              val set1 = array.toSet
-              val set2 = array2.toSet
-              if(set1.equals(set2)) return (true, array)
-            }
-            (false, null)
-          }
-
-          println("state cache is "+function.stateCache)
-
-          val containsAndArray = containsElementsIn(function.stateCache, parametersAndStates)
-          val containsArray = containsAndArray._1
-          val arrayOfParameters = containsAndArray._2
-          println("array of params is "+arrayOfParameters)
-
-          //mutate state if possible and skip recursive call if needed
-          if(containsArray && function.stateCache(arrayOfParameters) != null){
-            println("mutating instances")
-            var i = 0
-            for((element, parameterNames, states) <- arrayOfParameters){
-              for(paramName <- parameterNames) {
-                getClosestScopeAliasInfo(paramName, newInstances) match{
-                  case Some(paramInfo) =>
-                    val instancesToMutate = newInstances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-                    for (instance <- instancesToMutate) instance.currentStates = function.stateCache(arrayOfParameters)(i)
-                  case None =>
-                }
-              }
-              i+=1
-            }
-            newInstances = renameAliasesBack(functionToGivenParams, instances)
-            println("skipping")
-            return (newInstances, function.returned)
-          }
-          if(containsArray && function.stateCache(arrayOfParameters) == null) {
-            newInstances = renameAliasesBack(functionToGivenParams, instances)
-            return (newInstances, function.returned)
-          }
-          println("paramsandstate is "+parametersAndStates)
-          function.stateCache += parametersAndStates -> null
-          println("after setting null cache is "+function.stateCache)
-
-          //checking inside the function body
-          Util.currentScope.push(functionName.toString())
-          val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
-          newInstances = newInstancesAndReturned._1
-          //figuring out what is returned
-          var returned = newInstancesAndReturned._2
-          returned match {
-            case Some(alias) =>
-              alias match {
-                case _: (String, mutable.Stack[String]) =>
-                  val aliasInfo = alias.asInstanceOf[(String, mutable.Stack[String])]
-                  println(s"trying to match ${function.returnType.toString()} and ${currentElementInfo.name}")
-                  returned =
-                    if (function.returnType.toString().contains(currentElementInfo.name)) {
-                      println("function returns a protocolled object")
-                      //instance created outside the function
-                      if (functionToGivenParams.contains((aliasInfo._1, aliasInfo._2))) {
-                        Some(functionToGivenParams(aliasInfo._1, aliasInfo._2))
-                      }
-                      //instance created inside the function
-                      else {
-                        println("HERE instances are " + newInstances)
-                        newInstances.find(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)) match {
-                          case Some(instance) =>
-                            Some(newInstancesAndReturned._2, instance.currentStates)
-                          case None =>
-                            newInstancesAndReturned._2
-                        }
-                      }
-                    }
-                    else newInstancesAndReturned._2
-                case _ =>
-              }
-            case None =>
-          }
-          function.returned = returned
+      for (function <- functionTraverser.functions
+           if function.name == functionName.toString() && function.scope == getScope(funcCall, dontCheckSymbolField = true)) {
+        Util.currentScope.push(function.name) //push scope so parameters will be scoped inside the function
+        newInstances = assignParameters(newInstances, function.params, args)
+        //create maps
+        val mapsAndInstances = createMaps(function.params, function.name, newInstances)
+        val functionToGivenParams = mapsAndInstances._1
+        val givenToFunctionParams = mapsAndInstances._2
+        //make possible cache entry
+        val cacheEntry = createCacheEntry(givenToFunctionParams, newInstances)
+        //check if it hits
+        val cacheHitAndParams = cacheContainsCurrentStates(function.stateCache, cacheEntry)
+        val cacheHit = cacheHitAndParams._1
+        val parameters = cacheHitAndParams._2
+        //mutate state if possible and skip recursive call if needed
+        if (cacheHit && function.stateCache(parameters) != null) {
+          mutateInstances(parameters, newInstances, function)
+          newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+          println("skipping")
           Util.currentScope.pop()
+          return (newInstances, function.returned)
+        }
+        if (cacheHit && function.stateCache(parameters) == null) {
+          newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+          println("recursing")
+          Util.currentScope.pop()
+          return (newInstances, function.returned)
+        }
+        //if it doesn't, put in a null entry
+        function.stateCache += cacheEntry -> null
 
-          println("at end of function, instances are " + newInstances)
-          //construct array of next states
-          val nextStatesArray = ArrayBuffer[Set[State]]()
-          for((element, parameterNames, states) <- parametersAndStates){
-            var nextStates = Set[State]()
-            for(paramName <- parameterNames){
-              getClosestScopeAliasInfo(paramName, newInstances) match{
-                case Some(paramInfo) =>
-                  val instancesWithNextStates = newInstances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-                  for(instance <- instancesWithNextStates) nextStates ++= instance.currentStates
-                case None =>
-              }
+        //check inside the function body
+        Util.currentScope.push("body")
+        val newInstancesAndReturned = checkInsideFunctionBody(function.body, instances)
+        newInstances = newInstancesAndReturned._1
+        //figuring out what is returned if this hasn't been cached already
+        if (function.returned == None)
+          function.returned = findWhatToReturn(newInstancesAndReturned._2, newInstances, function, functionToGivenParams)
+        //remove aliases inside the body of the function since they can't be used anymore
+        newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+        Util.currentScope.pop()
+        //construct array of next states
+        val nextStates = findNextStates(cacheEntry, newInstances)
+        //update cache
+        function.stateCache += cacheEntry -> nextStates
+        //delete aliases in function here
+        newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+        println(s"the deal with function returns ${function.returned}")
+        Util.currentScope.pop()
+        return (newInstances, function.returned)
+      }
+    (instances, None)
+  }
+
+  /** Checks if the object given has been seen before. If not, executes the code inside it.
+   *
+   * @param objectName
+   * @param instances
+   * @return
+   */
+  def checkObject(objectName: String, instances: Set[Instance] = Set()) = {
+    getClosestScopeObject(objectName) match {
+      case Some(obj) =>
+        obj.initialised = true
+        Util.currentScope.push(objectName)
+        checkInsideObjectBody(obj.body, instances)
+        Util.currentScope.pop()
+      case _ =>
+    }
+  }
+
+  /** Checks for a new x function and executes the code within the class if found. Renames instances to
+   * constructor parameter names if needed.
+   *
+   * @param funcCall
+   * @param instances
+   */
+  def checkNewFunction(funcCall: global.Apply, args: List[Tree], instances: Set[Instance]): (Boolean, Boolean, Set[Instance]) = {
+    println("in check new")
+    var newInstances = for (instance <- instances) yield instance
+    var isCurrentType = false
+    funcCall match {
+      case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+        println("matched new")
+        println(showRaw(parents))
+        parents match {
+          case List(Ident(name)) =>
+            println("name is " + name)
+            var elementNameString = name.toString()
+            if (elementNameString.lastIndexOf(".") != -1)
+              elementNameString = elementNameString.substring(elementNameString.lastIndexOf(".") + 1)
+            for (element <- classAndObjectTraverser.classesAndObjects
+                 if (!element.isObject && element.name == elementNameString && element.scope == getScope(funcCall))) {
+              assignParameters(newInstances, element.params, args)
+              Util.currentScope.push(element.name)
+              checkInsideObjectBody(element.body, instances)
+              newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+              Util.currentScope.pop()
             }
-            nextStatesArray.append(nextStates)
+            isCurrentType = elementNameString == currentElementInfo.name
+          case List(Apply(elementName, arg2)) =>
+            println("matched function")
+            var elementNameString = elementName.toString()
+            if (elementNameString.lastIndexOf(".") != -1)
+              elementNameString = elementNameString.substring(elementNameString.lastIndexOf(".") + 1)
+            for (element <- classAndObjectTraverser.classesAndObjects
+                 if (!element.isObject && element.name == elementNameString && element.scope == getScope(elementName))) {
+              assignParameters(newInstances, element.params, args)
+              Util.currentScope.push(element.name)
+              checkInsideObjectBody(element.body, instances)
+              newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
+              Util.currentScope.pop()
+            }
+            isCurrentType = elementNameString == currentElementInfo.name
+          case _ =>
+        }
+        return (isCurrentType, true, newInstances)
+      case _ =>
+    }
+    (false, false, newInstances)
+  }
+
+  /** For the parameter list given, checks if they match any of our defined instances. If so, renames the instance
+   * to the parameter name. Keeps memory of the renaming in a hashmap of parameter name to instance name so these
+   * can easily be renamed after the function exits.
+   *
+   * @param instances
+   * @return
+   */
+  def createMaps(parameters: ArrayBuffer[Array[String]], functionName: String, instances: Set[Instance]):
+  (mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])],
+    mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]) = {
+    var functionToGivenParams = new mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]
+    var givenToFunctionParam = new mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]
+    //construct maps
+    var argCounter = 0
+    val paramScope = Util.currentScope.clone()
+    for (arg <- parameters) {
+      val argString = arg(0)
+      getClosestScopeAliasInfo(argString, instances) match {
+        case Some(aliasInfo) =>
+          val paramName = parameters(argCounter)(0)
+          functionToGivenParams += (paramName, paramScope) -> (aliasInfo._1, aliasInfo._2)
+          givenToFunctionParam.get(aliasInfo._1, aliasInfo._2) match {
+            case Some(setOfParams) =>
+              val updatedSet = setOfParams ++ Set((paramName, paramScope))
+              givenToFunctionParam += (aliasInfo._1, aliasInfo._2) -> updatedSet
+            case None =>
+              givenToFunctionParam += (aliasInfo._1, aliasInfo._2) -> Set((paramName, paramScope))
           }
-          //update cache
-          function.stateCache += parametersAndStates -> nextStatesArray
-          //renaming parameters on exit
-          newInstances = renameAliasesBack(functionToGivenParams, instances)
-          println("after renaming, instances are " + newInstances)
 
+        case None =>
+      }
+      argCounter += 1
+    }
+    (functionToGivenParams, givenToFunctionParam)
+  }
 
-          println(s"the deal with function returns $returned")
-          println(s"instances are $newInstances")
-          println(s"Cached function is " + function)
-          return (newInstances, returned)
+  /** Handles any for or while loop.
+   * It goes through the contents of the for loop and checks what the states of all the instances are at the end.
+   * It stores theses states in a list (one for each instance) and checks to see if all instances have looped
+   * (i.e. they have twice the same set of states in their list). If so it gets out of the for loop. It then
+   * gives all instances all the states they went through while looping since we don't know how many times the loop
+   * will iterate between 0 and infinity times. This assumes that users cannot write infinte loops into their
+   * protocols, otherwise this would never terminate.
+   *
+   * @param instances
+   * @param loopContent
+   * @return
+   */
+  def dealWithLoopContents(instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
+    var newInstances = for (instance <- instances) yield instance
+    var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
+    for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer(instance.currentStates)
+    do {
+      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
+        instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
+      for (line <- loopContent) {
+        newInstances = processLine(line, newInstances)._1
+        for (updatedInstance <- newInstances if instanceToInterimStates.contains((updatedInstance.className, updatedInstance.aliases))) {
+          instanceToInterimStates((updatedInstance.className, updatedInstance.aliases))(instanceToInterimStates((updatedInstance.className, updatedInstance.aliases)).length - 1) = updatedInstance.currentStates
         }
       }
-      println("instances at the end of deal with function are " + instances)
-      (instances, None)
+    } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
+    for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases))) {
+      for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
+        instance.currentStates = instance.currentStates ++ setOfStates
     }
+    newInstances
+  }
 
-    /** Checks if the object given has been seen before. If not, executes the code inside it.
-     *
-     * @param objectName
-     * @param instances
-     * @return
-     */
-    def checkObject(objectName: String, instances: Set[Instance] = Set()) = {
-      println(s"inside check Object with obj name $objectName")
-      getClosestScopeObject(objectName) match {
-        case Some(obj) =>
-          obj.initialised = true
-          Util.currentScope.push(objectName)
-          checkInsideObjectBody(obj.body, instances)
-          Util.currentScope.pop()
-        case _ =>
+  /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
+   *
+   * @param instances
+   * @param line
+   */
+  def updateStateIfNeeded(instances: Set[compilerPlugin.Instance], line: Trees#Tree): Set[Instance] = {
+    println("inside update state for line " + line)
+    val methodToStateIndices = currentElementInfo.methodToIndices
+    val elementName = currentElementInfo.name
+    line match {
+      case app@Apply(fun, args) =>
+        methodTraverser.traverse(app)
+      case _ =>
+    }
+    val methodCallInfos = methodTraverser.methodCallInfos
+    for (methodCallInfo <- methodCallInfos) {
+      val methodName = methodCallInfo(0)
+      val aliasName = methodCallInfo(1)
+      println("instances inside update are " + instances)
+      println("alias name to find within those is " + aliasName)
+      //use find to get all instances which have this alias in them
+      getClosestScopeAliasInfo(aliasName, instances) match {
+        case Some(aliasInfo) =>
+          val aliasName = aliasInfo._1
+          val aliasScope = aliasInfo._2
+          val instancesToUpdate = instances.filter(instance => instance.containsAliasInfo(aliasName, aliasScope))
+          for (instance <- instancesToUpdate) {
+            breakable {
+              var newSetOfStates: Set[State] = Set()
+              for (state <- instance.currentStates) {
+                if (state.name == Util.Unknown) break
+                if (methodToStateIndices.contains(methodName)) {
+                  println("found method name " + methodName)
+                  val indexSet = methodToStateIndices(methodName)
+                  println("index set is " + indexSet)
+                  var newStates: Set[State] = Set[State]()
+                  newStates += currentElementInfo.transitions(state.index)(indexSet.min)
+                  if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Util.Undefined)
+                    newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
+                  println("new states are " + newStates)
+                  for (state <- newStates if state.name == Util.Undefined) {
+                    throw new protocolViolatedException(Util.sortSet(instance.getAliasNames()), elementName,
+                      Util.sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+                  }
+                  newSetOfStates = newSetOfStates ++ newStates
+                }
+                else {
+                  instance.currentStates = Set(State(Util.Unknown, -2))
+                }
+              }
+              instance.currentStates = newSetOfStates
+            }
+          }
+        case None =>
       }
     }
+    //reset the traverser's list to be empty
+    methodTraverser.methodCallInfos = ListBuffer[Array[String]]()
+    println("instances at the end of update if needed are " + instances)
+    instances
+  }
 
-    /** Checks for a new x function and executes the code within the class if found. Renames instances to
-     * constructor parameter names if needed.
-     *
-     * @param funcCall
-     * @param instances
-     * @param args
-     */
-    def checkNewFunction(funcCall: global.Apply, instances: Set[Instance], args: List[global.Tree]): (Boolean, Set[Instance])= {
-      var newInstances = for (instance <- instances) yield instance
-      funcCall match {
-        case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-          parents match {
-            case List(Apply(elementName, arg2)) =>
-              var elementNameString = elementName.toString()
-              if (elementNameString.lastIndexOf(".") != -1)
-                elementNameString = elementNameString.substring(elementNameString.lastIndexOf(".") + 1)
-              for (element <- classAndObjectTraverser.classesAndObjects
-                   if (!element.isObject && element.name == elementNameString
-                     && element.scope == getScope(elementName))) {
-                val paramNameScopeToAlias = renameFunctionParameters(args, element.params, element.name, instances)._1
-                Util.currentScope.push(element.name)
-                checkInsideObjectBody(element.body, instances)
-                Util.currentScope.pop()
-                newInstances = renameAliasesBack(paramNameScopeToAlias, instances)
+  /** Traverses a tree and collects (methodName, aliasName) from method application statements
+   *
+   */
+  object methodTraverser extends Traverser {
+    var methodCallInfos = ListBuffer[Array[String]]()
+
+    override def traverse(tree: Tree): Unit = {
+      tree match {
+        case app@Apply(fun, args) =>
+          app match {
+            case q"$expr(...$exprss)" =>
+              expr match {
+                case select@Select(qualifier, name) =>
+                  var instanceName = qualifier.toString()
+                  if (qualifier.hasSymbolField) instanceName = qualifier.symbol.name.toString
+                  methodCallInfos +=
+                    Array(/*_*/ name.toString().appendedAll(getParametersFromTree(exprss)) /*_*/ ,
+                      instanceName)
+                case _ =>
               }
             case _ =>
           }
-          return(true, newInstances)
+          super.traverse(fun)
+          super.traverseTrees(args)
         case _ =>
-      }
-      (false, newInstances)
-    }
-
-    /** For the parameter list given, checks if they match any of our defined instances. If so, renames the instance
-     * to the parameter name. Keeps memory of the renaming in a hashmap of parameter name to instance name so these
-     * can easily be renamed after the function exits.
-     *
-     * @param args
-     * @param instances
-     * @return
-     */
-    def renameFunctionParameters(args: List[global.Tree], parameters: ArrayBuffer[Array[String]], functionName: String, instances: Set[Instance]):
-    (mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])],
-      mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]], Set[Instance]) = {
-      var functionToGivenParams = new mutable.HashMap[(String, mutable.Stack[String]), (String, mutable.Stack[String])]
-      var givenToFunctionParam = new mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]
-      //construct maps
-      var argCounter = 0
-      val paramScope = Util.currentScope.clone().push(functionName)
-      for (arg <- args) {
-        var argString = arg.toString()
-        if (argString.contains(".")) argString = argString.substring(argString.lastIndexOf(".") + 1)
-        getClosestScopeAliasInfo(argString, instances) match {
-          case Some(aliasInfo) =>
-            println(s"found aliases with info $aliasInfo in parameters")
-            val paramName = parameters(argCounter)(0)
-            functionToGivenParams += (paramName, paramScope) -> (aliasInfo._1, aliasInfo._2)
-            givenToFunctionParam.get(aliasInfo._1, aliasInfo._2) match {
-              case Some(setOfParams) =>
-                println("before update, map is" + givenToFunctionParam)
-                println(s"updating ${givenToFunctionParam(aliasInfo._1, aliasInfo._2)} with ${Set((paramName, paramScope))}")
-                val updatedSet = setOfParams ++ Set((paramName, paramScope))
-                givenToFunctionParam += (aliasInfo._1, aliasInfo._2) -> updatedSet
-                println("after update, map is" + givenToFunctionParam)
-              case None =>
-                givenToFunctionParam += (aliasInfo._1, aliasInfo._2) -> Set((paramName, paramScope))
-            }
-
-          case None =>
-        }
-        argCounter += 1
-      }
-      println("second map is " + givenToFunctionParam)
-      //rename instances
-      var newInstances = for(instance <- instances) yield instance
-      for ((aliasInfo, setOfParams) <- givenToFunctionParam) {
-        val instancesToCheck = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-        for (instance <- instancesToCheck) {
-          for (paramInfo <- setOfParams)
-            instance.updateAlias(Alias(aliasInfo._1, aliasInfo._2), Alias(paramInfo._1, paramInfo._2))
-        }
-      }
-      (functionToGivenParams, givenToFunctionParam, instances)
-    }
-
-    /** Handles any for or while loop.
-     * It goes through the contents of the for loop and checks what the states of all the instances are at the end.
-     * It stores theses states in a list (one for each instance) and checks to see if all instances have looped
-     * (i.e. they have twice the same set of states in their list). If so it gets out of the for loop. It then
-     * gives all instances all the states they went through while looping since we don't know how many times the loop
-     * will iterate between 0 and infinity times. This assumes that users cannot write infinte loops into their
-     * protocols, otherwise this would never terminate.
-     *
-     * @param instances
-     * @param loopContent
-     * @return
-     */
-    def dealWithLoopContents(instances: Set[Instance], loopContent: Trees#Tree): Set[Instance] = {
-      var newInstances = for (instance <- instances) yield instance
-      var instanceToInterimStates: mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]] = mutable.HashMap()
-      for (instance <- newInstances) instanceToInterimStates += (instance.className, instance.aliases) -> ListBuffer(instance.currentStates)
-      do {
-        for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
-          instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
-        for (line <- loopContent) {
-          newInstances = processLine(line, newInstances)._1
-          for (updatedInstance <- newInstances if instanceToInterimStates.contains((updatedInstance.className, updatedInstance.aliases))) {
-            instanceToInterimStates((updatedInstance.className, updatedInstance.aliases))(instanceToInterimStates((updatedInstance.className, updatedInstance.aliases)).length - 1) = updatedInstance.currentStates
-          }
-        }
-      } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
-      for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases))) {
-        for (setOfStates <- instanceToInterimStates((instance.className, instance.aliases)))
-          instance.currentStates = instance.currentStates ++ setOfStates
-      }
-      newInstances
-    }
-
-    /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
-     *
-     * @param instances
-     * @param line
-     */
-    def updateStateIfNeeded(instances: Set[compilerPlugin.Instance], line: Trees#Tree): Set[Instance] = {
-      println("inside update state for line " + line)
-      val methodToStateIndices = currentElementInfo.methodToIndices
-      val elementName = currentElementInfo.name
-      line match {
-        case app@Apply(fun, args) =>
-          methodTraverser.traverse(app)
-        case _ =>
-      }
-      val methodCallInfos = methodTraverser.methodCallInfos
-      for (methodCallInfo <- methodCallInfos) {
-        val methodName = methodCallInfo(0)
-        val aliasName = methodCallInfo(1)
-        println("instances inside update are " + instances)
-        println("alias name to find within those is " + aliasName)
-        //use find to get all instances which have this alias in them
-        getClosestScopeAliasInfo(aliasName, instances) match {
-          case Some(aliasInfo) =>
-            val aliasName = aliasInfo._1
-            val aliasScope = aliasInfo._2
-            val instancesToUpdate = instances.filter(instance => instance.containsAliasInfo(aliasName, aliasScope))
-            for (instance <- instancesToUpdate) {
-              breakable {
-                var newSetOfStates: Set[State] = Set()
-                for (state <- instance.currentStates) {
-                  if (state.name == Util.Unknown) break
-                  if (methodToStateIndices.contains(methodName)) {
-                    println("found method name " + methodName)
-                    val indexSet = methodToStateIndices(methodName)
-                    println("index set is " + indexSet)
-                    var newStates: Set[State] = Set[State]()
-                    newStates += currentElementInfo.transitions(state.index)(indexSet.min)
-                    if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Util.Undefined)
-                      newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
-                    println("new states are " + newStates)
-                    for (state <- newStates if state.name == Util.Undefined) {
-                      throw new protocolViolatedException(Util.sortSet(instance.getAliasNames()), elementName,
-                        Util.sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
-                    }
-                    newSetOfStates = newSetOfStates ++ newStates
-                  }
-                  else {
-                    instance.currentStates = Set(State(Util.Unknown, -2))
-                  }
-                }
-                instance.currentStates = newSetOfStates
-              }
-            }
-          case None =>
-        }
-      }
-      //reset the traverser's list to be empty
-      methodTraverser.methodCallInfos = ListBuffer[Array[String]]()
-      println("instances at the end of update if needed are " + instances)
-      instances
-    }
-
-    /** Traverses a tree and collects (methodName, aliasName) from method application statements
-     *
-     */
-    object methodTraverser extends Traverser {
-      var methodCallInfos = ListBuffer[Array[String]]()
-
-      override def traverse(tree: Tree): Unit = {
-        tree match {
-          case app@Apply(fun, args) =>
-            app match {
-              case q"$expr(...$exprss)" =>
-                expr match {
-                  case select@Select(qualifier, name) =>
-                    var instanceName = qualifier.toString()
-                    if (qualifier.hasSymbolField) instanceName = qualifier.symbol.name.toString
-                    methodCallInfos +=
-                      Array(/*_*/name.toString().appendedAll(getParametersFromTree(exprss))/*_*/,
-                        instanceName)
-                  case _ =>
-                }
-              case _ =>
-            }
-            super.traverse(fun)
-            super.traverseTrees(args)
-          case _ =>
-            super.traverse(tree)
-        }
-      }
-    }
-
-
-    /** Traverses a tree and collects classes and objects found */
-    object classAndObjectTraverser extends Traverser {
-      var classesAndObjects = ListBuffer[ClassOrObject]()
-
-      override def traverse(tree: Tree): Unit = {
-        tree match {
-          case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-            classesAndObjects += ClassOrObject(tname.toString, ArrayBuffer(), body, getScope(obj), isObject = true)
-            super.traverse(obj)
-          case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-            val parameters = /*_*/getParametersWithInstanceNames(paramss)/*_*/
-            classesAndObjects += ClassOrObject(tpname.toString(), parameters, stats, getScope(cla))
-            super.traverse(cla)
-          case _ =>
-            super.traverse(tree)
-        }
-      }
-    }
-
-    /** Gathers function definitions in a tree inside "functions" */
-    object functionTraverser extends Traverser {
-      var functions = ListBuffer[Function]()
-
-      override def traverse(tree: Tree): Unit = {
-        tree match {
-          case func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
-            val parameters = /*_*/getParametersWithInstanceNames(paramss)/*_*/
-            if (tname.toString() != "<init>")
-              functions +=
-                Function(tname.toString(), parameters, tpt, expr,
-                  getScope(func), Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), None)
-            /*_*/super.traverse(expr)/*_*/
-          case _ =>
-            super.traverse(tree)
-        }
-      }
-    }
-
-
-
-    /** Removes alias from instances */
-    def removeAliases(instances: Set[Instance], aliasName: String): Set[Instance] = {
-      println(s"instances before removing $aliasName are " + instances)
-      val newInstances = for (instance <- instances) yield instance
-      getClosestScopeAliasInfo(aliasName, newInstances) match {
-        case Some(aliasInfo) =>
-          val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-          for (instance <- instancesToUpdate)
-            instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
-        case None =>
-      }
-      println(s"instances after removing $aliasName are " + newInstances)
-      Util.cleanInstances(newInstances)
-    }
-
-    /** Gets the scope of a tree from its symbol.
-     * It will check if the tree has a symbol field unless specified not to.
-     * The boolean value is there because some trees will not pass the hasSymbolField check even though it is
-     * possible to get their scope in this way. I don't know why.
-     *
-     * @param obj
-     * @param dontCheckSymbolField
-     * @return
-     */
-    def getScope(obj: Tree, dontCheckSymbolField: Boolean = false): mutable.Stack[String] = {
-      val objectScope = mutable.Stack[String]()
-      if (obj.hasSymbolField || dontCheckSymbolField) {
-        for (symbol <- obj.symbol.owner.ownerChain.reverse)
-          objectScope.push(symbol.name.toString())
-      }
-      objectScope
-    }
-
-    /** Gets a parameter string as formatted in a function definition from a tree of them */
-    def getParametersFromTree(params: List[List[Tree]]): String = {
-      params match {
-        case List(List()) => "()"
-        case List(List(value)) => Util.keepOnlyMethodName(value.tpe.toString()).mkString("(", "", ")")
-        case List(values) =>
-          var parameters: ArrayBuffer[String] = ArrayBuffer()
-          for (elem <- values) {
-            parameters += Util.keepOnlyMethodName(elem.tpe.toString)
-          }
-          parameters.mkString("(", ",", ")")
-        case _ => ""
-      }
-    }
-
-    /** Checks that methods in return values are a subset of those in stats
-     *
-     * @param returnValuesArray
-     * @param stats
-     * @param elementName
-     * @param filename
-     */
-    def checkProtocolMethodsSubsetClassMethods(returnValuesArray: Array[ReturnValue], stats: Seq[Trees#Tree], elementName: String, filename: String): Unit = {
-      val classMethodSignatures = getMethodNames(stats)
-      println(s"\n$classMethodSignatures")
-      var protocolMethodSignatures: Set[String] = Set()
-      for (i <- returnValuesArray.indices) {
-        protocolMethodSignatures += Util.stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
-      }
-      println(protocolMethodSignatures)
-      if (!(protocolMethodSignatures subsetOf classMethodSignatures)) throw new badlyDefinedProtocolException(
-        s"Methods $protocolMethodSignatures defined in $filename are not a subset of methods " +
-          s"$classMethodSignatures defined in class $elementName")
-    }
-
-    /** Checks if an annotation is a Typestate annotation and returns the filename if so
-     *
-     * @param annotation
-     * @return
-     */
-    def getFilenameFromTypestateAnnotation(annotation: AnnotationInfo): Option[String] = {
-      annotation match {
-        case AnnotationInfo(arg1, arg2, arg3) =>
-          if (arg1.toString == "Typestate" || arg1.toString == "compilerPlugin.Typestate") {
-            Some(arg2.head.toString())
-          }
-          else None
-        case _ => None
-      }
-    }
-
-    /** Returns a set of method names (as name(parameters)) from the body of a class
-     *
-     * @param methodBody
-     * @return
-     */
-    def getMethodNames(methodBody: Seq[Trees#Tree]): Set[String] = {
-      var methodNames: Set[String] = Set()
-      for (line <- methodBody) {
-        line match {
-          case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
-            val parameters = /*_*/getParameters(paramss) /*_*/
-            methodNames += tname + s"($parameters)"
-          case _ =>
-        }
-      }
-      methodNames
-    }
-
-    /** Returns a string of the parameters given
-     *
-     * @param params
-     * @return
-     */
-    def getParameters(params: List[List[ValDef]]): String = {
-      params match {
-        case List(List()) => ""
-        case List(List(value)) =>
-          println(value.name.toString())
-          value.tpt.toString()
-        case List(values) =>
-          var parameters: ArrayBuffer[String] = ArrayBuffer()
-          for (elem <- values) {
-            println(elem.name.toString())
-            parameters += elem.tpt.toString
-          }
-          parameters.mkString(",")
-        case _ => ""
-      }
-    }
-
-
-    /** Gets parameters from a tree as their name and type in a string array */
-    def getParametersWithInstanceNames(params: List[List[ValDef]]): ArrayBuffer[Array[String]] = {
-      params match {
-        case List(List()) => ArrayBuffer(Array(""))
-        case List(List(value)) => ArrayBuffer(Array(value.name.toString(), value.tpt.toString()))
-        case List(values) =>
-          var parameters: ArrayBuffer[Array[String]] = ArrayBuffer()
-          for (elem <- values) {
-            parameters += Array(elem.name.toString(), elem.tpt.toString)
-          }
-          parameters
-        case _ => ArrayBuffer()
+          super.traverse(tree)
       }
     }
   }
+
+
+  /** Traverses a tree and collects classes and objects found */
+  object classAndObjectTraverser extends Traverser {
+    var classesAndObjects = ListBuffer[ClassOrObject]()
+
+    override def traverse(tree: Tree): Unit = {
+      tree match {
+        case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
+          classesAndObjects += ClassOrObject(tname.toString, ArrayBuffer(), body, getScope(obj), isObject = true)
+          super.traverse(obj)
+        case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+          val parameters = /*_*/ getParametersWithInstanceNames(paramss) /*_*/
+          classesAndObjects += ClassOrObject(tpname.toString(), parameters, stats, getScope(cla))
+          super.traverse(cla)
+        case _ =>
+          super.traverse(tree)
+      }
+    }
+  }
+
+  /** Gathers function definitions in a tree inside "functions" */
+  object functionTraverser extends Traverser {
+    var functions = ListBuffer[Function]()
+
+    override def traverse(tree: Tree): Unit = {
+      tree match {
+        case func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
+          val parameters = /*_*/ getParametersWithInstanceNames(paramss) /*_*/
+          if (tname.toString() != "<init>")
+            functions +=
+              Function(tname.toString(), parameters, tpt, expr,
+                getScope(func), Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), None)
+          /*_*/ super.traverse(expr) /*_*/
+        case _ =>
+          super.traverse(tree)
+      }
+    }
+  }
+
+
+  /** Removes alias from instances */
+  def removeAliases(instances: Set[Instance], aliasName: String): Set[Instance] = {
+    println(s"instances before removing $aliasName are " + instances)
+    val newInstances = for (instance <- instances) yield instance
+    getClosestScopeAliasInfo(aliasName, newInstances) match {
+      case Some(aliasInfo) =>
+        val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+        for (instance <- instancesToUpdate)
+          instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
+      case None =>
+    }
+    println(s"instances after removing $aliasName are " + newInstances)
+    Util.cleanInstances(newInstances)
+  }
+
+  /** Gets the scope of a tree from its symbol.
+   * It will check if the tree has a symbol field unless specified not to.
+   * The boolean value is there because some trees will not pass the hasSymbolField check even though it is
+   * possible to get their scope in this way. I don't know why.
+   *
+   * @param obj
+   * @param dontCheckSymbolField
+   * @return
+   */
+  def getScope(obj: Tree, dontCheckSymbolField: Boolean = false): mutable.Stack[String] = {
+    val objectScope = mutable.Stack[String]()
+    if (obj.hasSymbolField || dontCheckSymbolField) {
+      for (symbol <- obj.symbol.owner.ownerChain.reverse)
+        objectScope.push(symbol.name.toString())
+    }
+    objectScope
+  }
+
+  /** Gets a parameter string as formatted in a function definition from a tree of them */
+  def getParametersFromTree(params: List[List[Tree]]): String = {
+    params match {
+      case List(List()) => "()"
+      case List(List(value)) => Util.keepOnlyMethodName(value.tpe.toString()).mkString("(", "", ")")
+      case List(values) =>
+        var parameters: ArrayBuffer[String] = ArrayBuffer()
+        for (elem <- values) {
+          parameters += Util.keepOnlyMethodName(elem.tpe.toString)
+        }
+        parameters.mkString("(", ",", ")")
+      case _ => ""
+    }
+  }
+
+  /** Checks that methods in return values are a subset of those in stats
+   *
+   * @param returnValuesArray
+   * @param stats
+   * @param elementName
+   * @param filename
+   */
+  def checkProtocolMethodsSubsetClassMethods(returnValuesArray: Array[ReturnValue], stats: Seq[Trees#Tree], elementName: String, filename: String): Unit = {
+    val classMethodSignatures = getMethodNames(stats)
+    println(s"\n$classMethodSignatures")
+    var protocolMethodSignatures: Set[String] = Set()
+    for (i <- returnValuesArray.indices) {
+      protocolMethodSignatures += Util.stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
+    }
+    println(protocolMethodSignatures)
+    if (!(protocolMethodSignatures subsetOf classMethodSignatures)) throw new badlyDefinedProtocolException(
+      s"Methods $protocolMethodSignatures defined in $filename are not a subset of methods " +
+        s"$classMethodSignatures defined in class $elementName")
+  }
+
+  /** Checks if an annotation is a Typestate annotation and returns the filename if so
+   *
+   * @param annotation
+   * @return
+   */
+  def getFilenameFromTypestateAnnotation(annotation: AnnotationInfo): Option[String] = {
+    annotation match {
+      case AnnotationInfo(arg1, arg2, arg3) =>
+        if (arg1.toString == "Typestate" || arg1.toString == "compilerPlugin.Typestate") {
+          Some(arg2.head.toString())
+        }
+        else None
+      case _ => None
+    }
+  }
+
+  /** Returns a set of method names (as name(parameters)) from the body of a class
+   *
+   * @param methodBody
+   * @return
+   */
+  def getMethodNames(methodBody: Seq[Trees#Tree]): Set[String] = {
+    var methodNames: Set[String] = Set()
+    for (line <- methodBody) {
+      line match {
+        case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
+          val parameters = /*_*/ getParameters(paramss) /*_*/
+          methodNames += tname + s"($parameters)"
+        case _ =>
+      }
+    }
+    methodNames
+  }
+
+  /** Returns a string of the parameters given
+   *
+   * @param params
+   * @return
+   */
+  def getParameters(params: List[List[ValDef]]): String = {
+    params match {
+      case List(List()) => ""
+      case List(List(value)) =>
+        println(value.name.toString())
+        value.tpt.toString()
+      case List(values) =>
+        var parameters: ArrayBuffer[String] = ArrayBuffer()
+        for (elem <- values) {
+          println(elem.name.toString())
+          parameters += elem.tpt.toString
+        }
+        parameters.mkString(",")
+      case _ => ""
+    }
+  }
+
+
+  /** Gets parameters from a tree as their name and type in a string array */
+  def getParametersWithInstanceNames(params: List[List[ValDef]]): ArrayBuffer[Array[String]] = {
+    params match {
+      case List(List()) => ArrayBuffer(Array(""))
+      case List(List(value)) => ArrayBuffer(Array(value.name.toString(), value.tpt.toString()))
+      case List(values) =>
+        var parameters: ArrayBuffer[Array[String]] = ArrayBuffer()
+        for (elem <- values) {
+          parameters += Array(elem.name.toString(), elem.tpt.toString)
+        }
+        parameters
+      case _ => ArrayBuffer()
+    }
+  }
+}
 
 }
 

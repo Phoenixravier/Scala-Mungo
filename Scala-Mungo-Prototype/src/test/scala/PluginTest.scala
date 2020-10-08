@@ -159,6 +159,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     deleteFile("cannotWalkProtocol.scala")
     deleteFile("walkComeAliveWalkLoopProtocol.scala")
     deleteFile("decisionWalkProtocol.scala")
+    deleteFile("pairsProtocol.scala")
   }
 
   //region <Tests>
@@ -169,7 +170,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
@@ -818,23 +818,10 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  val cat = new Cat()
         |  for(i <- getCatAgeRange(cat)) println("for")
         |
-        |   def getCatAge(cat:Cat): Int ={
-        |    println("inside get cat age")
-        |    cat.walk()
-        |    10
-        |  }
-        |
         |  def getCatAgeRange(cat:Cat): List[Int] ={
         |    println("inside get cat age range")
         |    cat.walk()
         |    List(0,10)
-        |  }
-        |
-        |
-        |  def getBirthAge(kitty: Cat) = {
-        |    println("inside get birth age")
-        |    kitty.walk()
-        |    0
         |  }
         |}
         |
@@ -845,7 +832,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 26)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1181,7 +1168,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1221,7 +1208,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1470,7 +1457,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -1497,8 +1483,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1507,7 +1493,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -1524,13 +1509,13 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  takeInt(makeCatWalk(cat))
         |
         |
-        | def takeInt(int:Int): Unit={
-        | }
+        |  def takeInt(int:Int): Unit={
+        |  }
         |
         |  def makeCatWalk(kitty:Cat): Int ={
-        |      kitty.walk()
-        |      1
-        |    }
+        |    kitty.walk()
+        |    1
+        |  }
         |}
         |
         |""".stripMargin
@@ -1539,8 +1524,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1580,7 +1565,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1618,7 +1603,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2","kat")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1628,7 +1613,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -1658,8 +1642,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1668,7 +1652,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       """
         |package compilerPlugin
         |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -1701,8 +1684,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1740,7 +1723,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1782,7 +1765,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1791,8 +1774,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     val userCode =
       """
         |package compilerPlugin
-        |
-        |import scala.util.Random
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
@@ -1827,8 +1808,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 26)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1875,7 +1856,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2457,7 +2438,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2493,7 +2474,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }

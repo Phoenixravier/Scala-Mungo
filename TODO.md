@@ -23,22 +23,29 @@ SHOULD HAVE
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with Lamdba functions
 - [ ] Deal with break and return (alternative control flows)
+- [ ] Deal with class attributes
 - [ ] Deal with special cases of for loops (known counts)
 - [ ] Deal with threading
 - [ ] Deal with foreach and other map like things
 - [ ] Deal with try-catch (advanced, handling exceptions)
 - [ ] Deal with globals (have special scope like GLOBAL?)
 - [ ] Deal with collections (for-yield assignment)
-- [ ] Deal with class attributes
 
 COULD HAVE
 - [ ] Add end to a protocol file if it doesn't have end in it
 
 
 ************OCT****************
+MUST HAVE
+- [ ] Finish MVP 
 - [ ] Build
 - [ ] Make work on more than a single file
 - [ ] Make code readable
+
+SHOULD HAVE
+- [ ] Make nice documentation hosted somewhere (git pages)
+- [ ] Add interesting examples
+- [ ] Support Linux
 
 ************NOV****************
 - [ ] Scala-stMungo
@@ -48,8 +55,9 @@ COULD HAVE
 
 
 ### In Progress
-- [ ] Deal with parameters/returned things which are "new Class"
 
+- [ ] Get functions to check what is returned in params rather than just strings given 
+- [ ] Get function to return something sensible and deal with that returned value
 
 ### Done ✓
 
@@ -80,3 +88,4 @@ COULD HAVE
 - [x] Recursive functions
 - [x] Make things faster
 - [x] Make caching work with duplicate parameters
+- [x] Deal with parameters/returned things which are "new Class"
