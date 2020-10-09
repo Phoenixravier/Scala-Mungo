@@ -8,7 +8,7 @@ object DogProtocol extends ProtocolLang with App{
   when("stayOnAlert(Boolean):Unit") goto "onAlert"
 
   in ("walking")
-  when("bark():Unit") goto "walking"
+  when("bark():Unit")goto "walking"
   when("cry():Unit") goto "crying"
 
   in("crying")

@@ -4,13 +4,40 @@ import java.io.{FileOutputStream, ObjectOutputStream}
 import scala.collection.immutable.HashMap
 import scala.collection.{SortedSet, mutable}
 
+/** Domain specific language for users to write in their protocols.
+ *  Extend this to write a protocol for Scala-Mungo
+ *  Use in("Statex") to define a state and then define transitions in it with
+ *  when("methodName(argumentTypes)") goto "Statex"
+ *  A transition dependent on the return value of a function can be defined by using the "at" and "or" keywords as so:
+ *  when("methodName(argumentTypes)") goto
+ *    "Statex" at "returnValue1" or
+ *    "Statey" at "returnValue2" or
+ *    "Statez" at "returnValue3"
+ *
+ *  One of the states must be "init" and elements will go to this state when initialised in the code.
+ *  Always add "end()" to the end of the protocol or it will not work
+ *
+ *  Example:
+ *  object CatProtocol extends ProtocolLang with App{
+ *  in ("init")
+ *  when ("walk(Int):Unit") goto "State1"
+ *  when("comeAlive():Boolean") goto
+ *    "init" at "true" or
+ *    "State1" at "false"
+ *  in ("State1")
+ *  in ("State2")
+ *  when("walk(Int):Unit") goto "init"
+ *  end()
+ *  }
+ *
+ *
+ */
 class ProtocolLang {
   var stateIndexCounter:Int = 1 //start indexing at one because init state will take index 0
   var returnValueIndexCounter:Int = 0
 
   var currentState:State = _
   var currentMethod:Method = _
-  var arrayOfStates:Array[Array[State]] = _
 
   var states: Set[State] = Set()
   var statesMap: HashMap[String, State] = HashMap()
@@ -25,6 +52,18 @@ class ProtocolLang {
 
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
+  /** Creates a new state with name stateName. The name cannot be null or "_Undefined_".
+   *  All state names defined within a single protocol must be unique.
+   *
+   *  Checks the protocol has not already been ended before this statement
+   *  and that the name given is neither null nor "_Undefined_".
+   *  It then creates a State object and sets it as the currentState.
+   *  Then it checks that this state has not been defined before.
+   *  Then it adds the state to the set of states and to the map of stateName to State
+   *
+   * @param stateName Name of the state defined
+   * @return
+   */
   def in(stateName: String) = new In(stateName)
   class In(val stateName:String) {
     checkProtocolHasNotBeenEnded()
@@ -36,15 +75,18 @@ class ProtocolLang {
     statesMap += (stateName -> currentState)
   }
 
+  /** Checks if the end function has been executed already. Throws an exception if it has.*/
   def checkProtocolHasNotBeenEnded(): Unit ={
     if(ended) throw new Exception("You wrote protocol code after writing end, write all the protocol code before end")
   }
 
+  /** Checks the stateName is neither null nor "_Undefined_". Throws exceptions if the stateName is one of those*/
   def checkStateNameIsValid(stateName:String): Unit ={
     if(stateName == null) throw new Exception("You cannot call your state null")
     if(stateName == Undefined) throw new Exception(s"You cannot call a state $Undefined")
   }
 
+  /** Creates a new state object with a unique integer id. If the stateName is "init", creates a state with id 0. */
   def createNewState(stateName:String):State={
     var newState = State(stateName, stateIndexCounter)
     stateIndexCounter += 1
@@ -55,11 +97,21 @@ class ProtocolLang {
     newState
   }
 
+  /** Checks if the state given has a name which is already another state's one.
+   * Throws an exception if there is such a duplicate.*/
   def checkForDuplicateState(state:State): Unit ={
     if(states.exists(_.name == state.name))
       throw new Exception(s"State ${state.name} defined multiple times, define a state only once")
   }
 
+  /** Takes a method signature as a string and defines a transition from the state defined in an "in" statement above it
+   *  to the state written after the goto statement after the signature.
+   *  So a full line would look like: when("walk()") goto "State1"
+   *  A method signature cannot be null.
+   *
+   * @param methodSignature method to transition between states
+   * @return A Goto object which implements the goto function which should be used after this method
+   */
   def when(methodSignature:String) = {
     checkProtocolHasNotBeenEnded()
     checkMethodSignatureIsValid(methodSignature)
@@ -67,16 +119,19 @@ class ProtocolLang {
     new Goto(methodSignature)
   }
 
+  /** Checks if a method signature is null and throws an exception if so*/
   def checkMethodSignatureIsValid(methodSignature:String): Unit ={
     if(methodSignature == null)
       throw new Exception(s"You cannot call your method null. You called a method null in state $currentState")
   }
 
+  /** Checks that a currentState is not null and if it is throws an exception.
+   *  This is used so that a when statement is not used if a state has not been defined (with in) */
   def checkCurrentStateIsDefined(): Unit ={
     currentState match{
       case null =>
         throw new Exception("Defined a method without being inside a state. " +
-          "Use in(State) to define a state above a when(method) statement")
+          "Use in(\"stateName\") to define a state above a when(\"methodSignature\") statement")
       case _ =>
     }
   }
@@ -188,7 +243,7 @@ class ProtocolLang {
     checkWholeProtocolIsWellFormed()
     ended = true
     //create the array, print it and encode it into EncodedData.ser
-    val arrayOfStates = createArray()
+    val arrayOfStates = createArrayOfStates()
     println(methods)
     println(returnValues)
     printNicely(arrayOfStates)
@@ -214,7 +269,8 @@ class ProtocolLang {
     if(ended) throw new Exception("You used end multiple times in the protocol, only use end once!")
   }
 
-  def createArray():Array[Array[State]] ={
+  def createArrayOfStates():Array[Array[State]] ={
+    var arrayOfStates = Array[Array[State]]()
     arrayOfStates = Array.fill(states.size, returnValues.size)(State(Undefined, -1))
     transitions.foreach((transition:Transition) =>
       arrayOfStates(transition.startState.index)(transition.returnValue.index) = statesMap(transition.nextState))
