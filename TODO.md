@@ -9,8 +9,7 @@ cat
 func{
 	val cat = new Cat()
 }
-Object is created every time checkInsideFunctionBody is called
-
+Match statements can also return thigns and this is not dealt with
 
 ************SEP***************
 MUST HAVE
@@ -73,8 +72,8 @@ SHOULD HAVE
 - [x] Deal with If-Else statements 
 - [x] Deal with try-catch (basic)
 - [x] Deal with loops
-- [x] Does not deal with function calls
-- [x] Does not deal with return values (and subsequent path possibilities)
+- [x] Deal with function calls
+- [x] Deal with return values (and subsequent path possibilities)
 - [x] Does not work with methods with parameters
 - [x] Only works with code inside "App"
 - [x] Deal with if on its own

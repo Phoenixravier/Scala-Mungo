@@ -126,6 +126,8 @@ object Util {
   }
 
   def removeAllAliasesInScope(instances: Set[Instance], scope:mutable.Stack[String]): Set[Instance] = {
+    println("in remove all, scope is "+Util.currentScope)
+    if(scope == null) return instances
     var newInstances = for (instance <- instances) yield instance
     for(instance <- newInstances){
       for(alias <- instance.aliases){

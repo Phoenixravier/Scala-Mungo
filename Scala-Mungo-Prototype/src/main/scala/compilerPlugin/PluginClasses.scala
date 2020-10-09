@@ -44,6 +44,10 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
     aliases.contains(Alias(aliasName, aliasScope))
   }
 
+  def containsScopeAlias(): Boolean ={
+    className == null && aliases.last.name == "scope"
+  }
+
   override def toString(): String={
     s"$className $aliases $currentStates"
   }
