@@ -1856,7 +1856,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
     assert(actualException.getMessage === expectedException.getMessage)
   }
