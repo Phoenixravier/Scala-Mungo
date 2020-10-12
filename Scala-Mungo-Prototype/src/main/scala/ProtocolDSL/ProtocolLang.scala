@@ -1,6 +1,7 @@
 package ProtocolDSL
 
 import java.io.{FileOutputStream, ObjectOutputStream}
+
 import scala.collection.immutable.HashMap
 import scala.collection.{SortedSet, mutable}
 
@@ -44,6 +45,7 @@ class ProtocolLang {
   var methods: Set[Method] = Set()
   var transitions: mutable.LinkedHashSet[Transition] = mutable.LinkedHashSet()
   var returnValues: Set[ReturnValue] = Set()
+  var stateMachine = Array[Array[State]]()
 
   val Undefined = "_Undefined_"
   val Any = "_Any_"
@@ -54,12 +56,6 @@ class ProtocolLang {
 
   /** Creates a new state with name stateName. The name cannot be null or "_Undefined_".
    *  All state names defined within a single protocol must be unique.
-   *
-   *  Checks the protocol has not already been ended before this statement
-   *  and that the name given is neither null nor "_Undefined_".
-   *  It then creates a State object and sets it as the currentState.
-   *  Then it checks that this state has not been defined before.
-   *  Then it adds the state to the set of states and to the map of stateName to State
    *
    * @param stateName Name of the state defined
    * @return
@@ -137,9 +133,20 @@ class ProtocolLang {
   }
 
 
+  /** Creates a method from the methodSignature passed to it.
+   *
+   * @param methodSignature
+   */
   class Goto(val methodSignature:String){
     currentMethod = getOrCreateMethod(methodSignature)
     methods += currentMethod
+
+    /** Takes a next state to transition to and creates a new At object from which one can add states depedngin on the
+     * return value of the method.
+     *
+     * @param nextState Name of the state to transition to
+     * @return
+     */
     def goto(nextState:String) ={
       var returnValue = getOrCreateReturnValue(Any)
       //Updates
@@ -151,7 +158,7 @@ class ProtocolLang {
     }
   }
 
-  /** Create a new method or fetch an exiting one with the same signature
+  /** Create a new method or fetches an exiting one with the same signature
    *
    * @param methodSignature
    * @return
@@ -168,6 +175,7 @@ class ProtocolLang {
     newMethod
   }
 
+  /** Checks that the method given is not already defined for the current state. If it is, throws an exception. */
   def checkMethodIsOnlyDefinedOnceForTheCurrentState(method:Method): Unit ={
     if(method.currentState == currentState)
       throw new Exception(s"Defined method ${method.name} for state $currentState more than once")
@@ -190,7 +198,13 @@ class ProtocolLang {
     newReturnValue
   }
 
+
   class At(){
+    /** The at keyword which can be used to define a returnValue at which to go to a state.
+     *
+     * @param returnValue return value of the method at which to go to a state
+     * @return An Or object used to define multiple return values and corresponding states to go to
+     */
     def at(returnValue:String)={
       checkReturnValueIsValid(returnValue)
       //corrects return value in transition just defined
@@ -211,6 +225,8 @@ class ProtocolLang {
     }
   }
 
+  /** Checks the return value given is neither _Any_ or _Undefined_. Also checks that the return value has only been
+   * defined once for the current method. */
   def checkReturnValueIsValid(returnValue:String): Unit ={
     if(returnValue == Any || returnValue == Undefined)
       throw new Exception(s"You used $returnValue in state $currentState as a return value for method ${currentMethod.name}." +
@@ -227,8 +243,17 @@ class ProtocolLang {
   }
 
   class Or(){
+    /** Takes the name of the next state in the transition after an at keyword. Always use at after this to define
+     *  which return value from a method would cause a transition to the next state.
+     *  e.g or("Statex") at "true"
+     *
+     * @param nextState
+     * @return
+     */
     def or(nextState:String) ={
-      //create a new return value with undefined as the name and add a new Transition with it
+      //Creates a new return value with undefined as the name and adds a new Transition with it.
+      //This is done because we don't yet know what the return value is. Not before getting the parameter of the next
+      //at keyword.
       var returnValue = ReturnValue(currentMethod, Undefined, returnValueIndexCounter)
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //Updates
@@ -239,17 +264,25 @@ class ProtocolLang {
     }
   }
 
+  /** End keyword which must be placed at the end of the protocol or nothing will happen when this is executed.
+   *
+   */
   def end() = {
     checkWholeProtocolIsWellFormed()
     ended = true
     //create the array, print it and encode it into EncodedData.ser
-    val arrayOfStates = createArrayOfStates()
+    val arrayOfStates = createStateMachine()
     println(methods)
     println(returnValues)
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }
 
+  /** Checks that all return values have been written. AKA that there is no or statement without an at statement.
+   *  Checks that the init state has been defined.
+   *  Checks that all states used in transitions are defined.
+   *  Checks if end has been written more than once in the protocol.
+   *  Throws an exception if any of these are not the case.*/
   def checkWholeProtocolIsWellFormed(): Unit = {
     if (returnValues.exists(_.valueName == Undefined)) {
       val problematicTransition = transitions.filter(_.returnValue.valueName == Undefined).head
@@ -269,15 +302,27 @@ class ProtocolLang {
     if(ended) throw new Exception("You used end multiple times in the protocol, only use end once!")
   }
 
-  def createArrayOfStates():Array[Array[State]] ={
-    var arrayOfStates = Array[Array[State]]()
-    arrayOfStates = Array.fill(states.size, returnValues.size)(State(Undefined, -1))
+  /** Creates the state machine from the datastructures created while executing the protocol.
+   *  This is represented as an array where the states constitute the first dimension and the
+   *  return values constitute the second.
+   *  e.g.
+   *           walk():Any | run():Any
+   *  init   | State1     | Undefined
+   *  State1 | State1  | init
+   *
+   *  Would represent a state machine where the element can use method walk() in state init and transitions
+   *  to State1 where it can go to state init with method run() or stay in state State1 with method walk().
+   *  Undefined represents an illegal (undefined) transition and should throw an error when the protocol is checked.
+   *  */
+  def createStateMachine():Array[Array[State]] ={
+    stateMachine = Array.fill(states.size, returnValues.size)(State(Undefined, -1))
     transitions.foreach((transition:Transition) =>
-      arrayOfStates(transition.startState.index)(transition.returnValue.index) = statesMap(transition.nextState))
-    arrayOfStates
+      stateMachine(transition.startState.index)(transition.returnValue.index) = statesMap(transition.nextState))
+    stateMachine
   }
 
 
+  /** Prints the state machine in a readable way */
   def printNicely(array: Array[Array[State]]): Unit ={
     println()
     sortSet(returnValues).foreach((value: ReturnValue) => print(value+ " "))
@@ -292,6 +337,9 @@ class ProtocolLang {
     }
   }
 
+  /** Writes the state machine, the array of states and the array of return values (packaged in data) to a file
+   * with name filename.
+   * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
     val oos = new ObjectOutputStream(new FileOutputStream(filename))
     oos.writeObject(data)

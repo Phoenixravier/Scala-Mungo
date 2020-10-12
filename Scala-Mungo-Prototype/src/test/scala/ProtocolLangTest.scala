@@ -67,7 +67,7 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
     pl in "init"
     pl when "walk(): Unit" goto "init"
     pl.end()
-    assert(pl.arrayOfStates(0)(0) === State("init", 0))
+    assert(pl.stateMachine(0)(0) === State("init", 0))
   }
 
   "using or" should "create a correct entry in the transitions list" in {
@@ -94,7 +94,7 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
       "State1" at "False"
     pl in ("State1")
     pl.end()
-    assert(pl.arrayOfStates(0)(2) === State("State1", 1))
+    assert(pl.stateMachine(0)(2) === State("State1", 1))
   }
 
   "using end" should "serialize the data into a file such that it can be decoded" in {
@@ -131,8 +131,8 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
     pl in("onAlert")
     pl when("laze():Unit") goto "lazing"
     pl.end()
-    assert(pl.arrayOfStates.size === 5)
-    assert(pl.arrayOfStates(0).size === 4)
+    assert(pl.stateMachine.size === 5)
+    assert(pl.stateMachine(0).size === 4)
   }
 
   "writing in a certain number of states" should "create a set of the right size" in {
@@ -288,7 +288,7 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
     pl in ("State1")
     pl.end()
     assert(pl.returnValues.size === 9)
-    assert(pl.arrayOfStates(2)(4) === State("State1",3))
+    assert(pl.stateMachine(2)(4) === State("State1",3))
   }
 
   "creating a method" should "create a version with the Any return value" in {
@@ -304,7 +304,7 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
     pl in ("State1")
     pl.end()
     assert(pl.returnValues.size === 3)
-    assert(pl.arrayOfStates(0).size === 3)
+    assert(pl.stateMachine(0).size === 3)
   }
 
 
@@ -319,7 +319,7 @@ class ProtocolLangTest extends FlatSpec with Matchers with BeforeAndAfter{
       pl when("walk(): Unit") goto "init"
       pl in("init")
     } should have message("Defined a method without being inside a state. " +
-      "Use in(State) to define a state above a when(method) statement")
+      "Use in(\"stateName\") to define a state above a when(\"methodSignature\") statement")
   }
 
   "transitioning to a non-defined state" should "throw an error" in {
