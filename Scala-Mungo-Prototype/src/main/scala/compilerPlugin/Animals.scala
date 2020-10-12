@@ -17,13 +17,14 @@ class Cat{
 
 
 object Main extends App{
-  var cat = new Cat()
-  var cat1 = new Cat()
 
-  makeCatsWalk(cat, cat1)
-  makeCatsWalk(cat, cat1)
+  makeCatsWalk(createCat(), createCat())
   def makeCatsWalk(kat:Cat, kitty:Cat): Unit ={
     kat.walk()
+    kat.walk()
+  }
+  def createCat(): Cat ={
+    new Cat()
   }
 
 

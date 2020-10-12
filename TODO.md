@@ -17,7 +17,6 @@ MUST HAVE
 - [ ] Deal with companion objects
 - [ ] Deal with code on itself in constructor
 
-
 SHOULD HAVE
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with Lamdba functions
@@ -55,8 +54,6 @@ SHOULD HAVE
 
 ### In Progress
 
-- [ ] Get functions to check what is returned in params rather than just strings given 
-- [ ] Get function to return something sensible and deal with that returned value
 
 ### Done ✓
 
@@ -88,3 +85,5 @@ SHOULD HAVE
 - [x] Make things faster
 - [x] Make caching work with duplicate parameters
 - [x] Deal with parameters/returned things which are "new Class"
+- [x] Get functions to check what is returned in params rather than just strings given 
+- [x] Get function to return something sensible and deal with that returned value

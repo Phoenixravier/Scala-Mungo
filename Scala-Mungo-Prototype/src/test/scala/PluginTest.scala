@@ -1608,6 +1608,84 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "throw an exception if an instance violates its protocol inside a function with parameters returned from functions" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  makeCatsWalk(createCat(), createCat())
+        |  def makeCatsWalk(kat:Cat, kitty:Cat): Unit ={
+        |    kat.walk()
+        |    kat.walk()
+        |  }
+        |  def createCat(): Cat ={
+        |    new Cat()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol inside a function with parameters returned from functions in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.Random
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main {
+        | def main(args: Array[String]): Unit = {
+        |  makeCatsWalk(createCat(), createCat())
+        |  def makeCatsWalk(kat:Cat, kitty:Cat): Unit ={
+        |    kat.walk()
+        |    kat.walk()
+        |  }
+        |  def createCat(): Cat ={
+        |    new Cat()
+        |  }
+        | }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function" in {
     val userCode =
       """
