@@ -18,13 +18,12 @@ class Cat{
 
 object Main extends App{
 
-  makeCatsWalk(createCat(), createCat())
-  def makeCatsWalk(kat:Cat, kitty:Cat): Unit ={
-    kat.walk()
-    kat.walk()
+  recursive()
+  def recursive(): Unit ={
+    recursive2()
   }
-  def createCat(): Cat ={
-    new Cat()
+  def recursive2(): Unit ={
+    recursive()
   }
 
 

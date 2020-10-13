@@ -2,14 +2,14 @@
 [debug] All sources are invalidated.
 [debug] Initial set of included nodes: 
 [debug] Recompiling all sources: number of invalidated sources > 50.0% of all sources
-[info] Compiling 8 Scala sources to C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes ...
+[info] Compiling 12 Scala sources to C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes ...
 [debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
 [debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
-[debug] [zinc] Running cached compiler 404dc9e0 for Scala compiler version 2.13.3
+[debug] [zinc] Running cached compiler 28715354 for Scala compiler version 2.13.3
 [debug] [zinc] The Scala compiler is invoked with:
 [debug] 	-bootclasspath
 [debug] 	C:\Program Files\Java\jdk1.8.0_60\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\rt.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_60\jre\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-library\2.13.3\scala-library-2.13.3.jar
 [debug] 	-classpath
-[debug] 	C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-reflect\2.13.3\scala-reflect-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\io\suzaku\boopickle_2.13\1.3.2\boopickle_2.13-1.3.2.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-compiler\2.13.3\scala-compiler-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\modules\scala-parser-combinators_2.13\1.1.2\scala-parser-combinators_2.13-1.1.2.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\antlr\antlr4-runtime\4.8\antlr4-runtime-4.8.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\antlr\stringtemplate\3.2\stringtemplate-3.2.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\jline\jline\3.15.0\jline-3.15.0.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\net\java\dev\jna\jna\5.3.1\jna-5.3.1.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\antlr\antlr\2.7.7\antlr-2.7.7.jar
-[debug] Compilation failed (CompilerInterface)
-[error] (Compile / compileIncremental) Compilation failed
+[debug] 	C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-reflect\2.13.3\scala-reflect-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-compiler\2.13.3\scala-compiler-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\modules\scala-parser-combinators_2.13\1.1.2\scala-parser-combinators_2.13-1.1.2.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\jline\jline\3.15.0\jline-3.15.0.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\net\java\dev\jna\jna\5.3.1\jna-5.3.1.jar
+[debug] Scala compilation took 10.0187137 s
+[info] Done compiling.
