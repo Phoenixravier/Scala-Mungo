@@ -16,6 +16,7 @@ MUST HAVE
 - [ ] Deal with apply function
 - [ ] Deal with companion objects
 - [ ] Deal with code on itself in constructor
+- [ ] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol.
 
 SHOULD HAVE
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
@@ -31,6 +32,7 @@ SHOULD HAVE
 
 COULD HAVE
 - [ ] Add end to a protocol file if it doesn't have end in it
+- [ ] Add syntactic sugar for in and when so the parenthesis aren't needed
 
 
 ************OCT****************
