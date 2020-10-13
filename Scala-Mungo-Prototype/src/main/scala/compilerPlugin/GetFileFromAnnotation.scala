@@ -54,6 +54,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
+      println("function are "+functionTraverser.functions)
       classAndObjectTraverser.traverse(unit.body)
 
       //println(functionTraverser.functions)
@@ -794,20 +795,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       for ((aliasInfo, paramInfos) <- givenToFunctionParams) {
         var currentStates = Set[State]()
         for (paramInfo <- paramInfos) {
-          println(s"checking for $paramInfo in " + instances)
           val instancesToGetStatesFrom = instances.filter(instance => instance.containsAliasInfo(paramInfo._1, paramInfo._2))
-          println("instances to scrap for states are " + instancesToGetStatesFrom)
           for (instance <- instancesToGetStatesFrom) {
-            println("state to scrap is "+instance.currentStates)
             currentStates ++= instance.currentStates
-            println("current states are now "+currentStates)
           }
         }
         var paramNames = Set[String]()
         for (paramInfo <- paramInfos) paramNames += paramInfo._1
         cacheEntry.append((currentElementInfo.name, paramNames, currentStates))
       }
-      println("cache entry before returning is "+cacheEntry)
       cacheEntry
     }
 

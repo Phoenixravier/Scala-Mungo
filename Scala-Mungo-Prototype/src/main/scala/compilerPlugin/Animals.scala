@@ -2,11 +2,14 @@ package compilerPlugin
 
 
 
+
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
+
+  println("making a cat")
   var age:Int=_
   def comeAlive(): Unit = println("The cat is alive")
   def walk(): Boolean = {
@@ -15,19 +18,32 @@ class Cat{
   }
 }
 
-
-object Main extends App{
-
-  recursive()
-  def recursive(): Unit ={
-    recursive2()
-  }
-  def recursive2(): Unit ={
-    recursive()
+object Cat{
+  def apply(): Cat = {
+    println("making a cat in object")
+    new Cat()
   }
 
+  def walk(cat:Cat): Unit ={
+    println("doing sthg")
+    cat.walk()
+    cat.walk()
+  }
 
 }
+
+object Main extends App{
+  val cat = Cat()
+  Cat.walk(cat)
+  def apply(): Unit ={
+    val kitty = new Cat()
+    kitty.walk()
+    kitty.walk()
+  }
+}
+
+
+
 
 //import scala.language.postfixOps
 /*
