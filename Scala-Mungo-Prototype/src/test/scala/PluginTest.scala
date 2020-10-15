@@ -2,7 +2,7 @@
 import java.io.{BufferedWriter, File, FileWriter}
 
 import ProtocolDSL.State
-import compilerPlugin.{Cat, GetFileFromAnnotation, protocolViolatedException}
+import compilerPlugin.{GetFileFromAnnotation, protocolViolatedException}
 import org.scalatest._
 
 import scala.collection.SortedSet

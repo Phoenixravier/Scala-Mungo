@@ -1,5 +1,9 @@
+import ProtocolDSL.State
+import compilerPlugin.{Alias, Instance}
 import compilerPlugin.Util._
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
+
+import scala.collection.mutable
 
 class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
 
@@ -32,4 +36,19 @@ class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
     stripReturnValue("walk:") should be ("walk()")
   }
   //endregion
+
+  "copying instances" should "create separate sets and editing one alias name should not edit the other" in {
+    var firstSet = Set(compilerPlugin.Instance("Cat", Set(compilerPlugin.Alias("cat", mutable.Stack("here"))),Set(ProtocolDSL.State("state1", 1))))
+    var secondInstances= copyInstances(firstSet)
+    firstSet.last.aliases.last.name = "kitty"
+    assert(secondInstances.last.aliases.last.name == "cat")
+  }
+
+  "copying instances" should "create separate sets and editing one set should not edit the other" in {
+    var firstSet:Set[Instance] = Set(compilerPlugin.Instance("Cat", Set(compilerPlugin.Alias("cat", mutable.Stack("here"))),Set(ProtocolDSL.State("state1", 1))))
+    var secondInstances= copyInstances(firstSet)
+    firstSet+= Instance(null,null,null)
+    assert(secondInstances.last.aliases.last.name == "cat")
+    assert(secondInstances.size == 1)
+  }
 }

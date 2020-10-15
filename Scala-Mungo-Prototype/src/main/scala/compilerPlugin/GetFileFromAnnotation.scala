@@ -236,7 +236,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       getClosestScopeAliasInfo(assignee, newInstances) match {
         case Some(assigneeAliasInfo) =>
           returnedAssigned match{
-            case Some(returnedInstances) =>
+            case Some(returned) =>
+              var returnedInstances = Util.copyInstances(returned)
               newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
               var scopeToRemove:mutable.Stack[String] = null
               for(instance <- returnedInstances){
@@ -277,7 +278,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       var (newInstances, returnedAssigned) = checkInsideFunctionBody(assigned, instances)
       println("returned in novel is "+returnedAssigned)
       returnedAssigned match{
-        case Some(returnedInstances) =>
+        case Some(returned) =>
+          var returnedInstances = Util.copyInstances(returned)
           var scopesToRemove:ArrayBuffer[mutable.Stack[String]] = ArrayBuffer()
           println("returned Instances are "+returnedInstances)
           for(instance <- returnedInstances){
@@ -308,6 +310,10 @@ class MyComponent(val global: Global) extends PluginComponent {
       println(s"checking line $line at line number " + line.pos.line)
       println(s"instances before checking line are $instances")
       println(showRaw(line))
+      for(function <- functionTraverser.functions){
+        if(function.name == "createCat")
+          println("top of process line returned is "+function.returned)
+      }
       line match {
         //definitions to skip over (object, class, function)
         case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
@@ -876,6 +882,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       //finding function definition
       for (function <- functionTraverser.functions
            if function.name == functionName.toString() && function.scope == getScope(funcCall, dontCheckSymbolField = true)) {
+        println("found function "+function.name)
+        println("returned is "+function.returned)
         Util.currentScope.push(function.name) //push scope so parameters will be scoped inside the function
         newInstances = assignParameters(newInstances, function.params, args)
         println("after assigning, instances are " + newInstances)
@@ -897,7 +905,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
           println("skipping")
           Util.currentScope.pop()
-          return (newInstances, function.returned)
+          val returned = function.returned
+          return (newInstances, returned)
         }
         if (cacheHit && function.stateCache(parameters) == null) {
           newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
@@ -915,14 +924,15 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances = newInstancesAndReturned._1
         println("after returning from body of function, instances are "+newInstances)
         //figuring out what is returned if this hasn't been cached already
-        if (function.returned.isEmpty) {
+
           newInstancesAndReturned._2 match{
             case Some(setOfInstances) =>
-              function.returned = Some(setOfInstances ++ Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())),Set())))
+              var instancesReturned = setOfInstances ++ Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())),Set()))
+              function.returned = Some(Util.copyInstances(instancesReturned))
             case None =>
               function.returned = Some(Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())),Set())))
           }
-        }
+        println("after assigning returned it is "+function.returned)
         //remove aliases inside the body of the function since they can't be used anymore
         newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
         println("after removing instances in scope, instances are "+newInstances)
@@ -935,7 +945,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
         println(s"the deal with function returns ${function.returned}")
         Util.currentScope.pop()
-        return (newInstances, function.returned)
+        val returned = function.returned
+        return (newInstances, returned)
       }
     (instances, None)
   }

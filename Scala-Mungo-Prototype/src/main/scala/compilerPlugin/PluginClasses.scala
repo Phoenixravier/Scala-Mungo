@@ -7,7 +7,9 @@ import scala.collection.{SortedSet, mutable}
 import scala.reflect.api.Trees
 
 /** Holds an alias' name and scope */
-case class Alias(var name:String, var scope: mutable.Stack[String]){
+case class Alias(var name:String, var scope: mutable.Stack[String]) extends Cloneable {
+  override def clone(): Alias = super.clone().asInstanceOf[Alias]
+
   override def toString(): String={
     s"$name ${scope.reverse.mkString(".")}"
   }
