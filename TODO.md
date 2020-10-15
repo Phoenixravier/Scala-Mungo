@@ -9,17 +9,18 @@ cat
 func{
 	val cat = new Cat()
 }
-Match statements can also return thigns and this is not dealt with
+Match statements can also return things and this is not dealt with
+
+TESTS
+Test that the constructor of a class like Cat without parameters is gone through (one which matches List(Ident(name)) rather than List(Apply(elementName, arg2)) (which is tested)
 
 ************SEP***************
 MUST HAVE
-- [ ] Deal with code on itself in constructor
-- [ ] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol.
 - [ ] Functions should also check that parameter types are the same to match functions together
 
 SHOULD HAVE
-- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with class attributes
+- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
 - [ ] Deal with break and return (alternative control flows)
 - [ ] Deal with Lamdba functions
 - [ ] Deal with special cases of for loops (known counts)
@@ -55,8 +56,7 @@ SHOULD HAVE
 
 ### In Progress
 - [ ] Build
-
-- [ ] Deal with companion objects
+- [ ] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol
 
 ### Done ✓
 
@@ -91,3 +91,5 @@ SHOULD HAVE
 - [x] Get functions to check what is returned in params rather than just strings given 
 - [x] Get function to return something sensible and deal with that returned value
 - [x] Deal with apply function
+- [x] Deal with companion objects
+- [x] Deal with code on itself in constructors

@@ -325,13 +325,13 @@ class ProtocolLang {
   /** Prints the state machine in a readable way */
   def printNicely(array: Array[Array[State]]): Unit ={
     println()
-    sortSet(returnValues).foreach((value: ReturnValue) => print(value+ " "))
+    sortSet(returnValues).foreach((value: ReturnValue) => print(value+ " & "))
     println()
     println("----------------------------------------------------------------------------------------------------------")
     for(i <- array.indices) {
       print(states.filter(_.index == i).head+" : ")
       for(j <- array(i).indices) {
-        print(array(i)(j)+ " ")
+        print(array(i)(j)+ " & ")
       }
       println()
     }

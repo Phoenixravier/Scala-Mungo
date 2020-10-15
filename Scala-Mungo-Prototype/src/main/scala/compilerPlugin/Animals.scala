@@ -8,9 +8,8 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
-
   println("making a cat")
-  var age:Int=_
+  walk()
   def comeAlive(): Unit = println("The cat is alive")
   def walk(): Boolean = {
     println("in walking function")
@@ -18,27 +17,11 @@ class Cat{
   }
 }
 
-object Cat{
-  def apply(): Cat = {
-    println("making a cat in object")
-    new Cat()
-  }
-
-  def walk(cat:Cat): Unit ={
-    println("doing sthg")
-    cat.walk()
-    cat.walk()
-  }
-
-}
 
 object Main extends App{
-  val cat = Cat()
-  Cat.walk(cat)
-  def apply(): Unit ={
-    val kitty = new Cat()
-    kitty.walk()
-    kitty.walk()
+  val cat = createCat()
+  def createCat():Cat={
+    new Cat()
   }
 }
 

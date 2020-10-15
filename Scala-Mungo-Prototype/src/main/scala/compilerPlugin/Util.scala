@@ -11,7 +11,6 @@ import scala.reflect.api.Trees
 
 object Util {
   val Undefined = "_Undefined_"
-  val Unknown = "_Unknown_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
 
   /** Returns protocol data from a file */
@@ -127,6 +126,8 @@ object Util {
 
   def removeAllAliasesInScope(instances: Set[Instance], scope:mutable.Stack[String]): Set[Instance] = {
     println("in remove all, scope is "+Util.currentScope)
+    println("scope to remove is "+scope)
+    println("instances before removing are "+instances)
     if(scope == null) return instances
     var newInstances = for (instance <- instances) yield instance
     for(instance <- newInstances){
@@ -135,6 +136,7 @@ object Util {
           instance.aliases -= alias
       }
     }
+    println("instances after removing are "+newInstances)
     Util.cleanInstances(newInstances)
   }
 

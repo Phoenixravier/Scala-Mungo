@@ -2557,6 +2557,136 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
+  "plugin" should "throw an exception if an instance violates its protocol after its constructor" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |class Cat{
+        |  walk()
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val kat = new Cat()
+        |    kat.walk()
+        |}
+        |
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol after its constructor in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |class Cat{
+        |  walk()
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val kat = new Cat()
+        |    kat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in its own constructor" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |class Cat{
+        |  walk()
+        |  walk()
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |    val kat = new Cat()
+        |}
+        |
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance violates its protocol in its own constructor in main" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |class Cat{
+        |  walk()
+        |  walk()
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main{
+        | def main(args: Array[String]): Unit = {
+        |    val kat = new Cat()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
   "plugin" should "throw an exception if an instance violates its protocol inside an object constructor" in {
     val userCode =
       """
@@ -3721,7 +3851,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
 
   //endregion
 
-  //region <Match statements>
+  //region <MATCH STATEMENTS>
 
   "plugin" should "throw an exception if an instance violates its protocol inside a match statement" in {
     val userCode =
@@ -3862,7 +3992,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   }
 
   //endregion
-
 
   //region <RECURSION>
   "plugin" should "not throw an exception if a recursive method taking protocolled values is present" in {
@@ -4568,7 +4697,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
     assert(actualException.getMessage === expectedException.getMessage)
   }
-  
+
   //endregion
 
 

@@ -45,7 +45,7 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
   }
 
   def containsScopeAlias(): Boolean ={
-    className == null && aliases.last.name == "scope"
+    className == null && aliases.nonEmpty && aliases.last.name == "scope"
   }
 
   override def toString(): String={

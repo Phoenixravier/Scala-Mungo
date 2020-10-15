@@ -14,6 +14,6 @@ cd..
 
 call scalac -Xplugin:Scala-Mungo-Prototype_2.13.jar src\main\scala\compilerPlugin\Animals.scala
 
-del "Scala-Mungo-Prototype_2.13.jar"
+REM del "Scala-Mungo-Prototype_2.13.jar"
 
 
