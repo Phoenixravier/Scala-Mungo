@@ -21,7 +21,7 @@ run
 ```
 $ sbt publishLocal
 ```
-Then the plugin should be available in your computer in a different project by adding the line:
+Then the plugin should be available on your computer in a different project by adding the line:
 ```
 addCompilerPlugin("org.me" %% "GetFileFromAnnotation" % "0.2-SNAPSHOT")
 ```
