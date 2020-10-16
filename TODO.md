@@ -31,6 +31,7 @@ SHOULD HAVE
 - [ ] Deal with collections (for-yield assignment)
 
 COULD HAVE
+- [ ] Traits
 - [ ] Add end to a protocol file if it doesn't have end in it
 - [ ] Add syntactic sugar for in and when so the parenthesis aren't needed
 - [ ] Print instances at end of file/at error
