@@ -4,8 +4,10 @@
 
 ### Developper instructions:
 * Clone the project
-* Go into Scala-Mungo-Prototype
-
+* Go into Scala-Mungo-Prototype by using
+```
+cd Scala-Mungo-Prototype
+```
 To run the plugin use:
 ```
 $ makejar 
