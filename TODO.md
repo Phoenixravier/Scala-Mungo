@@ -58,6 +58,7 @@ SHOULD HAVE
 ### In Progress
 - [ ] Build
 - [ ] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol
+- [ ] Functions should track "this" as well
 
 ### Done ✓
 

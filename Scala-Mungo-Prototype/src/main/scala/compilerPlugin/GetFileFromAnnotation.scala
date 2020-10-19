@@ -238,21 +238,27 @@ class MyComponent(val global: Global) extends PluginComponent {
           returnedAssigned match {
             case Some(returned) =>
               var returnedInstances = Util.copyInstances(returned)
+              var scopesToRemove: ArrayBuffer[mutable.Stack[String]] = ArrayBuffer()
               newInstances = removeAliases(newInstances, assigneeAliasInfo._1)
-              var scopeToRemove: mutable.Stack[String] = null
               for (instance <- returnedInstances) {
-                if (instance.aliases.contains(Alias("new", mutable.Stack[String]()))) {
-                  newInstances +=
-                    Instance(currentElementInfo.name, Set(Alias(assigneeAliasInfo._1, Util.currentScope.clone())), Set(State("init", 0)))
-                } else {
-                  if (instance.containsScopeAlias())
-                    scopeToRemove = instance.aliases.last.scope
-                  else
+                if (instance.containsScopeAlias())
+                  scopesToRemove += instance.aliases.last.scope
+                else {
+                  if (newInstances.contains(instance)) {
+                    for (existingInstance <- newInstances) {
+                      if (instance == existingInstance)
+                        existingInstance.aliases += Alias(assigneeAliasInfo._1, assigneeAliasInfo._2)
+                    }
+                  }
+                  else {
                     instance.aliases += Alias(assigneeAliasInfo._1, assigneeAliasInfo._2)
+                    newInstances += instance
+                  }
                 }
               }
-              newInstances = newInstances ++ returnedInstances
-              newInstances = Util.removeAllAliasesInScope(newInstances, scopeToRemove)
+              for (scopeToRemove <- scopesToRemove) {
+                newInstances = Util.removeAllAliasesInScope(newInstances, scopeToRemove)
+              }
             case None =>
           }
           if (returnedAssigned != null) {
@@ -276,7 +282,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("in process novel assignment scope is" + Util.currentScope)
       println("assignee is " + assignee)
       var (newInstances, returnedAssigned) = checkInsideFunctionBody(assigned, instances)
-      println("returned in novel is " + returnedAssigned)
+      println("returned assigned in novel is " + returnedAssigned)
       returnedAssigned match {
         case Some(returned) =>
           var returnedInstances = Util.copyInstances(returned)
@@ -285,15 +291,28 @@ class MyComponent(val global: Global) extends PluginComponent {
           for (instance <- returnedInstances) {
             println("instance is " + instance)
             if (instance.containsScopeAlias()) {
-              println("found instance with scope")
+              println("found instance with scope " + instance.aliases.last.scope)
               scopesToRemove += instance.aliases.last.scope
-            } else
-              instance.aliases += Alias(assignee, Util.currentScope.clone())
+            } else {
+              if (newInstances.contains(instance)) {
+                for (existingInstance <- newInstances) {
+                  if (instance == existingInstance)
+                    existingInstance.aliases += Alias(assignee, Util.currentScope.clone())
+                }
+              }
+              else {
+                instance.aliases += Alias(assignee, Util.currentScope.clone())
+                newInstances += instance
+              }
+            }
           }
-          newInstances = newInstances ++ returnedInstances
-          println("instances after update are " + newInstances)
-          for (scopeToRemove <- scopesToRemove)
+          println("instances after novel assignment are " + newInstances)
+          println("scopes to remove are " + scopesToRemove)
+          for (scopeToRemove <- scopesToRemove) {
+            println("scope to remove is " + scopeToRemove.reverse.mkString("."))
             newInstances = Util.removeAllAliasesInScope(newInstances, scopeToRemove)
+          }
+          println("and after removing scope are " + newInstances)
         case None =>
       }
       newInstances
@@ -762,9 +781,21 @@ class MyComponent(val global: Global) extends PluginComponent {
       (false, instances)
     }
 
-    def assignParameters(instances: Set[Instance], parameters: ArrayBuffer[Array[String]], args: List[Tree]): Set[Instance] = {
-      println("in assign parameters for " + parameters)
+    def assignParameters(instances: Set[Instance], parameters: ArrayBuffer[Array[String]], args: List[Tree], calledOn: Tree): Set[Instance] = {
+      println("in assign parameters for parameters: ")
+      for (parameter <- parameters) {
+        println(parameter.mkString("Array(", ", ", ")"))
+      }
+      println("calledOn is " + calledOn)
+      if (calledOn != null) {
+        println("type is " + calledOn.symbol.tpe)
+        println("type  " + calledOn.tpe)
+      }
       var newInstances = for (instance <- instances) yield instance
+      if (calledOn != null && calledOn.symbol.tpe.toString().contains(currentElementInfo.name)) {
+        println("going into if statement")
+        newInstances = processNovelAssignment(currentElementInfo.name, calledOn, newInstances)
+      }
       var i = 0
       for (param <- parameters) {
         if (param.length > 1) {
@@ -774,6 +805,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
         i += 1
       }
+      println("after assigning parameters, instances are " + newInstances)
       newInstances
     }
 
@@ -870,7 +902,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("inside deal with function")
       //region <Checks>
 
-      //check for an assignment function, don't want to check args in this case
+      //check for an assignment function, don't want to check args or do anything else in this case
       val isAssignmentAndInstances = isAssignmentFunction(funcCall, instances)
       if (isAssignmentAndInstances._1) return (isAssignmentAndInstances._2, None)
 
@@ -893,7 +925,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("found function " + function.name)
         println("returned is " + function.returned)
         Util.currentScope.push(function.name) //push scope so parameters will be scoped inside the function
-        newInstances = assignParameters(newInstances, function.params, args)
+        newInstances = assignParameters(newInstances, function.params, args, calledOn)
         println("after assigning, instances are " + newInstances)
         //create maps
         val mapsAndInstances = createMaps(function.params, function.name, newInstances)
@@ -931,11 +963,16 @@ class MyComponent(val global: Global) extends PluginComponent {
         val newInstancesAndReturned = checkInsideFunctionBody(function.body, newInstances)
         newInstances = newInstancesAndReturned._1
         println("after returning from body of function, instances are " + newInstances)
-        //figuring out what is returned if this hasn't been cached already
-
+        //figuring out what is returned
         newInstancesAndReturned._2 match {
           case Some(setOfInstances) =>
-            var instancesReturned = setOfInstances ++ Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())), Set()))
+            var scopeClone = Util.currentScope.clone()
+            var instancesReturned = setOfInstances ++ Set(Instance(null, Set(Alias("scope", scopeClone.clone())), Set())) //delete internal variables
+            println("before pop, instances returned are " + instancesReturned)
+            scopeClone.pop()
+            println("instances returned are " + instancesReturned)
+            instancesReturned = instancesReturned ++ Set(Instance(null, Set(Alias("scope", scopeClone)), Set())) //need to delete the parameters too
+            println("after adding second scope, instances returned are " + instancesReturned)
             function.returned = Some(Util.copyInstances(instancesReturned))
           case None =>
             function.returned = Some(Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())), Set())))
@@ -1021,7 +1058,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         elementName = elementName.substring(elementName.lastIndexOf(".") + 1)
       for (element <- classAndObjectTraverser.classesAndObjects
            if (!element.isObject && element.name == elementName && element.scope == scope)) {
-        assignParameters(newInstances, element.params, args)
+        assignParameters(newInstances, element.params, args, null)
         Util.currentScope.push(element.name)
         newInstances +=
           Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone())), Set(currentElementInfo.states(0)))
@@ -1134,11 +1171,11 @@ class MyComponent(val global: Global) extends PluginComponent {
               val originalInstances = instancesBeforeFunction.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               println("instances to update are " + instancesToUpdate)
               println("original instances are " + originalInstances)
-              if(!(instancesToUpdate == originalInstances)){
-                for(instance <- originalInstances){
+              if (!(instancesToUpdate == originalInstances)) {
+                for (instance <- originalInstances) {
                   updateInstance(instance, methodName, line)
                 }
-                if(!(instancesToUpdate == originalInstances))
+                if (!(instancesToUpdate == originalInstances))
                   throw new Exception(s"Protocolled method $methodName did not mutate state of ${aliasInfo._1} as said in the protocol")
               }
               for (instance <- instancesToUpdate) {
@@ -1154,7 +1191,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       instances
     }
 
-    def updateInstance(instance:Instance, methodName:String, line:Trees#Tree) = {
+    def updateInstance(instance: Instance, methodName: String, line: Trees#Tree) = {
       var newSetOfStates: Set[State] = Set()
       for (state <- instance.currentStates) {
         println("found method name " + methodName)
