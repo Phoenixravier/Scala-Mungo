@@ -16,7 +16,7 @@ Test that the constructor of a class like Cat without parameters is gone through
 
 ************SEP***************
 MUST HAVE
-- [ ] Functions should also check that parameter types are the same to match functions together
+
 
 SHOULD HAVE
 - [ ] Deal with class attributes
@@ -41,6 +41,8 @@ MUST HAVE
 - [ ] Finish MVP 
 - [ ] Make work on more than a single file
 - [ ] Make code readable
+- [ ] Build local (advanced)
+- [ ] Build online
 
 SHOULD HAVE
 - [ ] Technical report on Scala-Mungo
@@ -56,9 +58,8 @@ SHOULD HAVE
 
 
 ### In Progress
-- [ ] Build
-- [ ] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol
-- [ ] Functions should track "this" as well
+- [ ] Functions should also check that parameter types are the same to match functions together
+
 
 ### Done ✓
 
@@ -95,3 +96,6 @@ SHOULD HAVE
 - [x] Deal with apply function
 - [x] Deal with companion objects
 - [x] Deal with code on itself in constructors
+- [x] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol
+- [x] Functions should track "this" as well
+- [x] Build local (basic)

@@ -77,6 +77,9 @@ class protocolViolatedException(aliasNames:SortedSet[String], className:String, 
 /** Error for when the user defines their protocol wrong */
 class badlyDefinedProtocolException(message:String) extends Exception(message)
 
+class inconsistentStateMutation(methodName:String, aliasName:String)
+  extends Exception(s"Method $methodName did not mutate state of $aliasName as described in the protocol")
+
 case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:mutable.Stack[String],
                          isObject:Boolean=false, var initialised:Boolean=false){
   override def toString(): String={ s"$name ${showParams(params)} $scope $initialised" }

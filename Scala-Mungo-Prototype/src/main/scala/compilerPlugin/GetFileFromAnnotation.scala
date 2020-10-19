@@ -1175,8 +1175,9 @@ class MyComponent(val global: Global) extends PluginComponent {
                 for (instance <- originalInstances) {
                   updateInstance(instance, methodName, line)
                 }
-                if (!(instancesToUpdate == originalInstances))
-                  throw new Exception(s"Protocolled method $methodName did not mutate state of ${aliasInfo._1} as said in the protocol")
+                if (!(instancesToUpdate == originalInstances)) {
+                  throw new inconsistentStateMutation(methodName, aliasInfo._1)
+                }
               }
               for (instance <- instancesToUpdate) {
                 updateInstance(instance, methodName, line)
