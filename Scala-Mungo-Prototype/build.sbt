@@ -6,7 +6,7 @@ description := "Protocol checker for Scala"
 
 ThisBuild / organization := "org.me"
 
-ThisBuild / version := "0.2-SNAPSHOT"
+ThisBuild / version := "0.7-SNAPSHOT"
 
 name := "Scala-Mungo-Prototype"
 

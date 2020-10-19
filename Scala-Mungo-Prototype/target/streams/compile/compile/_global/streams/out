@@ -1,10 +1,2 @@
 [debug] Acquiring lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock ...
-[warn] C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\GetFileFromAnnotation.scala:837:21: non-variable type argument String in type pattern (String, scala.collection.mutable.Stack[String]) is unchecked since it is eliminated by erasure
-[warn]             case _: (String, mutable.Stack[String]) =>
-[warn]                     ^
-[warn] 4 deprecations (since 2.13.0)
-[warn] 1 deprecation (since 2.13.2)
-[warn] 4 deprecations (since 2.13.3)
-[warn] 9 deprecations in total; re-run with -deprecation for details
-[warn] 5 warnings found
 [debug] Releasing lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock.
