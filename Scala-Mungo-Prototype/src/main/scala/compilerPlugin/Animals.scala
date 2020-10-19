@@ -19,7 +19,10 @@ class Cat{
 
 object Main extends App{
   val cat = new Cat()
-  cat.walk()
+  makeCatWalk(cat, 1)
+  def makeCatWalk(cat:Cat, nb:Int): Unit ={
+    cat.walk()
+  }
 }
 
 

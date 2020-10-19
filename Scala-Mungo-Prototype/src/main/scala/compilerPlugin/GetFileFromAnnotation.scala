@@ -883,6 +883,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       nextStatesArray
     }
 
+    def typesMatch(firstParameters:ArrayBuffer[Array[String]], secondParameters:List[global.Tree]): Boolean ={
+      if(!firstParameters.exists(param => param(0).length > 0) && secondParameters.isEmpty) return true
+      for((param, i) <- firstParameters.zipWithIndex) {
+        if(param(1) != Util.keepOnlyName(secondParameters(i).tpe.toString()))
+          return false
+      }
+      true
+    }
+
     /** Checks function calls.
      * First it checks if the function is an assignment in which case it just returns to let the assignment
      * be dealt with in the assignment function
@@ -921,7 +930,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       //endregion
       //finding function definition
       for (function <- functionTraverser.functions
-           if function.name == functionName.toString() && function.scope == getScope(funcCall, dontCheckSymbolField = true)) {
+           if (function.name == functionName.toString()
+             && function.scope == getScope(funcCall, dontCheckSymbolField = true)
+             && typesMatch(function.params, args))) {
         println("found function " + function.name)
         println("returned is " + function.returned)
         Util.currentScope.push(function.name) //push scope so parameters will be scoped inside the function
@@ -929,7 +940,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("after assigning, instances are " + newInstances)
         //create maps
         val mapsAndInstances = createMaps(function.params, function.name, newInstances)
-        val functionToGivenParams = mapsAndInstances._1
+        val functionToGivenParams = mapsAndInstances._1 //REMOVE THIS??
         val givenToFunctionParams = mapsAndInstances._2
         //make possible cache entry
         val cacheEntry = createCacheEntry(givenToFunctionParams, newInstances)
@@ -945,8 +956,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
           println("skipping")
           Util.currentScope.pop()
-          val returned = function.returned
-          return (newInstances, returned)
+          return (newInstances, function.returned)
         }
         if (cacheHit && function.stateCache(parameters) == null) {
           newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
@@ -963,7 +973,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         val newInstancesAndReturned = checkInsideFunctionBody(function.body, newInstances)
         newInstances = newInstancesAndReturned._1
         println("after returning from body of function, instances are " + newInstances)
-        //figuring out what is returned
+        //figuring out what is returned PUT THIS INTO ITS OWN FUNCTION
         newInstancesAndReturned._2 match {
           case Some(setOfInstances) =>
             var scopeClone = Util.currentScope.clone()
@@ -1148,9 +1158,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param line
      */
     def updateStateIfNeeded(instancesBeforeFunction: Set[Instance], instances: Set[Instance], line: Trees#Tree): Set[Instance] = {
-      println("inside usin, instances are " + instances)
-      println("inside usin, instances before function are " + instancesBeforeFunction)
-      println("inside update state for line " + line)
       line match {
         case app@Apply(fun, args) =>
           methodTraverser.traverse(app)
@@ -1325,11 +1332,11 @@ class MyComponent(val global: Global) extends PluginComponent {
     def getParametersFromTree(params: List[List[Tree]]): String = {
       params match {
         case List(List()) => "()"
-        case List(List(value)) => Util.keepOnlyMethodName(value.tpe.toString()).mkString("(", "", ")")
+        case List(List(value)) => Util.keepOnlyName(value.tpe.toString()).mkString("(", "", ")")
         case List(values) =>
           var parameters: ArrayBuffer[String] = ArrayBuffer()
           for (elem <- values) {
-            parameters += Util.keepOnlyMethodName(elem.tpe.toString)
+            parameters += Util.keepOnlyName(elem.tpe.toString)
           }
           parameters.mkString("(", ",", ")")
         case _ => ""

@@ -66,7 +66,7 @@ object Util {
   }
 
   /** Takes a string a strips everything after, and including ( from it */
-  def keepOnlyMethodName(method:String): String ={
+  def keepOnlyName(method:String): String ={
     if(method.contains('(')) method.substring(0,method.indexOf('('))
     else method
   }
