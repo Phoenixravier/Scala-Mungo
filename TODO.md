@@ -17,37 +17,38 @@ Test that only the relevant instances exist in the set of instances (as opposed 
 
 ************SEP***************
 MUST HAVE
-
+- [ ] Make errors stack and throw errors at the end rather than throw an error and stop when it happens
 
 SHOULD HAVE
 - [ ] Deal with class attributes
-- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions)
+- [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions) (CHECK)
 - [ ] Deal with break and return (alternative control flows)
+
+
+COULD HAVE
 - [ ] Deal with Lamdba functions
 - [ ] Deal with special cases of for loops (known counts)
 - [ ] Deal with threading
 - [ ] Deal with foreach and other map like things
 - [ ] Deal with try-catch (advanced, handling exceptions)
-- [ ] Deal with globals (have special scope like GLOBAL?)
+- [ ] Deal with globals (have special scope like GLOBAL, or empty scope, does my code deal with this already?) (CHECK)
 - [ ] Deal with collections (for-yield assignment)
-
-COULD HAVE
-- [ ] Traits
+- [ ] Deal with traits
+- [ ] Short sircuit boolean expressions
 - [ ] Add end to a protocol file if it doesn't have end in it
 - [ ] Add syntactic sugar for in and when so the parenthesis aren't needed
-- [ ] Print instances at end of file/at error
+- [ ] Print instances at end of file/at error (EASY)
 
 ************OCT****************
 MUST HAVE
-- [ ] Finish MVP 
+- [ ] Build local (advanced, with batch script)
+- [ ] Build online
 - [ ] Make work on more than a single file
 - [ ] Make code readable
-- [ ] Build local (advanced)
-- [ ] Build online
 - [ ] More tests (on Util!!)
 
 SHOULD HAVE
-- [ ] Technical report on Scala-Mungo
+- [ ] User testing
 - [ ] Make nice documentation hosted somewhere (git pages)
 - [ ] Add interesting examples
 - [ ] Support Linux
@@ -60,7 +61,7 @@ SHOULD HAVE
 
 
 ### In Progress
-- [ ] Functions should also check that parameter types are the same to match functions together
+- [ ] Technical report on Scala-Mungo
 
 
 ### Done ✓
@@ -101,3 +102,5 @@ SHOULD HAVE
 - [x] Functions in protocol when called should check that, if they change the state of a protocolled object, change it in the same way as it should be by protocol
 - [x] Functions should track "this" as well
 - [x] Build local (basic)
+- [x] Finish MVP 
+- [x] Functions should also check that parameter types are the same to match functions together

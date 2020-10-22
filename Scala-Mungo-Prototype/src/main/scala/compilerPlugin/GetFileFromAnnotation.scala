@@ -52,14 +52,10 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def apply(unit: CompilationUnit): Unit = {
       println("hello, plugin is running")
-      println("tree is " + unit.body)
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
-      println("function are " + functionTraverser.functions)
       classAndObjectTraverser.traverse(unit.body)
-
-      //println(functionTraverser.functions)
       checkCode()
     }
 
@@ -1183,7 +1179,18 @@ class MyComponent(val global: Global) extends PluginComponent {
                   updateInstance(instance, methodName, line)
                 }
                 if (!(instancesToUpdate == originalInstances)) {
-                  throw new inconsistentStateMutation(methodName, aliasInfo._1)
+                  var expectedStates:Set[State] = Set()
+                  for(instance <- originalInstances){
+                    expectedStates ++= instance.currentStates
+                  }
+                  var actualStates:Set[State] = Set()
+                  for(instance <- instancesToUpdate){
+                    actualStates ++= instance.currentStates
+                  }
+                  println("expected states are "+expectedStates)
+                  println("actual states are "+actualStates)
+                  throw new inconsistentStateMutation(methodName, aliasInfo._1,
+                    line.pos.source.toString(), line.pos.line, expectedStates, actualStates)
                 }
               }
               for (instance <- instancesToUpdate) {

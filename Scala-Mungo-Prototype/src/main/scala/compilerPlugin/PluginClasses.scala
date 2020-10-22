@@ -77,8 +77,10 @@ class protocolViolatedException(aliasNames:SortedSet[String], className:String, 
 /** Error for when the user defines their protocol wrong */
 class badlyDefinedProtocolException(message:String) extends Exception(message)
 
-class inconsistentStateMutation(methodName:String, aliasName:String)
-  extends Exception(s"Method $methodName did not mutate state of $aliasName as described in the protocol")
+class inconsistentStateMutation(methodName:String, aliasName:String, file:String, line:Int,
+                                expectedStates:Set[State], actualStates:Set[State])
+  extends Exception(s"In file $file, at line $line, method $methodName did not mutate state of $aliasName " +
+    s"as described in the protocol. Expected states $expectedStates, got states $actualStates")
 
 case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:mutable.Stack[String],
                          isObject:Boolean=false, var initialised:Boolean=false){
