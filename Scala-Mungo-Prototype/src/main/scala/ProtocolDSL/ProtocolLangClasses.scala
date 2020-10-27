@@ -33,7 +33,7 @@ case class ReturnValue(parentMethod:Method, var valueName:String, var index:Int)
     this.index compare that.index
   }
   override def toString()={
-    parentMethod.name + ":" + valueName + " " + index
+    parentMethod.name + ":" + valueName
   }
 }
 

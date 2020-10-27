@@ -4,28 +4,39 @@ scalaVersion := "2.13.3"
 
 description := "Protocol checker for Scala"
 
-ThisBuild / organization := "org.me"
+//ThisBuild / organization := "org.me"
 
-ThisBuild / version := "0.7-SNAPSHOT"
+ThisBuild / version := "1.0"
 
 name := "Scala-Mungo-Prototype"
+licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
+//ThisBuild / licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
 
-ThisBuild / licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
-
+homepage := Some(url("https://github.com/Aliceravier/Scala-Mungo"))
 /*
-lazy val root = (project in file("."))
-  .settings(
-    sbtPlugin := true,
-    name := "Scala-Mungo-Prototype",
-    publishMavenStyle := false,
-    bintrayRepository := "sbt-plugins",
-    bintrayOrganization in bintray := None
-  )
-packageBin in Compile := file(s"${name.value}_${scalaBinaryVersion.value}.jar")
+pomExtra :=
+  <scm>
+    <connection>
+      scm:git:git://github.com/Aliceravier/Scala-Mungo.git
+    </connection>
+    <url>
+      https://github.com/Aliceravier/Scala-Mungo
+    </url>
+  </scm>
+    <developers>
+      <developer>
+        <id>aliceravier</id>
+        <name>Alice Ravier</name>
+        <email>aliceravier@yahoo.co.uk</email>
+      </developer>
+    </developers>
+
+publishTo in ThisBuild := Some(
+  "Project Bintray" at
+    "https://bintray.com/aliceravier")
+credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+publishMavenStyle := true
 */
-
-
-//addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.2")
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 
@@ -34,4 +45,9 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
+
+//addCompilerPlugin("org.wartremover" %% "wartremover" % "2.4.11" cross CrossVersion.full)
+//scalacOptions += "-P:wartremover:traverser:org.wartremover.warts.Unsafe"
+
+
 

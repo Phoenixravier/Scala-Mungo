@@ -9,20 +9,23 @@ class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
   println("making a cat")
-  def comeAlive(): Unit = println("The cat is alive")
+  def comeAlive() = println("The cat is alive")
   def walk(): Boolean = {
-    comeAlive()
     true
   }
 }
 
 
 object Main extends App{
-  val cat = new Cat()
-  makeCatWalk(cat, 1)
-  def makeCatWalk(cat:Cat, nb:Int): Unit ={
-    cat.walk()
+  val x = 0
+  var y = x match{
+    case 0 => 3
+    case 1 => 2
+    case _ => 4
   }
+  println(y)
+  if(Array(1) == Array(1))
+    println("ok")
 }
 
 
