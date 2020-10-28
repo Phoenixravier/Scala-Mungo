@@ -24,6 +24,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var decisionWalkProtocol = ""
   var pairsProtocol = ""
   var walkComeAliveDifferentProtocol = ""
+  var loopProtocol = ""
   //endregion
 
   /** Create protocol files before testing */
@@ -163,6 +164,19 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |""".stripMargin
     writeFile("walkComeAliveDifferentProtocol.scala", Seq(walkComeAliveDifferentProtocol))
+
+    loopProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object loopProtocol extends ProtocolLang with App {
+        |  in("init")
+        |  when("finished()") goto "init" at "false" or "end" at "true"
+        |  in("end")
+        |  end()
+        |}
+        |""".stripMargin
+    writeFile("loopProtocol.scala", Seq(loopProtocol))
   }
 
   /** Delete protocol files after testing */
@@ -176,6 +190,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     deleteFile("decisionWalkProtocol.scala")
     deleteFile("pairsProtocol.scala")
     deleteFile("walkComeAliveDifferentProtocol.scala")
+    deleteFile("loopProtocol.scala")
   }
 
   //region <Tests>
@@ -4055,6 +4070,42 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |   case _ =>
         |  }
         |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with multiple return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate("loopProtocol.scala")
+        |class LoopImpl {
+        |  def finished(): Boolean = {true}
+        |}
+        |
+        |object Main{
+        | def test2(): Unit = {
+        |    test(new LoopImpl)
+        |  }
+        |
+        |  def test(loop: LoopImpl): Unit = {
+        |    loop.finished() match {
+        |      case false =>
+        |        test(loop)
+        |      case true =>
+        |
+        |    }
+        |  }
+        |  test2()
         |}
         |
         |""".stripMargin

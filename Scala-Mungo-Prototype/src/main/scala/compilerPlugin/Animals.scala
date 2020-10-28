@@ -11,21 +11,22 @@ class Cat{
   println("making a cat")
   def comeAlive() = println("The cat is alive")
   def walk(): Boolean = {
+    comeAlive()
+    Dog.walk(this)
     true
+  }
+}
+
+object Dog{
+  def walk(cat:Cat): Unit ={
+    cat.comeAlive()
   }
 }
 
 
 object Main extends App{
-  val x = 0
-  var y = x match{
-    case 0 => 3
-    case 1 => 2
-    case _ => 4
-  }
-  println(y)
-  if(Array(1) == Array(1))
-    println("ok")
+  val cat = new Cat()
+  cat.walk()
 }
 
 

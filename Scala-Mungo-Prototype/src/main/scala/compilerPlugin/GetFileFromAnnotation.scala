@@ -1150,10 +1150,10 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
      *
-     * @param instances
+     * @param instancesAfterFunction
      * @param line
      */
-    def updateStateIfNeeded(instancesBeforeFunction: Set[Instance], instances: Set[Instance], line: Trees#Tree): Set[Instance] = {
+    def updateStateIfNeeded(instancesBeforeFunction: Set[Instance], instancesAfterFunction: Set[Instance], line: Trees#Tree): Set[Instance] = {
       line match {
         case app@Apply(fun, args) =>
           methodTraverser.traverse(app)
@@ -1164,13 +1164,13 @@ class MyComponent(val global: Global) extends PluginComponent {
         val methodName = methodCallInfo(0)
         val aliasName = methodCallInfo(1)
         println("method name is " + methodName)
-        println("instances inside update are " + instances)
+        println("instances inside update are " + instancesAfterFunction)
         breakable {
-          getClosestScopeAliasInfo(aliasName, instances) match {
+          getClosestScopeAliasInfo(aliasName, instancesAfterFunction) match {
             case Some(aliasInfo) =>
               if (!currentElementInfo.methodToIndices.contains(methodName))
                 break
-              val instancesToUpdate = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              val instancesToUpdate = instancesAfterFunction.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               val originalInstances = instancesBeforeFunction.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               println("instances to update are " + instancesToUpdate)
               println("original instances are " + originalInstances)
@@ -1202,8 +1202,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
       //reset the traverser's list to be empty
       methodTraverser.methodCallInfos = ListBuffer[Array[String]]()
-      println("instances at the end of update if needed are " + instances)
-      instances
+      println("instances at the end of update if needed are " + instancesAfterFunction)
+      instancesAfterFunction
     }
 
     def updateInstance(instance: Instance, methodName: String, line: Trees#Tree) = {
