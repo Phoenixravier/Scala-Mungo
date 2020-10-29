@@ -4,9 +4,10 @@ scalaVersion := "2.13.3"
 
 description := "Protocol checker for Scala"
 
-//ThisBuild / organization := "org.me"
+ThisBuild / organization := "org.me"
 
-ThisBuild / version := "1.0"
+//ThisBuild / version := "1.1"
+ThisBuild / version := "0.9.1-SNAPSHOT"
 
 name := "Scala-Mungo-Prototype"
 licenses += ("MIT", url("http://opensource.org/licenses/MIT"))

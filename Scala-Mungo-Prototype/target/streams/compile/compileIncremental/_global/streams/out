@@ -1,1 +1,34 @@
-[debug] No changes
+[debug] 
+[debug] Initial source changes: 
+[debug] 	removed:Set()
+[debug] 	added: Set()
+[debug] 	modified: Set(C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\GetFileFromAnnotation.scala)
+[debug] Invalidated products: Set()
+[debug] External API changes: API Changes: Set()
+[debug] Modified binary dependencies: Set()
+[debug] Initial directly invalidated classes: Set(compilerPlugin.GetFileFromAnnotation, compilerPlugin.MyComponent.Function, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.functionTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.classAndObjectTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.methodTraverser, compilerPlugin.MyComponent)
+[debug] 
+[debug] Sources indirectly invalidated by:
+[debug] 	product: Set()
+[debug] 	binary dep: Set()
+[debug] 	external source: Set()
+[debug] All initially invalidated classes: Set(compilerPlugin.GetFileFromAnnotation, compilerPlugin.MyComponent.Function, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.functionTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.classAndObjectTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.methodTraverser, compilerPlugin.MyComponent)
+[debug] All initially invalidated sources:Set(C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\compilerPlugin\GetFileFromAnnotation.scala)
+[debug] Initial set of included nodes: compilerPlugin.GetFileFromAnnotation, compilerPlugin.MyComponent.Function, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.functionTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.classAndObjectTraverser, compilerPlugin.MyComponent.GetFileFromAnnotationPhase.methodTraverser, compilerPlugin.MyComponent
+[info] Compiling 1 Scala source to C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes ...
+[debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
+[debug] Getting org.scala-sbt:compiler-bridge_2.13:1.3.5:compile for Scala 2.13.3
+[debug] [zinc] Running cached compiler 17e06f98 for Scala compiler version 2.13.3
+[debug] [zinc] The Scala compiler is invoked with:
+[debug] 	-bootclasspath
+[debug] 	C:\Program Files\Java\jdk1.8.0_60\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\rt.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_60\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_60\jre\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-library\2.13.3\scala-library-2.13.3.jar
+[debug] 	-classpath
+[debug] 	C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\target\scala-2.13\classes;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-reflect\2.13.3\scala-reflect-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\scala-compiler\2.13.3\scala-compiler-2.13.3.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\scala-lang\modules\scala-parser-combinators_2.13\1.1.2\scala-parser-combinators_2.13-1.1.2.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\org\jline\jline\3.15.0\jline-3.15.0.jar;C:\Users\Alice\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\net\java\dev\jna\jna\5.3.1\jna-5.3.1.jar
+[debug] Scala compilation took 19.2329012 s
+[info] Done compiling.
+[debug] New invalidations:
+[debug] 	Set()
+[debug] Initial set of included nodes: 
+[debug] Previously invalidated, but (transitively) depend on new invalidations:
+[debug] 	Set()
+[debug] No classes were invalidated.

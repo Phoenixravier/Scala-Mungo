@@ -46,12 +46,15 @@ class MyComponent(val global: Global) extends PluginComponent {
     override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
     /** Entry point of the plugin. Goes through the code collecting object, class and function bodies, then checks
-     * the code for protocol violations
+     *  the code for protocol violations.
+     *  Goes through apply function once for each file.
      *
      * @param unit : contains tree of the code in body
      */
     def apply(unit: CompilationUnit): Unit = {
+      println("at top of apply, currElmInfo is "+currentElementInfo)
       println("hello, plugin is running")
+      println(s"whole source is: \n ${unit.body}")
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
@@ -108,10 +111,15 @@ class MyComponent(val global: Global) extends PluginComponent {
             checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
             val methodToIndices = Util.createMethodToIndicesMap(returnValuesArray)
             currentElementInfo = ElementInfo(name, scope, transitions, states, methodToIndices, isObject)
+            println("after being set, cei is "+currentElementInfo)
             println("checking class " + currentElementInfo.name)
             checkElementIsUsedCorrectly()
             Some(name)
-          case None => None
+          case None =>
+            if(currentElementInfo.isAssigned) {
+              println("going through class "+currentElementInfo.name)
+              checkElementIsUsedCorrectly()
+            }
         }
       }
       None
