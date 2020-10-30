@@ -1,32 +1,28 @@
 package compilerPlugin
 
-
-
-
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
+  def go() = ???
+  def grab() = ???
+  def stop() = ???
+  def jump() = ???
+
   println("making a cat")
+  m()
   def comeAlive() = println("The cat is alive")
   def walk(): Boolean = {
     comeAlive()
-    Dog.walk(this)
     true
   }
-}
-
-object Dog{
-  def walk(cat:Cat): Unit ={
-    cat.comeAlive()
+  def m() ={
   }
 }
 
-
 object Main extends App{
+  val Cat = new Cat()
   val cat = new Cat()
-  cat.walk()
 }
 
 

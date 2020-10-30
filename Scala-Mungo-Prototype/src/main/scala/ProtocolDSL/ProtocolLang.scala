@@ -273,7 +273,7 @@ class ProtocolLang {
     //create the array, print it and encode it into EncodedData.ser
     val arrayOfStates = createStateMachine()
     println(methods)
-    println(returnValues)
+    println(returnValues.toArray.mkString("Array(", ", ", ")"))
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }

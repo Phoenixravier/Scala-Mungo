@@ -61,7 +61,8 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
 
 /** Holds information about a class or an object */
 case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Array[Array[State]], states:Array[State],
-                       methodToIndices:mutable.HashMap[String, Set[Int]], isObject:Boolean=false, var isAssigned:Boolean=false){
+                       methodToIndices:mutable.HashMap[String, Set[Int]], returnValueToIndice:mutable.HashMap[String, Int],
+                       isObject:Boolean=false, var isAssigned:Boolean=false){
   override def toString(): String={
     s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $isObject"
   }

@@ -25,6 +25,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var pairsProtocol = ""
   var walkComeAliveDifferentProtocol = ""
   var loopProtocol = ""
+  var enumProtocol = ""
   //endregion
 
   /** Create protocol files before testing */
@@ -177,6 +178,34 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |""".stripMargin
     writeFile("loopProtocol.scala", Seq(loopProtocol))
+
+    enumProtocol =
+      """
+        |package ProtocolDSL
+        |
+        |object enumProtocol extends ProtocolLang with App{
+        |    in ("init")
+        |    when ("m()") goto
+        |        "S2" at "letters.A" or
+        |        "S3" at "letters.B" or
+        |        "S4" at "letters.C" or
+        |        "S5" at "letters.D"
+        |    in("S2")
+        |    when("go()") goto "S6"
+        |    in("S3")
+        |    when("grab()") goto "S8"
+        |    in("S4")
+        |    when("stop()") goto "S7"
+        |    in("S5")
+        |    when("jump()") goto "S9"
+        |    in("S6")
+        |    in("S7")
+        |    in("S8")
+        |    in("S9")
+        |    end()
+        |}
+        |""".stripMargin
+    writeFile("enumProtocol.scala", Seq(enumProtocol))
   }
 
   /** Delete protocol files after testing */
@@ -191,6 +220,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     deleteFile("pairsProtocol.scala")
     deleteFile("walkComeAliveDifferentProtocol.scala")
     deleteFile("loopProtocol.scala")
+    deleteFile("enumProtocol.scala")
   }
 
   //region <Tests>
@@ -4079,7 +4109,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
   }
 
-  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with multiple return values" in {
+  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
     val userCode =
       """
         |package compilerPlugin
@@ -4106,6 +4136,95 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |    }
         |  }
         |  test2()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate("loopProtocol.scala")
+        |class LoopImpl {
+        |  def finished(): Boolean = {true}
+        |}
+        |
+        |object Main{
+        | def test2(): Unit = {
+        |    test(new LoopImpl)
+        |  }
+        |
+        |  def test(loop: LoopImpl): Unit = {
+        |    loop.finished() match {
+        |      case false =>
+        |        test(loop)
+        |      case true =>
+        |
+        |    }
+        |  }
+        |  test2()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with 4 enum return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import compilerPlugin.letters.letter
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |object letters extends Enumeration {
+        |  type letter = Value
+        |  val A,B,C,D = Value
+        |}
+        |
+        |@Typestate(filename = "enumProtocol.scala")
+        |class Cat{
+        |  def go() = ???
+        |  def grab() = ???
+        |  def stop() = ???
+        |  def jump() = ???
+        |
+        |  println("making a cat")
+        |  def comeAlive() = println("The cat is alive")
+        |  def walk(): Boolean = {
+        |    comeAlive()
+        |    true
+        |  }
+        |  def m(): letter ={
+        |    letters.A
+        |  }
+        |}
+        |
+        |object Main{
+        | val cat = new Cat()
+        |  cat.m() match{
+        |    case letters.A =>
+        |      cat.go()
+        |    case letters.B =>
+        |      cat.grab()
+        |    case letters.C =>
+        |      cat.stop()
+        |    case letters.D =>
+        |      cat.jump()
+        |  }
         |}
         |
         |""".stripMargin

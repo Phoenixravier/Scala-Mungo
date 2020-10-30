@@ -10,6 +10,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 
 object Util {
+
+
   val Undefined = "_Undefined_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
 
@@ -111,6 +113,13 @@ object Util {
     methodToIndices
   }
 
+  def createReturnValueToIndiceMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[String, Int] = {
+    var returnValueToIndice:mutable.HashMap[String, Int] = mutable.HashMap()
+    for(returnValue <- returnValuesArray)
+      returnValueToIndice += Util.stripReturnValue(returnValue.parentMethod.name) + ":" +returnValue.valueName -> returnValue.index
+    returnValueToIndice
+  }
+
   /** From a scope implemented as a stack, gets a string formatted with dots */
   def getScopeString(scopeStack:mutable.Stack[String]): String ={
     scopeStack.reverse.mkString(".")
@@ -155,6 +164,34 @@ object Util {
     }
     println("after copying, instances are "+newInstances)
     newInstances
+  }
+
+
+  /** For two sets of instances, if and instance is present in both of them, merges the different states
+   * associated with it into one instance. Copies over the remaining instances which are only present once.
+   *
+   * @param firstInstances  First of the instance sets, to merge with hte second one
+   * @param secondInstances Second of the instance sets, to merge with the first one
+   * @return
+   */
+  def mergeInstanceStates(firstInstances: Set[Instance], secondInstances: Set[Instance]): Set[Instance] = {
+    println(s"merging $firstInstances with $secondInstances")
+    var mergedInstances: Set[Instance] = Set()
+    for (firstInstance <- firstInstances) {
+      for (alias <- firstInstance.aliases) {
+        secondInstances.find(instance => instance.aliases.contains(alias)) match {
+          case Some(instance) =>
+            mergedInstances += Instance(firstInstance.className, firstInstance.aliases ++ instance.aliases,
+              firstInstance.currentStates ++ instance.currentStates)
+          case None => mergedInstances += firstInstance
+        }
+      }
+    }
+    for (secondInstance <- secondInstances) if(!firstInstances.exists(instance => instance.aliases == secondInstance.aliases)) {
+      mergedInstances += secondInstance
+    }
+    println("merged instances are "+mergedInstances)
+    mergedInstances
   }
 
 }
