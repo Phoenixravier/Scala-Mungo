@@ -12,6 +12,7 @@ import scala.tools.nsc.{Global, Phase}
 import scala.util.control.Breaks._
 import Util._
 
+
 /** My plugin */
 class GetFileFromAnnotation(val global: Global) extends Plugin {
   val name = "GetFileFromAnnotation"
@@ -34,6 +35,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
   }
 
+
+
   val runsAfter: List[String] = List[String]("refchecks")
   val phaseName: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -41,6 +44,8 @@ class MyComponent(val global: Global) extends PluginComponent {
 
   /** Phase which is ran by the plugin */
   class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
+
+
     var compilationUnit: CompilationUnit = _
     var currentElementInfo: ElementInfo = _
 
@@ -56,6 +61,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("at top of apply, currElmInfo is "+currentElementInfo)
       println("hello, plugin is running")
       println(s"whole source is: \n ${unit.body}")
+      println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
@@ -1270,6 +1276,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       instance.currentStates = newSetOfStates
     }
 
+    //region<Traversers>
     /** Traverses a tree and collects (methodName, aliasName) from method application statements
      *
      */
@@ -1339,7 +1346,12 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
+    object controlFlowGraphTraverser extends Traverser {
+      var controlFlowGraph = controlFlowGraph()
 
+    }
+
+//endregion
     /** Removes alias from instances */
     def removeAliases(instances: Set[Instance], aliasName: String): Set[Instance] = {
       println(s"instances before removing $aliasName are " + instances)

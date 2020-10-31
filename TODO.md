@@ -104,3 +104,4 @@ SHOULD HAVE
 - [x] Build local (basic)
 - [x] Finish MVP 
 - [x] Functions should also check that parameter types are the same to match functions together
+- [x] Make match statements check if they are matching protocolled methods and advance state by method:returnvalue if possible in a case statement

@@ -3,6 +3,7 @@ package compilerPlugin
 import ProtocolDSL.State
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.RedBlackTree.Tree
 import scala.collection.{SortedSet, mutable}
 import scala.reflect.api.Trees
 
@@ -97,3 +98,5 @@ case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Se
     parameters
   }
 }
+
+

@@ -1,9 +1,14 @@
 package compilerPlugin
 
+import scala.tools.nsc.doc.html.HtmlTags.I
+import scala.util.control.Breaks
+import scala.util.control.Breaks.{break, breakable}
+
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\CatProtocol.scala")
 class Cat{
+
   def go() = ???
   def grab() = ???
   def stop() = ???
@@ -21,8 +26,19 @@ class Cat{
 }
 
 object Main extends App{
-  val Cat = new Cat()
-  val cat = new Cat()
+
+  val Inner = new Breaks
+  val Outer = new Breaks
+  Inner.breakable{
+    println("A")
+    Inner.break()
+    Inner.break()
+  }
+  Outer.breakable{
+    println("B")
+  }
+
+
 }
 
 
