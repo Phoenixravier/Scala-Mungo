@@ -4145,41 +4145,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
   }
 
-  "plugin" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
-    val userCode =
-      """
-        |package compilerPlugin
-        |
-        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-        |
-        |
-        |@Typestate("loopProtocol.scala")
-        |class LoopImpl {
-        |  def finished(): Boolean = {true}
-        |}
-        |
-        |object Main{
-        | def test2(): Unit = {
-        |    test(new LoopImpl)
-        |  }
-        |
-        |  def test(loop: LoopImpl): Unit = {
-        |    loop.finished() match {
-        |      case false =>
-        |        test(loop)
-        |      case true =>
-        |
-        |    }
-        |  }
-        |  test2()
-        |}
-        |
-        |""".stripMargin
-    noException should be thrownBy {
-      val (compiler, sources) = createCompiler(userCode)
-      new compiler.Run() compileSources (sources)
-    }
-  }
 
   "plugin" should "not throw an exception if an instance does not violates its protocol from a method with 4 enum return values" in {
     val userCode =
@@ -4943,6 +4908,228 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
 
   //endregion
 
+  //region <break statements>
+  "plugin" should "not throw an exception if an instance calls an illegal method after a break statement" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  breakable{
+        |   cat.walk()
+        |   break()
+        |   cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance calls an illegal method after an if statement containing a break" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  breakable{
+        |    var x = 0
+        |    if(x == 0) {
+        |      cat.walk()
+        |      break()
+        |    }
+        |    else{
+        |    }
+        |    cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "not throw an exception if an instance calls an illegal method after a break of an outer breakable" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Unit = println("walking")
+        |}
+        |
+        |object Main extends App {
+        |  val cat = new Cat()
+        |  val Outer = Breaks
+        |  Outer.breakable{
+        |    breakable{
+        |      Outer.break()
+        |    }
+        |    cat.m()
+        |    cat.m()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
+  "plugin" should "throw an exception if an instance calls an illegal method after an if statement containing a break" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        | val cat = new Cat()
+        |  breakable{
+        |    var x = 0
+        |    if(x == 0) {
+        |      cat.walk()
+        |      break()
+        |    }
+        |    else{
+        |      cat.walk()
+        |    }
+        |    cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance calls an illegal method after a nested breakable/break block" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        | val cat = new Cat()
+        |  breakable{
+        |    breakable{
+        |      break()
+        |    }
+        |    cat.walk()
+        |    cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance calls an illegal method after a labelled nested breakable/break block" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        | val cat = new Cat()
+        |  val Outer = Breaks
+        |  val Inner = Breaks
+        |  Outer.breakable{
+        |    Inner.breakable{
+        |      Inner.break()
+        |    }
+        |    cat.walk()
+        |    cat.walk()
+        |  }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+  //endregion
+
+  //region <BIGGER EXAMPLES>
+
+
+  //endregion
 
   //endregion
 

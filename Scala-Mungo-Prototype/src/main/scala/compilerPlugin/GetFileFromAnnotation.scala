@@ -23,7 +23,6 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 
 /** The component which will run when my plugin is used */
 class MyComponent(val global: Global) extends PluginComponent {
-
   import global._
 
   case class Function(name: String, params: ArrayBuffer[Array[String]],
@@ -35,8 +34,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
   }
 
-
-
   val runsAfter: List[String] = List[String]("refchecks")
   val phaseName: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -44,10 +41,9 @@ class MyComponent(val global: Global) extends PluginComponent {
 
   /** Phase which is ran by the plugin */
   class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
-
-
     var compilationUnit: CompilationUnit = _
     var currentElementInfo: ElementInfo = _
+    var savedBreakInstances: mutable.Map[String, ArrayBuffer[Set[Instance]]] = mutable.Map[String, ArrayBuffer[Set[Instance]]]()
 
     override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -58,6 +54,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param unit : contains tree of the code in body
      */
     def apply(unit: CompilationUnit): Unit = {
+      ckType("happy")
       println("at top of apply, currElmInfo is "+currentElementInfo)
       println("hello, plugin is running")
       println(s"whole source is: \n ${unit.body}")
@@ -108,7 +105,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         getFilenameFromTypestateAnnotation(annotation) match {
           case Some(filename) => //a correct Typestate annotation is being used
             //execute the DSL in the protocol file and serialize the data into a file
-            Util.executeFile(filename)
+            println("filename is "+filename)
+            executeFile(filename)
             //retrieve the serialized data
             if (!Files.exists(Paths.get("protocolClasses\\EncodedData.ser")))
               throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
@@ -179,24 +177,21 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param code The code to check
      */
     def checkInsideObjectBody(code: Seq[Trees#Tree], givenInstances: Set[Instance] = Set()): Set[Instance] = {
-      var instances = for (instance <- givenInstances) yield instance
-      println("instances at the top of check inside object " + instances)
+      var newInstances = for (instance <- givenInstances) yield instance
+      println("instances at the top of check inside object " + newInstances)
       println("code to go through is " + code)
       if (currentElementInfo.isObject && !currentElementInfo.isAssigned) {
-        instances += Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone)), Set(currentElementInfo.states(0)))
+        newInstances += Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone)), Set(currentElementInfo.states(0)))
         currentElementInfo.isAssigned = true
       }
-      for (line <- code) {
-        println("line line is " + line)
-      }
-      for (line <- code) {
-        println("going through line " + line)
-        instances = checkInsideFunctionBody(line, instances)._1
+      for(line <- code) {
+        println("inside object checker, line is "+line)
+        newInstances = checkInsideFunctionBody(line, newInstances)._1
       }
       println("in object check before print instances")
       println("\nInstances:")
-      instances.foreach(println)
-      instances
+      newInstances.foreach(println)
+      newInstances
     }
 
 
@@ -226,6 +221,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           val newInstanceAndNbLinesToSkipAndReturned = processLine(line, instances)
           instances = newInstanceAndNbLinesToSkipAndReturned._1
           nbOfLinesToSkip = newInstanceAndNbLinesToSkipAndReturned._2
+          if(nbOfLinesToSkip == -1)
+              return (Set(), None)
           if (newInstanceAndNbLinesToSkipAndReturned._3.isDefined) // do this to avoid erasing returned element
             returned = newInstanceAndNbLinesToSkipAndReturned._3
           println(s"after processing line $line, returned is " + returned)
@@ -341,11 +338,30 @@ class MyComponent(val global: Global) extends PluginComponent {
       println(s"checking line $line at line number " + line.pos.line)
       println(s"instances before checking line are $instances")
       println(showRaw(line))
-      for (function <- functionTraverser.functions) {
-        if (function.name == "createCat")
-          println("top of process line returned is " + function.returned)
-      }
       line match {
+        case Apply(Select(Select(scope, label), TermName("break")), body) =>
+          println("FOUND BREAK with label "+label.toString())
+          if(savedBreakInstances.contains(label.toString())) {
+            savedBreakInstances(label.toString()) += copyInstances(instances)
+          }else
+            savedBreakInstances += (label.toString() -> ArrayBuffer(copyInstances(instances)))
+          (Set(), -1, None)
+        /*
+        case Apply(Select(Select(Select(Select(arg0, arg1), arg2), arg3), TermName("breakable")), body) =>
+          println("found normal break")
+          (instances, Util.getLengthOfTree(line) - 1, None)
+
+        */
+        case Apply(Select(Select(scope, label), TermName("breakable")), body) =>
+          println("In breakable with label "+label)
+          var newInstances = checkInsideObjectBody(body, instances)
+          if(savedBreakInstances.contains(label.toString())) {
+            for(instances <- savedBreakInstances(label.toString()))
+              newInstances = mergeInstanceStates(newInstances, instances)
+          }
+          println("at the end of breakable, instances are "+newInstances)
+          savedBreakInstances.remove(label.toString())
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
         //definitions to skip over (object, class, function)
         case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
           (instances, Util.getLengthOfTree(line) - 1, None)
@@ -378,7 +394,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         //while(true) and dowhile(true)
         case LabelDef(TermName(name), List(), block@Block(statements, Apply(Ident(TermName(name2)), List())))
           if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>
-          val newInstances = dealWithLoopContents(instances, block.asInstanceOf[Trees#Tree])
+          val newInstances = dealWithWhileLoop(null, instances, block.asInstanceOf[Trees#Tree])
           (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
         //while loops
         case q"while ($cond) $loopContents" =>
@@ -392,19 +408,13 @@ class MyComponent(val global: Global) extends PluginComponent {
           var copiedInstances = Util.copyInstances(instances)
           println("before going into function, instances are " + instances)
           val (newInstances, returned) = dealWithFunction(func, functionName, args, instances)
-          println("after going into function, instances are " + instances)
-          println("after going into function, new instances are " + newInstances)
           val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
           println(s"from function $functionName, returned is " + returned)
           (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
         case func@Apply(Select(instanceCalledOn, functionName), args) =>
           println("before going into function, instances are " + instances)
           var copiedInstances = Util.copyInstances(instances)
-          println("copied instances are " + copiedInstances)
           val (newInstances, returned) = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
-          println("after going into function, instances are " + instances)
-          println("after going into function, new instances are " + newInstances)
-          println("after going into function, copied instances are " + copiedInstances)
           val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
           println(s"from function $functionName, returned is " + returned)
           (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
@@ -549,7 +559,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       //loop
       do {
         //go through condition of the while
-        newInstances = checkInsideFunctionBody(cond, newInstances)._1
+        if(cond != null)
+          newInstances = checkInsideFunctionBody(cond, newInstances)._1
         Util.currentScope.push("while")
         //go through loop body
         newInstances = checkInsideFunctionBody(loopContent, newInstances)._1
@@ -1158,7 +1169,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * It stores theses states in a list (one for each instance) and checks to see if all instances have looped
      * (i.e. they have twice the same set of states in their list). If so it gets out of the for loop. It then
      * gives all instances all the states they went through while looping since we don't know how many times the loop
-     * will iterate between 0 and infinity times. This assumes that users cannot write infinte loops into their
+     * will iterate between 0 and infinity times. This assumes that users cannot write loops of infinite length into their
      * protocols, otherwise this would never terminate.
      *
      * @param instances
@@ -1346,10 +1357,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-    object controlFlowGraphTraverser extends Traverser {
-      var controlFlowGraph = controlFlowGraph()
-
-    }
 
 //endregion
     /** Removes alias from instances */
