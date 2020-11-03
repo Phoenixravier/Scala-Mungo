@@ -2,20 +2,8 @@
 package compilerPlugin
 
 import scala.util.control.Breaks
-import scala.util.control.Breaks.{break, breakable}
-
 
 class Typestate(filename:String) extends scala.annotation.StaticAnnotation
-class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
-/*
-@Nonsense(filename = "src\\main\\scala\\ProtocolDSL\\SomeProtocol.scala")
-class Trash{
- def comeAlive():Unit = println("The trash awakens")
- def walk():Unit = println("walking")
-}
-
- */
-
 
 @Typestate(filename = "src\\main\\scala\\ProtocolDSL\\SomeProtocol.scala")
 class Cat{
@@ -45,6 +33,7 @@ object main extends App {
     }while(y == 0)
   }
 }
+
 
  */
 

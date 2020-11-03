@@ -37,11 +37,11 @@ when("send_QUITToS()") goto "State45"
 when("send_UIDLToS()") goto "State47"
 when("send_UIDL_NToS()") goto "State54"
 in("State10")
-when("send_STATVoidToS(Void)") goto "State11"
+when("send_STATVoidToS(Null)") goto "State11"
 in("State11")
 when("receive_OKNTwoIntFromS()") goto "State9"
 in("State12")
-when("send_LISTVoidToS(Void)") goto "State13"
+when("send_LISTVoidToS(Null)") goto "State13"
 in("State13")
 when("receive_Choice1LabelFromS()") goto
 "State14" at "OK" or
@@ -59,7 +59,7 @@ when("receive_SUMTwoIntFromS()") goto "State15"
 in("State18")
 when("receive_ERRStringFromS()") goto "State9"
 in("State19")
-when("send_LIST_nIntToS(int)") goto "State20"
+when("send_LIST_nIntToS(Int)") goto "State20"
 in("State20")
 when("receive_Choice1LabelFromS()") goto
 "State21" at "OK" or
@@ -69,7 +69,7 @@ when("receive_OKTwoIntFromS()") goto "State9"
 in("State22")
 when("receive_ERRStringFromS()") goto "State9"
 in("State23")
-when("send_RETR_nIntToS(int)") goto "State24"
+when("send_RETR_nIntToS(Int)") goto "State24"
 in("State24")
 when("receive_Choice1LabelFromS()") goto
 "State25" at "OK" or
@@ -87,7 +87,7 @@ when("receive_SUMStringFromS()") goto "State26"
 in("State29")
 when("receive_ERRStringFromS()") goto "State9"
 in("State30")
-when("send_DELE_nIntToS(int)") goto "State31"
+when("send_DELE_nIntToS(Int)") goto "State31"
 in("State31")
 when("receive_Choice1LabelFromS()") goto
 "State32" at "OK" or
@@ -97,7 +97,7 @@ when("receive_OKStringFromS()") goto "State9"
 in("State33")
 when("receive_ERRStringFromS()") goto "State9"
 in("State34")
-when("send_RSETVoidToS(Void)") goto "State35"
+when("send_RSETVoidToS(Null)") goto "State35"
 in("State35")
 when("receive_OKNStringFromS()") goto "State9"
 in("State36")
@@ -119,15 +119,15 @@ when("receive_SUMStringFromS()") goto "State39"
 in("State42")
 when("receive_ERRStringFromS()") goto "State9"
 in("State43")
-when("send_NOOPVoidToS(Void)") goto "State44"
+when("send_NOOPVoidToS(Null)") goto "State44"
 in("State44")
 when("receive_OKNVoidFromS()") goto "State9"
 in("State45")
-when("send_QUITVoidToS(Void)") goto "State46"
+when("send_QUITVoidToS(Null)") goto "State46"
 in("State46")
 when("receive_OKNStringFromS()") goto "end"
 in("State47")
-when("send_UIDLVoidToS(Void)") goto "State48"
+when("send_UIDLVoidToS(Null)") goto "State48"
 in("State48")
 when("receive_Choice1LabelFromS()") goto
 "State49" at "OK" or
@@ -145,7 +145,7 @@ when("receive_SUMIntStringFromS()") goto "State50"
 in("State53")
 when("receive_ERRStringFromS()") goto "State9"
 in("State54")
-when("send_UIDL_nIntToS(int)") goto "State55"
+when("send_UIDL_nIntToS(Int)") goto "State55"
 in("State55")
 when("receive_Choice1LabelFromS()") goto
 "State56" at "OK" or
@@ -157,13 +157,13 @@ when("receive_ERRStringFromS()") goto "State9"
 in("State58")
 when("receive_ERRStringFromS()") goto "State5"
 in("State59")
-when("send_QUITVoidToS(Void)") goto "State60"
+when("send_QUITVoidToS(Null)") goto "State60"
 in("State60")
 when("receive_OKNStringFromS()") goto "end"
 in("State61")
 when("receive_ERRStringFromS()") goto "State1"
 in("State62")
-when("send_QUITVoidToS(Void)") goto "State63"
+when("send_QUITVoidToS(Null)") goto "State63"
 in("State63")
 when("receive_OKNStringFromS()") goto "end"
 in("end")

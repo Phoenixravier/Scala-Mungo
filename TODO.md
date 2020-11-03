@@ -22,7 +22,7 @@ MUST HAVE
 SHOULD HAVE
 - [ ] Deal with class attributes
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions) (CHECK)
-- [ ] Deal with break and return (alternative control flows)
+- [ ] Deal with return in functions
 
 
 COULD HAVE
@@ -41,16 +41,15 @@ COULD HAVE
 
 ************OCT****************
 MUST HAVE
-- [ ] Build local (advanced, with batch script)
-- [ ] Build online
+- [ ] Remove need for batch script
 - [ ] Make work on more than a single file
 - [ ] Make code readable
-- [ ] More tests (on Util!!)
+- [ ] More tests (on Util)
+- [ ] tutorial
 
 SHOULD HAVE
 - [ ] User testing
 - [ ] Make nice documentation hosted somewhere (git pages)
-- [ ] Add interesting examples
 - [ ] Support Linux
 
 ************NOV****************
@@ -61,7 +60,7 @@ SHOULD HAVE
 
 
 ### In Progress
-- [ ] Technical report on Scala-Mungo
+- [ ] Add interesting examples
 
 
 ### Done ✓
@@ -105,3 +104,7 @@ SHOULD HAVE
 - [x] Finish MVP 
 - [x] Functions should also check that parameter types are the same to match functions together
 - [x] Make match statements check if they are matching protocolled methods and advance state by method:returnvalue if possible in a case statement
+- [x] Deal with break
+- [x] Build online
+- [x] Build local
+- [x] Technical report on Scala-Mungo

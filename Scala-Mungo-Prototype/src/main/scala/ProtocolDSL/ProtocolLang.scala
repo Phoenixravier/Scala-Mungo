@@ -150,7 +150,6 @@ class ProtocolLang {
     def goto(nextState:String) ={
       var returnValue = getOrCreateReturnValue(Any)
       //Updates
-      returnValues += returnValue
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //initialise method set with index of its Any version (method:_Any_)
       if(currentMethod.indices.isEmpty) currentMethod.indices = Set(returnValueIndexCounter-1) //counter already incremented inside method above
@@ -188,13 +187,14 @@ class ProtocolLang {
    */
   def getOrCreateReturnValue(returnValue:String):ReturnValue={
     var newReturnValue = ReturnValue(currentMethod, returnValue, returnValueIndexCounter)
-    returnValueIndexCounter+=1
     for(existingReturnValue <- returnValues){
       if(existingReturnValue.parentMethod.name == currentMethod.name && existingReturnValue.valueName == returnValue) {
-        newReturnValue = existingReturnValue
-        returnValueIndexCounter -=1 //put counter back down since it is not used this time
+        return existingReturnValue
       }
     }
+    returnValues += newReturnValue
+    currentMethod.indices += returnValueIndexCounter
+    returnValueIndexCounter+=1
     newReturnValue
   }
 
@@ -209,14 +209,8 @@ class ProtocolLang {
       checkReturnValueIsValid(returnValue)
       //corrects return value in transition just defined
       val lastTransition = transitions.last
-      if(lastTransition.returnValue.valueName == Any) { //last transition was the first for this method
-        //gets or creates a new return value so as not to overwrite the Any one
-        var newReturnValue = getOrCreateReturnValue(returnValue)
-        lastTransition.returnValue = newReturnValue
-        returnValues += newReturnValue
-      }
-      else lastTransition.returnValue.valueName = returnValue
-
+      var newReturnValue = getOrCreateReturnValue(returnValue)
+      lastTransition.returnValue = newReturnValue
       currentMethod.indices += lastTransition.returnValue.index
       //replaces the transition with one with the correct return value
       transitions.dropRight(1)
@@ -257,9 +251,6 @@ class ProtocolLang {
       var returnValue = ReturnValue(currentMethod, Undefined, returnValueIndexCounter)
       transitions += Transition(currentState, currentMethod, returnValue, nextState)
       //Updates
-      currentMethod.indices += returnValueIndexCounter
-      returnValueIndexCounter +=1
-      returnValues += returnValue
       new At()
     }
   }
@@ -268,12 +259,13 @@ class ProtocolLang {
    *
    */
   def end() = {
+    println("transitions are: "+transitions)
+    println("return values are: "+returnValues)
     checkWholeProtocolIsWellFormed()
     ended = true
     //create the array, print it and encode it into EncodedData.ser
     val arrayOfStates = createStateMachine()
-    println(methods)
-    println(returnValues.toArray.mkString("Array(", ", ", ")"))
+    println("return values array is: "+returnValues.toArray.mkString("Array(", ", ", ")"))
     printNicely(arrayOfStates)
     sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
   }

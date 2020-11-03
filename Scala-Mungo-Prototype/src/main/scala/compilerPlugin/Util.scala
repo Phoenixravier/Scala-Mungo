@@ -12,6 +12,7 @@ import scala.reflect.api.Trees
 object Util {
 
 
+
   val Undefined = "_Undefined_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
 
@@ -125,6 +126,17 @@ object Util {
     for(returnValue <- returnValuesArray)
       returnValueToIndice += Util.stripReturnValue(returnValue.parentMethod.name) + ":" +returnValue.valueName -> returnValue.index
     returnValueToIndice
+  }
+
+  def createStateToAvailableMethodsMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[State, Set[ReturnValue]] = {
+    var stateToAvailableMethods:mutable.HashMap[State, Set[ReturnValue]] = mutable.HashMap()
+    for(returnValue <- returnValuesArray){
+      if(!stateToAvailableMethods.contains(returnValue.parentMethod.currentState))
+        stateToAvailableMethods += returnValue.parentMethod.currentState -> Set(returnValue)
+      else
+        stateToAvailableMethods(returnValue.parentMethod.currentState) += returnValue
+    }
+    stateToAvailableMethods
   }
 
   /** From a scope implemented as a stack, gets a string formatted with dots */

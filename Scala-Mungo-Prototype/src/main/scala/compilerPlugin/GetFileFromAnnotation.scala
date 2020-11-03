@@ -112,11 +112,16 @@ class MyComponent(val global: Global) extends PluginComponent {
               throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
                 s"check you have an end statement at the end of the protocol and that the name of the file is " +
                 s"the same as the name of the protocol and that the path given for the protocol is correct")
-            val (transitions, states, returnValuesArray) = Util.getDataFromFile("protocolClasses\\EncodedData.ser")
+            val (stateMachine, states, returnValuesArray) = Util.getDataFromFile("protocolClasses\\EncodedData.ser")
+            //println("stateMachine are "+stateMachine.mkString("Array(", ", ", ")"))
+            println("states are "+states.mkString("Array(", ", ", ")"))
+            println("ret values are "+returnValuesArray.mkString("Array(", ", ", ")"))
             checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
             val methodToIndices = Util.createMethodToIndicesMap(returnValuesArray)
             val returnValueToIndice = Util.createReturnValueToIndiceMap(returnValuesArray)
-            currentElementInfo = ElementInfo(name, scope, transitions, states, methodToIndices, returnValueToIndice, isObject)
+            val stateToAvailableMethods = Util.createStateToAvailableMethodsMap(returnValuesArray)
+            println("state to available methods: "+stateToAvailableMethods)
+            currentElementInfo = ElementInfo(name, scope, stateMachine, states, methodToIndices, returnValueToIndice, isObject)
             println("after being set, cei is "+currentElementInfo)
             println("checking class " + currentElementInfo.name)
             checkElementIsUsedCorrectly()
@@ -1225,7 +1230,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
       val methodCallInfos = methodTraverser.methodCallInfos
       for (methodCallInfo <- methodCallInfos) {
-        val methodName = methodCallInfo(0)+returnValue
+        var methodName = methodCallInfo(0)+returnValue
+        if(methodName.contains(".") && methodName.contains("("))
+          methodName = methodName.substring(methodName.indexOf("(")+1) + methodName.substring(methodName.lastIndexOf(".")+1)
         val aliasName = methodCallInfo(1)
         println("method name is " + methodName)
         println("instances inside update are " + instancesAfterFunction)
@@ -1435,17 +1442,19 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param filename
      */
     def checkProtocolMethodsSubsetClassMethods(returnValuesArray: Array[ReturnValue], stats: Seq[Trees#Tree], elementName: String, filename: String): Unit = {
-      val classMethodSignatures = getMethodNames(stats)
-      println(s"\n$classMethodSignatures")
-      var protocolMethodSignatures: Set[String] = Set()
+      val classMethods = getMethodNames(stats)
+      println(s"\n$classMethods")
+      var protocolMethods: Set[String] = Set()
       for (i <- returnValuesArray.indices) {
-        protocolMethodSignatures += Util.stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
+        protocolMethods += Util.stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
       }
-      println(protocolMethodSignatures)
-      if (!(protocolMethodSignatures subsetOf classMethodSignatures)) throw new badlyDefinedProtocolException(
-        s"Methods $protocolMethodSignatures defined in $filename are not a subset of methods " +
-          s"$classMethodSignatures defined in class $elementName")
+      println(protocolMethods)
+      if (!(protocolMethods subsetOf classMethods)) throw new badlyDefinedProtocolException(
+        s"Methods $protocolMethods defined in $filename are not a subset of methods " +
+          s"$classMethods defined in class $elementName. Methods ${protocolMethods.diff(classMethods)} are defined in " +
+          s"the protocol but not in the class")
     }
+
 
     /** Checks if an annotation is a Typestate annotation and returns the filename if so
      *
@@ -1491,12 +1500,18 @@ class MyComponent(val global: Global) extends PluginComponent {
         case List(List()) => ""
         case List(List(value)) =>
           println(value.name.toString())
-          value.tpt.toString()
+          var valueName = value.tpt.toString()
+          if(valueName.contains('.'))
+            valueName = valueName.substring(valueName.lastIndexOf('.')+1)
+          valueName
         case List(values) =>
           var parameters: ArrayBuffer[String] = ArrayBuffer()
           for (elem <- values) {
             println(elem.name.toString())
-            parameters += elem.tpt.toString
+            var valueName = elem.tpt.toString
+            if(valueName.contains('.'))
+              valueName = valueName.substring(valueName.lastIndexOf('.')+1)
+            parameters += valueName
           }
           parameters.mkString(",")
         case _ => ""
