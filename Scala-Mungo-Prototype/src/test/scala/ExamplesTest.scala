@@ -1019,6 +1019,215 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
       new compiler.Run() compileSources (sources)
     }
   }
+  "F" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |object Choice1 extends Enumeration {
+        |  type Choice1 = Value
+        |  val APPROVE, REFUSE = Value
+        |}
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader, PrintWriter}
+        |import java.net.{Socket, UnknownHostException}
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\FProtocol.scala") class FRole() { // Connect to the other participants in the protocol
+        |  private var socketRIn:BufferedReader = _
+        |  private var socketROut:PrintWriter = _
+        |  private var socketAIn:BufferedReader = _
+        |  private var socketAOut:PrintWriter = _
+        |  try { // Create the sockets
+        |    val socketR = new Socket("localhost", 20000)
+        |    val socketA = new Socket("localhost", 20002)
+        |    socketRIn = new BufferedReader(new InputStreamReader(socketR.getInputStream))
+        |    socketROut = new PrintWriter(socketR.getOutputStream, true)
+        |    socketAIn = new BufferedReader(new InputStreamReader(socketA.getInputStream))
+        |    socketAOut = new PrintWriter(socketA.getOutputStream, true)
+        |  } catch {
+        |    case e: UnknownHostException =>
+        |      System.out.println("Unable to connect to the remote host")
+        |      System.exit(-1)
+        |    case e: IOException =>
+        |      System.out.println("Input/output error")
+        |      System.exit(-1)
+        |  }
+        |  System.out.println("Connected")
+        |
+        |
+        |  def receive_checkintFromR(): Int = {
+        |    var line = ""
+        |    try line = this.socketRIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Output error.")
+        |        System.exit(-1)
+        |    }
+        |    line.toInt
+        |  }
+        |
+        |  def send_APPROVEToR(): Unit = {
+        |    this.socketROut.println("APPROVE")
+        |    this.socketAOut.println("APPROVE") //also send to Agent
+        |
+        |  }
+        |
+        |  def send_REFUSEToR(): Unit = {
+        |    this.socketROut.println("REFUSE")
+        |    this.socketAOut.println("REFUSE")
+        |  }
+        |
+        |  def send_approveintToR(payload: Int): Unit = {
+        |    this.socketROut.println(payload)
+        |  }
+        |
+        |  def send_approveintToA(payload: Int): Unit = {
+        |    this.socketAOut.println(payload)
+        |  }
+        |
+        |  def receive_invoiceintFromA(): Int = {
+        |    var line = ""
+        |    try line = this.socketAIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Output error.")
+        |        System.exit(-1)
+        |    }
+        |    line.toInt
+        |  }
+        |
+        |  def send_paymentintToA(payload: Int): Unit = {
+        |    this.socketAOut.println(payload)
+        |  }
+        |
+        |  def send_refuseStringToR(payload: String): Unit = {
+        |    this.socketROut.println(payload)
+        |  }
+        |
+        |  def send_refuseStringToA(payload: String): Unit = {
+        |    this.socketAOut.println(payload)
+        |  }
+        |}
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader}
+        |
+        |
+        |object FMain {
+        |  def safeRead(readerF: BufferedReader): String = {
+        |    var readline = ""
+        |    try readline = readerF.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Output error, unable to read")
+        |        System.exit(-1)
+        |    }
+        |    readline
+        |  }
+        |
+        |  def main(args: Array[String]): Unit = { // Create the current role
+        |    val currentF = new FRole
+        |    // readerF can be used to input strings, and then use them in send method invocation
+        |    val readerF = new BufferedReader(new InputStreamReader(System.in))
+        |    // Method invocation follows the F typestate
+        |    val payload1 = currentF.receive_checkintFromR()
+        |    System.out.println("Received quote price from Researcher: £" + payload1)
+        |    System.out.print("Choose a label among [APPROVE, REFUSE]: ")
+        |    safeRead(readerF) match {
+        |      case "APPROVE" =>
+        |        currentF.send_APPROVEToR()
+        |        System.out.print("Send approval code to Researcher: ")
+        |        val payload2 = safeRead(readerF).toInt
+        |        currentF.send_approveintToR(payload2)
+        |        System.out.print("Send approval code to Agent: ")
+        |        val payload3 = safeRead(readerF).toInt
+        |        currentF.send_approveintToA(payload3)
+        |        val payload4 = currentF.receive_invoiceintFromA()
+        |        System.out.println("Received invoice from Agent: " + payload4)
+        |        System.out.print("Send payment to Agent: £")
+        |        val payload5 = safeRead(readerF).toInt
+        |        currentF.send_paymentintToA(payload5)
+        |        System.out.println("\n	----TRANSACTION COMPLETE----	")
+        |
+        |      case "REFUSE" =>
+        |        currentF.send_REFUSEToR()
+        |        System.out.print("Send travel refusal to Researcher: ")
+        |        val payload6 = safeRead(readerF)
+        |        currentF.send_refuseStringToR(payload6)
+        |        System.out.print("Send travel refusal to Agent: ")
+        |        val payload7 = safeRead(readerF)
+        |        currentF.send_refuseStringToA(payload7)
+        |        System.out.println("\n	----TRANSACTION COMPLETE----	")
+        |
+        |    }
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "R" should "not throw an exception" in {
+    val userCode =
+      """
+        |import java.io.BufferedReader;
+        |import java.io.IOException;
+        |import java.io.InputStreamReader;
+        |
+        |public class RMain {
+        |    public static String safeRead(BufferedReader readerR) {
+        |        String readline = "";
+        |        try {
+        |            readline = readerR.readLine();
+        |        } catch (IOException e) {
+        |            System.out.println("Input/Output error, unable to read");
+        |            System.exit(-1);
+        |        }
+        |        return readline;
+        |    }
+        |
+        |    public static void main(String[] args) {
+        |        // Create the current role
+        |        RRole currentR = new RRole();
+        |        // readerR can be used to input strings, and then use them in send method invocation
+        |        BufferedReader readerR = new BufferedReader(new InputStreamReader(System.in));
+        |        // Method invocation follows the R typestate
+        |        System.out.print("Send travel destination request to Agent: ");
+        |        String payload1 = safeRead(readerR);
+        |        currentR.send_requestStringToA(payload1);
+        |        int payload2 = currentR.receive_quoteintFromA();
+        |        System.out.println("Received quote price from Agent: £" + payload2);
+        |        System.out.print("Send quote price to Finance: £");
+        |        int payload3 = Integer.parseInt(safeRead(readerR));
+        |        currentR.send_checkintToF(payload3);
+        |        switch (currentR.receive_Choice1LabelFromF()) {
+        |            case APPROVE:
+        |                System.out.println("Finance has approved the request");
+        |                int payload4 = currentR.receive_approveintFromF();
+        |                System.out.println("Received approve code from Finance: " + payload4);
+        |                String payload5 = currentR.receive_ticketStringFromA();
+        |                System.out.println("Received ticket from Agent: " + payload5);
+        |                System.out.println("\n	----TRANSACTION COMPLETE----	");
+        |                break;
+        |            case REFUSE:
+        |                System.out.println("Finance has refused the request");
+        |                String payload6 = currentR.receive_refuseStringFromF();
+        |                System.out.println("Received refusal from Finance: " + payload6);
+        |                System.out.println("\n	----TRANSACTION COMPLETE----	");
+        |                break;
+        |        }
+        |    }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
   //endregion
 
   //region <Utility functions>
