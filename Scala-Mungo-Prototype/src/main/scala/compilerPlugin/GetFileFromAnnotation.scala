@@ -57,8 +57,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       ckType("happy")
       println("at top of apply, currElmInfo is "+currentElementInfo)
       println("hello, plugin is running")
-      println(s"whole source is: \n ${unit.body}")
-      println("raw is: "+showRaw(unit.body))
+      //println(s"whole source is: \n ${unit.body}")
+      //println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
@@ -122,7 +122,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             checkElementIsUsedCorrectly()
             Some(name)
           case None =>
-            if(currentElementInfo.isAssigned) {
+            if(currentElementInfo != null) {
               println("going through class "+currentElementInfo.name)
               checkElementIsUsedCorrectly()
             }
@@ -235,6 +235,171 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
 
+
+    /** Checks a line and returns possibly updated instances.
+     * Has different cases for different types of line
+     *
+     * @param line      line of code to analyse
+     * @param instances instances to update
+     * @return
+     */
+    def processLine(line: Trees#Tree, instances: Set[Instance]): (Set[Instance], Int, Option[Set[Instance]]) = {
+      println(s"checking line $line at line number " + line.pos.line)
+      println(s"instances before checking line are $instances")
+      //println(showRaw(line))
+      line match {
+        case Apply(Select(Select(scope, label), TermName("break")), body) =>
+          dealWithBreak(instances, label.toString())
+          (Set(), -1, None)
+        case Apply(Select(Ident(TermName(label)), TermName("break")), List()) =>
+          dealWithBreak(instances, label)
+          (Set(), -1, None)
+        case Apply(Select(Select(scope, label), TermName("breakable")), body) =>
+          val newInstances = dealWithBreakable(instances, label, body)
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        case Apply(Select(Ident(label), TermName("breakable")), body) =>
+          val newInstances = dealWithBreakable(instances, label, body)
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        //definitions to skip over (object, class, function)
+        case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
+          (instances, Util.getLengthOfTree(line) - 1, None)
+        case q"$mod class $pname[..$tpara] $actMods(...$para) extends { ..$defs } with ..$prnts { $self => ..$sts }" =>
+          (instances, Util.getLengthOfTree(line) - 1, None)
+        case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr" =>
+          (instances, Util.getLengthOfTree(line) - 1, None)
+        //assignment
+        case q"val $assignee = $newValue" =>
+          println("matched equals with val")
+          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        case q"var $assignee = $newValue" =>
+          println("matched equals with var")
+          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        case q"$assignee = $newValue" =>
+          println("in assignment " + line)
+          val newInstances = processAssignment(assignee.toString, newValue, instances)
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        //for loops
+        case q"for (..$enums) $expr" =>
+          println("matched for loop in process line")
+          val newInstances = dealWithForLoop(enums, instances, expr)
+          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
+        case q"for (..$enums) yield $expr" =>
+          println("matched for yield")
+          val newInstances = dealWithForLoop(enums, instances, expr)
+          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
+        //while(true) and dowhile(true)
+        case LabelDef(TermName(name), List(), block@Block(statements, Apply(Ident(TermName(name2)), List())))
+          if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>
+          val newInstances = dealWithDoWhileLoop(null, instances, block.asInstanceOf[Trees#Tree])
+          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
+        //while loops
+        case q"while ($cond) $loopContents" =>
+          val newInstances = dealWithWhileLoop(cond, instances, loopContents)
+          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
+        case q"do $loopContents while ($cond)" =>
+          val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
+          (newInstances, 0, None)
+        //Functions (first is for functions defined in the same scope, second the others)
+        case func@Apply(Ident(functionName), args) =>
+          var copiedInstances = Util.copyInstances(instances)
+          println("before going into function, instances are " + instances)
+          val (newInstances, returned) = dealWithFunction(func, functionName, args, instances)
+          val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
+          println(s"from function $functionName, returned is " + returned)
+          (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
+        case func@Apply(Select(instanceCalledOn, functionName), args) =>
+          println("before going into function, instances are " + instances)
+          var copiedInstances = Util.copyInstances(instances)
+          val (newInstances, returned) = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
+          val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
+          println(s"from function $functionName, returned is " + returned)
+          (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
+        case q"if ($cond) $ifBody else $elseBody" =>
+          println("dealing with if else " + line)
+          val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
+          println("returned from ifelse is " + returned.mkString("Array(", ", ", ")"))
+          (newInstances, Util.getLengthOfTree(line) - 1, returned)
+        case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
+          val newInstances = /*_*/ checkTryCatchFinally(tryBody, cases, finallyBody, instances) /*_*/
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+        case q"$expr match { case ..$cases }" =>
+          println("in match")
+          val newInstances = /*_*/ processMatchStatement(expr, cases, instances) /*_*/
+          println("Found a match statement")
+          println("expr is " + expr)
+          println("cases are " + cases)
+          (newInstances, Util.getLengthOfTree(line) - 1, None)
+
+        //All three next cases are to check for solitary object name on a line
+        case Ident(TermName(objectName)) =>
+          println("matched raw ident")
+          checkObject(objectName, instances)
+          getClosestScopeAliasInfo(objectName, instances) match {
+            case Some(aliasInfo) =>
+              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              (instances, 0, Some(returned))
+            case None =>
+              (instances, 0, None)
+          }
+        case Select(location, expr) =>
+          println("matched raw select")
+          var exprString = expr.toString()
+          if (exprString.lastIndexOf(".") != -1)
+            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
+          checkObject(exprString, instances)
+          getClosestScopeAliasInfo(exprString.trim, instances) match {
+            case Some(aliasInfo) =>
+              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              (instances, 0, Some(returned))
+            case None =>
+              (instances, 0, None)
+          }
+        case Block(List(expr), Literal(Constant(()))) =>
+          println("matched raw block")
+          var exprString = expr.toString()
+          if (exprString.lastIndexOf(".") != -1)
+            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
+          checkObject(exprString, instances)
+          getClosestScopeAliasInfo(exprString.trim, instances) match {
+            case Some(aliasInfo) =>
+              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              (instances, 0, Some(returned))
+            case None =>
+              (instances, 0, None)
+          }
+        //default case
+        case q"$name" =>
+          println("matched name")
+          (instances, 0, None)
+        case _ =>
+          println("nothing matched this line")
+          (instances, 0, None)
+      }
+    }
+
+
+    private def dealWithBreak(instances: Set[Instance], label: String) = {
+      println("FOUND BREAK with label " + label)
+      if (savedBreakInstances.contains(label)) {
+        savedBreakInstances(label) += copyInstances(instances)
+      } else
+        savedBreakInstances += (label -> ArrayBuffer(copyInstances(instances)))
+    }
+
+    def dealWithBreakable(instances:Set[Instance], label:Name, body:Seq[Trees#Tree]):Set[Instance] = {
+      println("In breakable with label " + label)
+      var newInstances = checkInsideObjectBody(body, instances)
+      if (savedBreakInstances.contains(label.toString())) {
+        for (instances <- savedBreakInstances(label.toString()))
+          newInstances = mergeInstanceStates(newInstances, instances)
+      }
+      println("at the end of breakable, instances are " + newInstances)
+      savedBreakInstances.remove(label.toString())
+      newInstances
+    }
+
     def processAssignment(assignee: String, assigned: Trees#Tree, instances: Set[Instance]): Set[Instance] = {
       println("in process assignment")
       // check rhs of assignment
@@ -327,168 +492,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       newInstances
     }
 
-    /** Checks a line and returns possibly updated instances.
-     * Has different cases for different types of line
-     *
-     * @param line      line of code to analyse
-     * @param instances instances to update
-     * @return
-     */
-    def processLine(line: Trees#Tree, instances: Set[Instance]): (Set[Instance], Int, Option[Set[Instance]]) = {
-      println(s"checking line $line at line number " + line.pos.line)
-      println(s"instances before checking line are $instances")
-      println(showRaw(line))
-      line match {
-        case Apply(Select(Select(scope, label), TermName("break")), body) =>
-          println("FOUND BREAK with label "+label.toString())
-          if(savedBreakInstances.contains(label.toString())) {
-            savedBreakInstances(label.toString()) += copyInstances(instances)
-          }else
-            savedBreakInstances += (label.toString() -> ArrayBuffer(copyInstances(instances)))
-          (Set(), -1, None)
-        /*
-        case Apply(Select(Select(Select(Select(arg0, arg1), arg2), arg3), TermName("breakable")), body) =>
-          println("found normal break")
-          (instances, Util.getLengthOfTree(line) - 1, None)
-
-        */
-        case Apply(Select(Select(scope, label), TermName("breakable")), body) =>
-          println("In breakable with label "+label)
-          var newInstances = checkInsideObjectBody(body, instances)
-          if(savedBreakInstances.contains(label.toString())) {
-            for(instances <- savedBreakInstances(label.toString()))
-              newInstances = mergeInstanceStates(newInstances, instances)
-          }
-          println("at the end of breakable, instances are "+newInstances)
-          savedBreakInstances.remove(label.toString())
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-        //definitions to skip over (object, class, function)
-        case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
-          (instances, Util.getLengthOfTree(line) - 1, None)
-        case q"$mod class $pname[..$tpara] $actMods(...$para) extends { ..$defs } with ..$prnts { $self => ..$sts }" =>
-          (instances, Util.getLengthOfTree(line) - 1, None)
-        case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr" =>
-          (instances, Util.getLengthOfTree(line) - 1, None)
-        //assignment
-        case q"val $assignee = $newValue" =>
-          println("matched equals with val")
-          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-        case q"var $assignee = $newValue" =>
-          println("matched equals with var")
-          val newInstances = /*_*/ processNovelAssignment(assignee.toString, newValue, instances) /*_*/
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-        case q"$assignee = $newValue" =>
-          println("in assignment " + line)
-          val newInstances = processAssignment(assignee.toString, newValue, instances)
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-        //for loops
-        case q"for (..$enums) $expr" =>
-          println("matched for loop in process line")
-          val newInstances = dealWithForLoop(enums, instances, expr)
-          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
-        case q"for (..$enums) yield $expr" =>
-          println("matched for yield")
-          val newInstances = dealWithForLoop(enums, instances, expr)
-          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
-        //while(true) and dowhile(true)
-        case LabelDef(TermName(name), List(), block@Block(statements, Apply(Ident(TermName(name2)), List())))
-          if (name.startsWith("while$") || name.startsWith("doWhile$")) && name2 == name =>
-          val newInstances = dealWithWhileLoop(null, instances, block.asInstanceOf[Trees#Tree])
-          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
-        //while loops
-        case q"while ($cond) $loopContents" =>
-          val newInstances = dealWithWhileLoop(cond, instances, loopContents)
-          (newInstances, Util.getLengthOfTree(line) - 1, None) //-1 because we are processing the current one already
-        case q"do $loopContents while ($cond)" =>
-          val newInstances = dealWithDoWhileLoop(cond, instances, loopContents)
-          (newInstances, 0, None)
-        //Functions (first is for functions defined in the same scope, second the others)
-        case func@Apply(Ident(functionName), args) =>
-          var copiedInstances = Util.copyInstances(instances)
-          println("before going into function, instances are " + instances)
-          val (newInstances, returned) = dealWithFunction(func, functionName, args, instances)
-          val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
-          println(s"from function $functionName, returned is " + returned)
-          (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
-        case func@Apply(Select(instanceCalledOn, functionName), args) =>
-          println("before going into function, instances are " + instances)
-          var copiedInstances = Util.copyInstances(instances)
-          val (newInstances, returned) = dealWithFunction(func, functionName, args, instances, instanceCalledOn)
-          val updatedInstances = updateStateIfNeeded(copiedInstances, newInstances, line)
-          println(s"from function $functionName, returned is " + returned)
-          (updatedInstances, Util.getLengthOfTree(line) - 1, returned) //because we are processing the current one already
-        case q"if ($cond) $ifBody else $elseBody" =>
-          println("dealing with if else " + line)
-          val (newInstances, returned) = dealWithIfElse(cond, ifBody, elseBody, instances)
-          println("returned from ifelse is " + returned.mkString("Array(", ", ", ")"))
-          (newInstances, Util.getLengthOfTree(line) - 1, returned)
-        case q"try $tryBody catch { case ..$cases } finally $finallyBody" =>
-          val newInstances = /*_*/ checkTryCatchFinally(tryBody, cases, finallyBody, instances) /*_*/
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-        case q"$expr match { case ..$cases }" =>
-          println("in match")
-          val newInstances = /*_*/ processMatchStatement(expr, cases, instances) /*_*/
-          println("Found a match statement")
-          println("expr is " + expr)
-          println("cases are " + cases)
-          (newInstances, Util.getLengthOfTree(line) - 1, None)
-
-        //All three next cases are to check for solitary object name on a line
-        case Ident(TermName(objectName)) =>
-          println("matched raw ident")
-          checkObject(objectName, instances)
-          getClosestScopeAliasInfo(objectName, instances) match {
-            case Some(aliasInfo) =>
-              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-              (instances, 0, Some(returned))
-            case None =>
-              (instances, 0, None)
-          }
-        case Select(location, expr) =>
-          println("matched raw select")
-          var exprString = expr.toString()
-          if (exprString.lastIndexOf(".") != -1)
-            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
-          checkObject(exprString, instances)
-          getClosestScopeAliasInfo(exprString.trim, instances) match {
-            case Some(aliasInfo) =>
-              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-              (instances, 0, Some(returned))
-            case None =>
-              (instances, 0, None)
-          }
-        case Block(List(expr), Literal(Constant(()))) =>
-          println("matched raw block")
-          var exprString = expr.toString()
-          if (exprString.lastIndexOf(".") != -1)
-            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
-          checkObject(exprString, instances)
-          getClosestScopeAliasInfo(exprString.trim, instances) match {
-            case Some(aliasInfo) =>
-              val returned = instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-              (instances, 0, Some(returned))
-            case None =>
-              (instances, 0, None)
-          }
-        //default case
-        case q"$name" =>
-          println("matched name")
-          (instances, 0, None)
-        case _ =>
-          println("nothing matched this line")
-          (instances, 0, None)
-      }
-    }
-
-
-    def isProtocolMethod(methodName: String): Boolean = {  //change this to take methodname and type of element if there are multiple elements being checked
-      println("method name is "+methodName)
-      println("method to indices is "+currentElementInfo.methodToIndices)
-      if(currentElementInfo.methodToIndices.contains(methodName))
-        return true
-      false
-    }
 
     def isAliasCallingProtocolMethod(expr: Trees#Tree, instances:Set[Instance]):Boolean =  {
       expr match {
@@ -510,6 +513,14 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
       //reset the traverser's list to be empty
       methodTraverser.methodCallInfos = ListBuffer[Array[String]]()
+      false
+    }
+
+    def isProtocolMethod(methodName: String): Boolean = {  //change this to take methodname and type of element if there are multiple elements being checked
+      println("method name is "+methodName)
+      println("method to indices is "+currentElementInfo.methodToIndices)
+      if(currentElementInfo.methodToIndices.contains(methodName))
+        return true
       false
     }
 
@@ -536,7 +547,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       for (instance <- instances) caseInstances += Instance(instance.className, instance.aliases, instance.currentStates)
       //this needs to actually process what is inside the case statement rather than the entire statement
       if(expr != null){
-        val returnValue = cases.head.pat.toString()
+        var returnValue = cases.head.pat.toString()
+        if(returnValue.contains("."))
+          returnValue = returnValue.substring(returnValue.lastIndexOf('.')+1)
         println("expr is defined and we get return value "+returnValue)
         println("and expr is "+expr)
         caseInstances = updateStateIfNeeded(caseInstances, caseInstances, expr, ":"+returnValue)
@@ -591,7 +604,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
         Util.currentScope.pop()
         //go through condition of the while
-        newInstances = checkInsideFunctionBody(cond, newInstances)._1
+        if(cond != null)
+          newInstances = checkInsideFunctionBody(cond, newInstances)._1
         for (instance <- newInstances if instanceToInterimStates.contains((instance.className, instance.aliases)))
           instanceToInterimStates((instance.className, instance.aliases)) += instance.currentStates
       } while (!Util.duplicatesInAllListsOfMap(instanceToInterimStates))
@@ -1252,7 +1266,6 @@ class MyComponent(val global: Global) extends PluginComponent {
                 for (instance <- instancesToUpdate) {
                   updateInstance(instance, methodName, line)
                 }
-                println("out of for loop")
               }
             case None =>
           }

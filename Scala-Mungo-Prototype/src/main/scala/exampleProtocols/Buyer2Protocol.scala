@@ -10,7 +10,7 @@ when("send_agreeStringToBuyer1(String)") goto "State3"
 in("State3")
 when("send_agreeStringToSeller(String)") goto "State4"
 in("State4")
-when("send_transferintToSeller(int)") goto "end"
+when("send_transferintToSeller(Int)") goto "end"
 in("State5")
 when("send_quitStringToBuyer1(String)") goto "State6"
 in("State6")
