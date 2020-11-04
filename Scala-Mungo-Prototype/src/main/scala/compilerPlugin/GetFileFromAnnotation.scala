@@ -454,6 +454,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
     def isAliasCallingProtocolMethod(expr: Trees#Tree, instances:Set[Instance]):Boolean =  {
+      println("expr is "+expr)
       expr match {
         case app@Apply(fun, args) =>
           methodTraverser.traverse(app)
@@ -490,6 +491,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstances = processCaseStatements(cases, newInstances)
       }
       else{
+        println("is alias calling protocol method")
         newInstances = processCaseStatements(cases, newInstances, expr)
       }
       newInstances
@@ -501,7 +503,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       for (instance <- instances) caseInstances += Instance(instance.className, instance.aliases, instance.currentStates)
       //this needs to actually process what is inside the case statement rather than the entire statement
       if(expr != null){
+        println("expr is not null")
         var returnValue = cases.head.pat.toString()
+        println("here, return value is "+returnValue)
         if(returnValue.contains("."))
           returnValue = returnValue.substring(returnValue.lastIndexOf('.')+1)
         caseInstances = updateStateIfNeeded(caseInstances, caseInstances, expr, ":"+returnValue)
@@ -873,9 +877,21 @@ class MyComponent(val global: Global) extends PluginComponent {
       nextStatesArray
     }
 
+    /** Checks if two lists of parameters, formatted differently, are the same
+     *
+     * @param firstParameters ArrayBuffer of parameters as arrays with form [
+     * @param secondParameters
+     * @return
+     */
     def typesMatch(firstParameters:ArrayBuffer[Array[String]], secondParameters:List[global.Tree]): Boolean ={
-      if(!firstParameters.exists(param => param(0).length > 0) && secondParameters.isEmpty) return true
+      if(!firstParameters.exists(param => param(0).length > 0) && secondParameters.isEmpty) return true //both lists are empty
       for((param, i) <- firstParameters.zipWithIndex) {
+        println(param.mkString("Array(", ", ", ")"))
+        println(secondParameters)
+        println("interest"+param(0))
+        println(secondParameters.nonEmpty)
+        if(param.length < 2 && secondParameters.nonEmpty)
+          return false
         if(param(1) != Util.keepOnlyName(secondParameters(i).tpe.toString()))
           return false
       }
@@ -1142,7 +1158,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
       val methodCallInfos = methodTraverser.methodCallInfos
       for (methodCallInfo <- methodCallInfos) {
+        println("return value is "+returnValue)
         var methodName = methodCallInfo(0)+returnValue
+        println("before stripping, method name is "+methodName)
         if(methodName.contains(".") && methodName.contains("("))
           methodName = methodName.substring(0,methodName.indexOf("(")+1) + methodName.substring(methodName.lastIndexOf(".")+1)
         val aliasName = methodCallInfo(1)

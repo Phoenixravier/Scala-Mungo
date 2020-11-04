@@ -78,7 +78,7 @@ in("State29")
 when("receive_SChoice6LabelFromC()") goto
 "State30" at "DATALINE" or
 "State31" at "SUBJECT" or
-"State32" at "TAD" 
+"State32" at "ATAD"
 in("State30")
 when("receive_datalineStringFromC()") goto "State29"
 in("State31")

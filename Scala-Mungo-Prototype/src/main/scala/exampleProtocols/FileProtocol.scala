@@ -6,8 +6,8 @@ when("open()") goto
 "end" at "ERROR" 
 in("Open")
 when("hasNext()") goto
-"Read" at "TRUE" or
-"Close>" at "FALSE" 
+"Read" at "true" or
+"Close" at "false"
 when("close()") goto "end"
 in("Read")
 when("read()") goto "Open"

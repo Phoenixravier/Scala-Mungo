@@ -272,6 +272,8 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
       new compiler.Run() compileSources (sources)
     }
   }
+
+
   //endregion
 
   //region Bookstore
@@ -2545,6 +2547,1260 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
         |        currentC.send_quitStringToS(payload28)
         |
         |    }
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "SMTPServer" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |object SChoice1 extends Enumeration {
+        |  type SChoice1 = Value
+        |  val EHLO, QUIT = Value
+        |}
+        |
+        |object SChoice2 extends Enumeration {
+        |  type SChoice2 = Value
+        |  val STARTTLS, QUIT = Value
+        |}
+        |
+        |object SChoice3 extends Enumeration {
+        |  type SChoice3 = Value
+        |  val AUTH, QUIT = Value
+        |}
+        |
+        |object SChoice4 extends Enumeration {
+        |  type SChoice4 = Value
+        |  val MAIL, QUIT = Value
+        |}
+        |
+        |object SChoice5 extends Enumeration {
+        |  type SChoice5 = Value
+        |  val RCPT, DATA = Value
+        |}
+        |
+        |object SChoice6 extends Enumeration {
+        |  type SChoice6 = Value
+        |  val DATALINE, SUBJECT, ATAD = Value
+        |}
+        |
+        |object SMTPMessage {
+        |  def Parse(message: String): SMTPMessage = {
+        |    val matches = message.split(" |-", 2)
+        |    new SMTPMessage(matches(0), matches(1), message.charAt(3) == '-')
+        |  }
+        |}
+        |
+        |class SMTPMessage {
+        |  private var command: String = null
+        |  private var payload: String = null
+        |  private var isDashed = false
+        |
+        |  def this(command: String, payload: String, isDashed: Boolean) {
+        |    this()
+        |    this.command = command
+        |    this.payload = payload
+        |    this.isDashed = isDashed
+        |  }
+        |
+        |  def this(command: String, payload: String) {
+        |    this()
+        |    this.command = command
+        |    this.payload = payload
+        |    this.isDashed = false
+        |  }
+        |
+        |  def this(command: String) {
+        |    this()
+        |    this.command = command
+        |    this.payload = null
+        |    this.isDashed = false
+        |  }
+        |
+        |  override def toString: String = {
+        |    var message: String = null
+        |    if (this.payload == null) message = this.command + "\\r\\n"
+        |    else message = this.command + " " + this.payload + "\\r\\n"
+        |    message
+        |  }
+        |
+        |  def getCommand: String = this.command
+        |
+        |  def getPayload: String = this.payload
+        |
+        |  def getIsDashed: Boolean = this.isDashed
+        |}
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader, PrintWriter}
+        |import java.net.{ServerSocket, Socket}
+        |
+        |import compilerPlugin.SChoice1.EHLO
+        |import compilerPlugin.SChoice2.STARTTLS
+        |import compilerPlugin.SChoice3.AUTH
+        |import compilerPlugin.SChoice4.MAIL
+        |import compilerPlugin.SChoice5.RCPT
+        |import compilerPlugin.SChoice6.DATALINE
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\SMTPSProtocol.scala") class SRole() { // Bind the sockets
+        |  var serverC: ServerSocket = null
+        |  // Connecting to the server
+        |  try // Create the sockets
+        |    serverC = new ServerSocket(20000)
+        |  catch {
+        |    case e: IOException =>
+        |      System.out.println("Unable to listen on ports")
+        |      System.exit(-1)
+        |  }
+        |  // Accept a client connection
+        |  var socketC: Socket = null
+        |  try {
+        |    System.out.println("Accepting...")
+        |    socketC = serverC.accept
+        |    System.out.println("C accepted")
+        |  } catch {
+        |    case e: IOException =>
+        |      System.out.println("Accept failed")
+        |      System.exit(-1)
+        |  }
+        |  private var socketCIn: BufferedReader = null
+        |  private var socketCOut: PrintWriter = null
+        |  // Create the read and write streams
+        |  try {
+        |    socketCIn = new BufferedReader(new InputStreamReader(socketC.getInputStream))
+        |    socketCOut = new PrintWriter(socketC.getOutputStream, true)
+        |  } catch {
+        |    case e: IOException =>
+        |      System.out.println("Read failed")
+        |      System.exit(-1)
+        |  }
+        |
+        |
+        |  def send_220StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def receive_SChoice1LabelFromC(): SChoice1.Value = {
+        |    var stringLabelSChoice1 = ""
+        |    try stringLabelSChoice1 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice1 match {
+        |      case "EHLO" =>
+        |        SChoice1.EHLO
+        |      case "QUIT" =>
+        |        SChoice1.QUIT
+        |      case _ =>
+        |        SChoice1.QUIT
+        |    }
+        |  }
+        |
+        |  def receive_ehloStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def send_250DASHToC(): Unit = {
+        |    this.socketCOut.println("_250DASH")
+        |  }
+        |
+        |  def send_250ToC(): Unit = {
+        |    this.socketCOut.println("_250")
+        |  }
+        |
+        |  def send_250dashStringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def send_250StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def receive_SChoice2LabelFromC(): SChoice2.Value = {
+        |    var stringLabelSChoice2 = ""
+        |    try stringLabelSChoice2 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice2 match {
+        |      case "STARTTLS" =>
+        |        SChoice2.STARTTLS
+        |      case "QUIT" =>
+        |        SChoice2.QUIT
+        |      case _ =>
+        |        SChoice2.QUIT
+        |    }
+        |  }
+        |
+        |  def receive_starttlsStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_SChoice3LabelFromC(): SChoice3.Value = {
+        |    var stringLabelSChoice3 = ""
+        |    try stringLabelSChoice3 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice3 match {
+        |      case "AUTH" =>
+        |        SChoice3.AUTH
+        |      case "QUIT" =>
+        |        SChoice3.QUIT
+        |      case _ =>
+        |        SChoice3.QUIT
+        |    }
+        |  }
+        |
+        |  def receive_authStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def send_235ToC(): Unit = {
+        |    this.socketCOut.println("_235")
+        |  }
+        |
+        |  def send_535ToC(): Unit = {
+        |    this.socketCOut.println("_535")
+        |  }
+        |
+        |  def send_235StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def receive_SChoice4LabelFromC(): SChoice4.Value = {
+        |    var stringLabelSChoice4 = ""
+        |    try stringLabelSChoice4 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice4 match {
+        |      case "MAIL" =>
+        |        SChoice4.MAIL
+        |      case "QUIT" =>
+        |        SChoice4.QUIT
+        |      case _ =>
+        |        SChoice4.QUIT
+        |    }
+        |  }
+        |
+        |  def receive_mailStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def send_501ToC(): Unit = {
+        |    this.socketCOut.println("_501")
+        |  }
+        |
+        |  def send_501StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def receive_SChoice5LabelFromC(): SChoice5.Value = {
+        |    var stringLabelSChoice5 = ""
+        |    try stringLabelSChoice5 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice5 match {
+        |      case "RCPT" =>
+        |        SChoice5.RCPT
+        |      case "DATA" =>
+        |        SChoice5.DATA
+        |      case _ =>
+        |        SChoice5.DATA
+        |    }
+        |  }
+        |
+        |  def receive_rcptStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_dataStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def send_354StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |
+        |  def receive_SChoice6LabelFromC(): SChoice6.Value = {
+        |    var stringLabelSChoice6 = ""
+        |    try stringLabelSChoice6 = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelSChoice6 match {
+        |      case "DATALINE" =>
+        |        SChoice6.DATALINE
+        |      case "SUBJECT" =>
+        |        SChoice6.SUBJECT
+        |      case "ATAD" =>
+        |        SChoice6.ATAD
+        |      case _ =>
+        |        SChoice6.ATAD
+        |    }
+        |  }
+        |
+        |  def receive_datalineStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_subjectStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_atadStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_quitStringFromC(): String = {
+        |    var line = ""
+        |    try line = this.socketCIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def send_535StringToC(payload0: String): Unit = {
+        |    this.socketCOut.println(payload0)
+        |  }
+        |}
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader}
+        |
+        |
+        |object SMain {
+        |  def safeRead(readerS: BufferedReader): String = {
+        |    var readline = ""
+        |    try readline = readerS.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Output error, unable to read")
+        |        System.exit(-1)
+        |    }
+        |    readline
+        |  }
+        |
+        |  def main(args: Array[String]): Unit = { // Create the current role
+        |    val X = new Breaks
+        |    val XInner = new Breaks
+        |    val X1 = new Breaks
+        |    val X1Inner = new Breaks
+        |    val Y = new Breaks
+        |    val YInner = new Breaks
+        |    val Z1 = new Breaks
+        |    val Z1Inner = new Breaks
+        |    val Z2 = new Breaks
+        |    val Z2Inner = new Breaks
+        |    val Z3 = new Breaks
+        |    val Z3Inner = new Breaks
+        |    val currentS = new SRole
+        |    // readerS can be used to input strings, and then use them in send method invocation
+        |    val readerS = new BufferedReader(new InputStreamReader(System.in))
+        |    // Method invocation follows the S typestate
+        |    System.out.print("Send to C: ")
+        |    val payload1 = safeRead(readerS)
+        |    currentS.send_220StringToC(payload1)
+        |    currentS.receive_SChoice1LabelFromC match {
+        |      case EHLO =>
+        |        val payload3 = currentS.receive_ehloStringFromC
+        |        System.out.println("Received from C: " + payload3)
+        |        do {
+        |          XInner.breakable {
+        |            System.out.print("Choose a label among [_250DASH, _250]: ")
+        |            val sread1 = safeRead(readerS)
+        |            sread1 match {
+        |              case "_250DASH" =>
+        |                currentS.send_250DASHToC()
+        |                System.out.print("Send to C: ")
+        |                val payload5 = safeRead(readerS)
+        |                currentS.send_250dashStringToC(payload5)
+        |                XInner.break()
+        |              case "_250" =>
+        |                currentS.send_250ToC()
+        |                System.out.print("Send to C: ")
+        |                val payload7 = safeRead(readerS)
+        |                currentS.send_250StringToC(payload7)
+        |                currentS.receive_SChoice2LabelFromC match {
+        |                  case STARTTLS =>
+        |                    val payload9 = currentS.receive_starttlsStringFromC
+        |                    System.out.println("Received from C: " + payload9)
+        |                    System.out.print("Send to C: ")
+        |                    val payload11 = safeRead(readerS)
+        |                    currentS.send_220StringToC(payload11)
+        |                    currentS.receive_SChoice1LabelFromC match {
+        |                      case EHLO =>
+        |                        val payload13 = currentS.receive_ehloStringFromC
+        |                        System.out.println("Received from C: " + payload13)
+        |                        X1.breakable {
+        |                          do {
+        |                            X1Inner.breakable {
+        |                              System.out.print("Choose a label among [_250DASH, _250]: ")
+        |                              val sread2 = safeRead(readerS)
+        |                              sread2 match {
+        |                                case "_250DASH" =>
+        |                                  currentS.send_250DASHToC()
+        |                                  System.out.print("Send to C: ")
+        |                                  val payload15 = safeRead(readerS)
+        |                                  currentS.send_250dashStringToC(payload15)
+        |                                  X1Inner.break()
+        |                                case "_250" =>
+        |                                  currentS.send_250ToC()
+        |                                  System.out.print("Send to C: ")
+        |                                  val payload17 = safeRead(readerS)
+        |                                  currentS.send_250StringToC(payload17)
+        |                                  Y.breakable {
+        |                                    do {
+        |                                      YInner.breakable {
+        |                                        currentS.receive_SChoice3LabelFromC match {
+        |                                          case AUTH =>
+        |                                            val payload19 = currentS.receive_authStringFromC
+        |                                            System.out.println("Received from C: " + payload19)
+        |                                            System.out.print("Choose a label among [_235, _535]: ")
+        |                                            val sread3 = safeRead(readerS)
+        |                                            sread3 match {
+        |                                              case "_235" =>
+        |                                                currentS.send_235ToC()
+        |                                                System.out.print("Send to C: ")
+        |                                                val payload21 = safeRead(readerS)
+        |                                                currentS.send_235StringToC(payload21)
+        |                                                Z1.breakable {
+        |                                                  do {
+        |                                                    Z1Inner.breakable {
+        |                                                      currentS.receive_SChoice4LabelFromC match {
+        |                                                        case MAIL =>
+        |                                                          val payload23 = currentS.receive_mailStringFromC
+        |                                                          System.out.println("Received from C: " + payload23)
+        |                                                          System.out.print("Choose a label among [_501, _250]: ")
+        |                                                          val sread4 = safeRead(readerS)
+        |                                                          sread4 match {
+        |                                                            case "_501" =>
+        |                                                              currentS.send_501ToC()
+        |                                                              System.out.print("Send to C: ")
+        |                                                              val payload25 = safeRead(readerS)
+        |                                                              currentS.send_501StringToC(payload25)
+        |                                                              Z1Inner.break()
+        |
+        |                                                            case "_250" =>
+        |                                                              currentS.send_250ToC()
+        |                                                              System.out.print("Send to C: ")
+        |                                                              val payload27 = safeRead(readerS)
+        |                                                              currentS.send_250StringToC(payload27)
+        |                                                              Z2.breakable {
+        |                                                                do {
+        |                                                                  Z2Inner.breakable {
+        |                                                                    currentS.receive_SChoice5LabelFromC match {
+        |                                                                      case RCPT =>
+        |                                                                        val payload29 = currentS.receive_rcptStringFromC
+        |                                                                        System.out.println("Received from C: " + payload29)
+        |                                                                        System.out.print("Choose a label among [_250]: ")
+        |                                                                        val sread5 = safeRead(readerS)
+        |                                                                        sread5 match {
+        |                                                                          case "_250" =>
+        |                                                                            currentS.send_250ToC()
+        |                                                                            System.out.print("Send to C: ")
+        |                                                                            val payload31 = safeRead(readerS)
+        |                                                                            currentS.send_250StringToC(payload31)
+        |                                                                            Z2Inner.break()
+        |
+        |                                                                        }
+        |                                                                        Z2.break()
+        |
+        |                                                                      case SChoice5.DATA =>
+        |                                                                        val payload33 = currentS.receive_dataStringFromC
+        |                                                                        System.out.println("Received from C: " + payload33)
+        |                                                                        System.out.print("Send to C: ")
+        |                                                                        val payload35 = safeRead(readerS)
+        |                                                                        currentS.send_354StringToC(payload35)
+        |                                                                        do {
+        |                                                                          Z3Inner.breakable {
+        |                                                                            currentS.receive_SChoice6LabelFromC() match {
+        |                                                                              case DATALINE =>
+        |                                                                                val payload37 = currentS.receive_datalineStringFromC
+        |                                                                                System.out.println("Received from C: " + payload37)
+        |                                                                                Z3Inner.break()
+        |
+        |                                                                              case SChoice6.SUBJECT =>
+        |                                                                                val payload39 = currentS.receive_subjectStringFromC
+        |                                                                                System.out.println("Received from C: " + payload39)
+        |                                                                                Z3Inner.break()
+        |
+        |                                                                              case SChoice6.ATAD =>
+        |                                                                                val payload41 = currentS.receive_atadStringFromC
+        |                                                                                System.out.println("Received from C: " + payload41)
+        |                                                                                System.out.print("Send to C: ")
+        |                                                                                val payload43 = safeRead(readerS)
+        |                                                                                currentS.send_250StringToC(payload43)
+        |                                                                                Z1Inner.break()
+        |                                                                            }
+        |                                                                          }
+        |                                                                        } while (true)
+        |                                                                    }
+        |                                                                  }
+        |                                                                } while (true)
+        |                                                              }
+        |                                                          }
+        |                                                          Z1.break()
+        |                                                        case SChoice4.QUIT =>
+        |                                                          val payload45 = currentS.receive_quitStringFromC
+        |                                                          System.out.println("Received from C: " + payload45)
+        |                                                          Z1.break()
+        |                                                      }
+        |                                                    }
+        |                                                  } while (true)
+        |                                                }
+        |                                                Y.break()
+        |
+        |                                              case "_535" =>
+        |                                                currentS.send_535ToC()
+        |                                                System.out.print("Send to C: ")
+        |                                                val payload47 = safeRead(readerS)
+        |                                                currentS.send_535StringToC(payload47)
+        |                                                YInner.break()
+        |
+        |                                            }
+        |                                            Y.break()
+        |
+        |                                          case SChoice3.QUIT =>
+        |                                            val payload49 = currentS.receive_quitStringFromC
+        |                                            System.out.println("Received from C: " + payload49)
+        |                                            Y.break()
+        |
+        |                                        }
+        |                                      }
+        |                                    } while (true)
+        |                                  }
+        |                                  X1.break()
+        |
+        |                              }
+        |                            }
+        |                          } while (true)
+        |                        }
+        |                        X.break()
+        |
+        |                      case SChoice1.QUIT =>
+        |                        val payload51 = currentS.receive_quitStringFromC
+        |                        System.out.println("Received from C: " + payload51)
+        |                        X.break()
+        |
+        |                    }
+        |                    X.break()
+        |
+        |                  case SChoice2.QUIT =>
+        |                    val payload53 = currentS.receive_quitStringFromC
+        |                    System.out.println("Received from C: " + payload53)
+        |                    X.break()
+        |
+        |                }
+        |                X.break()
+        |
+        |            }
+        |          }
+        |        } while (true)
+        |
+        |      case SChoice1.QUIT =>
+        |        val payload55 = currentS.receive_quitStringFromC
+        |        System.out.println("Received from C: " + payload55)
+        |
+        |    }
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+  //region stack
+  "stack used in stackUser example 1" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |object Stack {
+        |  def main(args: Array[String]): Unit = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    val s = new Stack
+        |    s.initialise(0)
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |    var i = 2
+        |    do s.put(new Node({
+        |      i += 1; i - 1
+        |    })) while ( {
+        |      i < 42
+        |    })
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          val n = s.get
+        |          System.out.println(n.get)
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      } while (true)
+        |    }
+        |    s.close()
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\CollectionProtocol.scala")
+        |class Stack() {
+        |  private var head:Node = null
+        |
+        |  def initialise(i: Int): Unit = {
+        |    head = null
+        |  }
+        |
+        |  def put(n: Node): Unit = {
+        |    head = n.next(head)
+        |  }
+        |
+        |  def get(): Node = {
+        |    val tmp = head
+        |    head = head.getNext()
+        |    tmp
+        |  }
+        |
+        |  def isEmpty(): Boolean = {
+        |    if (head == null) return true
+        |    false
+        |  }
+        |
+        |  def close(): Unit = {
+        |  }
+        |}
+        |
+        |
+        |class Node(var i: Int) {
+        |  var next:Node = null
+        |
+        |  def set(i: Int): Unit = {
+        |    this.i = i
+        |  }
+        |
+        |  def get(): String = "The number of this Node is: " + i
+        |
+        |  def next(in: Node): Node = {
+        |    next = in
+        |    this
+        |  }
+        |
+        |  def getNext(): Node = {
+        |    this.next
+        |  }
+        |}
+        |
+        |object StackUser {
+        |  def main(args: Array[String]): Unit = {
+        |    var s = new Stack
+        |    s.initialise(0)
+        |    val su = new StackUser
+        |    s = su.produce(s)
+        |    s = su.produce(s)
+        |    s = su.consume(s)
+        |    s = su.produce(s, 60)
+        |    s = su.consume(s)
+        |    s.close
+        |    su.close()
+        |  }
+        |}
+        |
+        |class StackUser {
+        |  def produce(s: Stack): Stack = {
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |    s.put(new Node(2))
+        |    s.put(new Node(3))
+        |    s.put(new Node(4))
+        |    s
+        |  }
+        |
+        |  def produce(s: Stack, j: Int): Stack = {
+        |    var i = 0
+        |    do s.put(new Node({
+        |      i += 1; i - 1
+        |    })) while ( {
+        |      i < j
+        |    })
+        |    s
+        |  }
+        |
+        |  def consume(s: Stack): Stack = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          System.out.println(s.get.get + " ")
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      } while (true)
+        |    }
+        |    s
+        |  }
+        |
+        |  def close(): Unit = {
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "stack used in stackUser example 1 with an added protocol" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |object Stack {
+        |  def main(args: Array[String]): Unit = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    val s = new Stack
+        |    s.initialise(0)
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |    var i = 2
+        |    do s.put(new Node({
+        |      i += 1; i - 1
+        |    })) while ( {
+        |      i < 42
+        |    })
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          val n = s.get
+        |          System.out.println(n.get)
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      } while (true)
+        |    }
+        |    s.close()
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\CollectionProtocol.scala")
+        |class Stack() {
+        |  private var head:Node = null
+        |
+        |  def initialise(i: Int): Unit = {
+        |    head = null
+        |  }
+        |
+        |  def put(n: Node): Unit = {
+        |    head = n.next(head)
+        |  }
+        |
+        |  def get(): Node = {
+        |    val tmp = head
+        |    head = head.getNext()
+        |    tmp
+        |  }
+        |
+        |  def isEmpty(): Boolean = {
+        |    if (head == null) return true
+        |    false
+        |  }
+        |
+        |  def close(): Unit = {
+        |  }
+        |}
+        |
+        |
+        |class Node(var i: Int) {
+        |  var next:Node = null
+        |
+        |  def set(i: Int): Unit = {
+        |    this.i = i
+        |  }
+        |
+        |  def get(): String = "The number of this Node is: " + i
+        |
+        |  def next(in: Node): Node = {
+        |    next = in
+        |    this
+        |  }
+        |
+        |  def getNext(): Node = {
+        |    this.next
+        |  }
+        |}
+        |
+        |object StackUser {
+        |  def main(args: Array[String]): Unit = {
+        |    var s = new Stack
+        |    s.initialise(0)
+        |    val su = new StackUser
+        |    s = su.produce(s)
+        |    s = su.produce(s)
+        |    s = su.consume(s)
+        |    s = su.produce(s, 60)
+        |    s = su.consume(s)
+        |    s.close
+        |    su.close()
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\StackUserProtocol.scala")
+        |class StackUser {
+        |  def produce(s: Stack): Stack = {
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |    s.put(new Node(2))
+        |    s.put(new Node(3))
+        |    s.put(new Node(4))
+        |    s
+        |  }
+        |
+        |  def produce(s: Stack, j: Int): Stack = {
+        |    var i = 0
+        |    do s.put(new Node({
+        |      i += 1; i - 1
+        |    })) while ( {
+        |      i < j
+        |    })
+        |    s
+        |  }
+        |
+        |  def consume(s: Stack): Stack = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          System.out.println(s.get.get + " ")
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      } while (true)
+        |    }
+        |    s
+        |  }
+        |
+        |  def close(): Unit = {
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "stack used in stackUser example 2 with an added protocol" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |object Stack {
+        |  def main(args: Array[String]): Unit = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    val s = new Stack
+        |    s.initialise(0)
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |    var i = 2
+        |    do s.put(new Node({
+        |      i += 1;
+        |      i - 1
+        |    })) while ( {
+        |      i < 42
+        |    })
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          val n = s.get
+        |          System.out.println(n.get)
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      } while (true)
+        |    }
+        |    s.close()
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\CollectionProtocol.scala")
+        |class Stack() {
+        |  private var head: Node = null
+        |
+        |  def initialise(i: Int): Unit = {
+        |    head = null
+        |  }
+        |
+        |  def put(n: Node): Unit = {
+        |    head = n.next(head)
+        |  }
+        |
+        |  def get(): Node = {
+        |    val tmp = head
+        |    head = head.getNext()
+        |    tmp
+        |  }
+        |
+        |  def isEmpty(): Boolean = {
+        |    if (head == null) return true
+        |    false
+        |  }
+        |
+        |  def close(): Unit = {
+        |  }
+        |}
+        |
+        |
+        |class Node(var i: Int) {
+        |  var next: Node = null
+        |
+        |  def set(i: Int): Unit = {
+        |    this.i = i
+        |  }
+        |
+        |  def get(): String = "The number of this Node is: " + i
+        |
+        |  def next(in: Node): Node = {
+        |    next = in
+        |    this
+        |  }
+        |
+        |  def getNext(): Node = {
+        |    this.next
+        |  }
+        |}
+        |
+        |
+        |object StackUser {
+        |  def main(args: Array[String]): Unit = {
+        |    val su = new StackUser
+        |    su.produce(20)
+        |    su.consume()
+        |    su.produce()
+        |    su.produce()
+        |    su.consume()
+        |    su.close()
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\StackUserProtocol2.scala")
+        |class StackUser() {
+        |  var s = new Stack
+        |  s.initialise(0)
+        |
+        |  def produce(): Unit = {
+        |    s.put(new Node(0))
+        |    s.put(new Node(1))
+        |  }
+        |
+        |  def produce(j: Int): Unit = {
+        |    var i = 0
+        |    do s.put(new Node({
+        |      i += 1;
+        |      i - 1
+        |    })) while ( {
+        |      i < j
+        |    })
+        |  }
+        |
+        |  def consume(): Unit = {
+        |    val loop = new Breaks
+        |    val loopInner = new Breaks
+        |    loop.breakable {
+        |      do {
+        |        loopInner.breakable {
+        |          System.out.println(s.get.get + " ")
+        |          s.isEmpty match {
+        |            case true =>
+        |              loop.break()
+        |            case false =>
+        |              loopInner.break()
+        |          }
+        |        }
+        |      }
+        |      while ( {
+        |        true
+        |      })
+        |    }
+        |  }
+        |
+        |  def close(): Unit = {
+        |    s.close
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+  //region file
+  "file" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import compilerPlugin.Status.OK
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |object Status extends Enumeration {
+        |  type Status = Value
+        |  val OK, ERROR = Value
+        |}
+        |
+        |
+        |object File {
+        |  def main(args: Array[String]): Unit = {
+        |    val myFile = new File("file.txt")
+        |    val a = myFile
+        |    processFile(a)
+        |  }
+        |
+        |  def processFile(myFile: File): Unit = {
+        |    myFile.open match {
+        |      case OK =>
+        |        if (true) {
+        |          val loop = new Breaks
+        |          loop.breakable {
+        |            while (true) {
+        |              myFile.hasNext match {
+        |                case true =>
+        |                  myFile.read()
+        |
+        |                case false =>
+        |                  loop.break()
+        |              }
+        |            }
+        |          }
+        |        }
+        |        myFile.close()
+        |
+        |      case Status.ERROR =>
+        |        System.out.println("File <file.txt> not found!")
+        |
+        |    }
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\FileProtocol.scala")
+        |class File(var file: String) {
+        |  protected var reader: MyBufferedReader = null
+        |  private var readBuffer: Array[Char] = null
+        |  private var i = 0
+        |  reader = new MyBufferedReader(file)
+        |  readBuffer = new Array[Char](1024)
+        |  i = 0
+        |
+        |
+        |  def open(): Status.Value = {
+        |    if (reader.open) return Status.OK
+        |    Status.ERROR
+        |  }
+        |
+        |  def close(): Unit = {
+        |    reader.close()
+        |  }
+        |
+        |  //The next two methods demonstrate that
+        |  // a created typestate object can
+        |  // be assigned in a linear way and
+        |  // passed around as an argument
+        |  def hasNext(): Boolean = {
+        |    if (reader.ready) return true
+        |    false
+        |  }
+        |
+        |  def read(): Unit = {
+        |    readBuffer({
+        |      i += 1;
+        |      i - 1
+        |    }) = reader.read
+        |  }
+        |}
+        |
+        |import java.io.BufferedReader
+        |import java.io.FileNotFoundException
+        |import java.io.FileReader
+        |import java.io.IOException
+        |
+        |class MyBufferedReader(var file: String) {
+        |  private var reader: BufferedReader = null
+        |
+        |  def open: Boolean = {
+        |    try reader = new BufferedReader(new FileReader(file))
+        |    catch {
+        |      case e: FileNotFoundException =>
+        |        return false
+        |    }
+        |    true
+        |  }
+        |
+        |  def close(): Unit = {
+        |    try reader.close()
+        |    catch {
+        |      case e: IOException =>
+        |        e.printStackTrace()
+        |        System.exit(-1)
+        |    }
+        |  }
+        |
+        |  def ready: Boolean = {
+        |    try if (reader.ready) return true
+        |    catch {
+        |      case e: IOException =>
+        |        return false
+        |    }
+        |    false
+        |  }
+        |
+        |  def read: Char = {
+        |    var c = -1
+        |    try c = reader.read
+        |    catch {
+        |      case e: IOException =>
+        |        e.printStackTrace()
+        |        System.exit(-1)
+        |    }
+        |    c.toChar
         |  }
         |}
         |""".stripMargin
