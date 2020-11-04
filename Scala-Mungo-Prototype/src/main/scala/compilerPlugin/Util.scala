@@ -26,10 +26,8 @@ object Util {
 
   /** Removes all instances with an empty set of aliases */
   def cleanInstances(instances:Set[Instance]): Set[Instance]={
-    println("instances before cleaning are "+instances)
     var newInstances = for(instance <- instances) yield instance
     for(instance <- newInstances if instance.aliases.isEmpty) newInstances -= instance
-    println("instances after cleaning are "+newInstances)
     newInstances
   }
 
@@ -153,9 +151,6 @@ object Util {
   }
 
   def removeAllAliasesInScope(instances: Set[Instance], scope:mutable.Stack[String]): Set[Instance] = {
-    println("in remove all, scope is "+Util.currentScope)
-    println("scope to remove is "+scope)
-    println("instances before removing are "+instances)
     if(scope == null) return instances
     var newInstances = for (instance <- instances) yield instance
     for(instance <- newInstances){
@@ -164,8 +159,7 @@ object Util {
           instance.aliases -= alias
       }
     }
-    println("instances after removing are "+newInstances)
-    Util.cleanInstances(newInstances)
+    cleanInstances(newInstances)
   }
 
   def copyInstances(instances:Set[Instance]):Set[Instance]={
@@ -181,7 +175,6 @@ object Util {
       }
       newInstances += Instance(instance.className, aliases, states)
     }
-    println("after copying, instances are "+newInstances)
     newInstances
   }
 
