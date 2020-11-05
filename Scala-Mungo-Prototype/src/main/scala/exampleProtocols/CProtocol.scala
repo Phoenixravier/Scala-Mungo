@@ -49,21 +49,21 @@ in("State17")
 when("receive_Choice2LabelFromS()") goto
 "State18" at "DATE" or
 "State19" at "SERVER" or
-"State20" at "TRICTTS" or
+"State20" at "STRICTTS" or
 "State21" at "LASTM" or
-"State22" at "TAG" or
+"State22" at "ETAG" or
 "State23" at "ACCEPTR" or
-"State24" at "ONTENTL" or
+"State24" at "CONTENTL" or
 "State25" at "VARY" or
-"State26" at "ONTENTT" or
+"State26" at "CONTENTT" or
 "State27" at "VIA" or
-"State28" at "ACHEC" or
+"State28" at "CACHEC" or
 "State29" at "P3P" or
-"State30" at "XSSPROTECTION" or
+"State30" at "XXSSPROTECTION" or
 "State31" at "XFRAMEOPT" or
-"State32" at "ETCOOKIE" or
+"State32" at "SETCOOKIE" or
 "State33" at "TRANSFERE" or
-"State34" at "XPIRES" or
+"State34" at "EXPIRES" or
 "State35" at "BODY" 
 in("State18")
 when("receive_dateStrFromS()") goto "State17"

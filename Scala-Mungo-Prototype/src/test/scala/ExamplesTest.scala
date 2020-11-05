@@ -272,8 +272,6 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
       new compiler.Run() compileSources (sources)
     }
   }
-
-
   //endregion
 
   //region Bookstore
@@ -3805,6 +3803,893 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
         |}
         |""".stripMargin
     noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+  //region http
+  "http" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |object Choice1 extends Enumeration {
+        |  type Choice1 = Value
+        |  val _200, _404 = Value
+        |}
+        |
+        |object Choice2 extends Enumeration {
+        |  type Choice2 = Value
+        |  val DATE, SERVER, STRICTTS, LASTM, ETAG, ACCEPTR, CONTENTL, VARY, CONTENTT, VIA, CACHEC, P3P, XXSSPROTECTION, XFRAMEOPT, SETCOOKIE, TRANSFERE, EXPIRES, BODY = Value
+        |}
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader, PrintWriter}
+        |import java.net.{InetAddress, ServerSocket, Socket}
+        |
+        |
+        |object CRole {
+        |  def getString(socketSIn: BufferedReader): String = {
+        |    var body = ""
+        |    try {
+        |      var i = 0
+        |      while ( {
+        |        i != -1 && i.toChar != '\r' && i.toChar != '\n'
+        |      }) {
+        |        i = socketSIn.read
+        |        body += i.toChar
+        |      }
+        |    } catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    body
+        |  }
+        |}
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\CProtocol.scala") class CRole() { // Bind the sockets
+        |  private var socketSIn: BufferedReader = _
+        |  private var socketSOut: PrintWriter = _
+        |  val serverS: ServerSocket = null
+        |  // Connecting to the server
+        |  var addr: InetAddress = _
+        |  var socket: Socket = _
+        |  try { // Create the sockets
+        |    addr = InetAddress.getByName("www.ecosia.com")
+        |    socket = new Socket(addr, 80)
+        |  } catch {
+        |    case e: IOException =>
+        |      System.out.println("Unable to listen on ports")
+        |      System.exit(-1)
+        |  }
+        |  // Accept a client connection
+        |  // Create the read and write streams
+        |  try {
+        |    socketSIn = new BufferedReader(new InputStreamReader(socket.getInputStream))
+        |    socketSOut = new PrintWriter(socket.getOutputStream, true)
+        |  } catch {
+        |    case e: IOException =>
+        |      System.out.println("Read failed")
+        |      System.exit(-1)
+        |  }
+        |
+        |
+        |  def send_REQUESTToS(): Unit = {
+        |    this.socketSOut.print("")
+        |  }
+        |
+        |  def send_requestStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_HOSTToS(): Unit = {
+        |    this.socketSOut.print("Host: ")
+        |  }
+        |
+        |  def send_USERAToS(): Unit = {
+        |    this.socketSOut.print("User-Agent: ")
+        |  }
+        |
+        |  def send_ACCEPTTToS(): Unit = {
+        |    this.socketSOut.print("Accept: ")
+        |  }
+        |
+        |  def send_ACCEPTLToS(): Unit = {
+        |    this.socketSOut.print("Accept-Language: ")
+        |  }
+        |
+        |  def send_ACCEPTEToS(): Unit = {
+        |    this.socketSOut.print("Accept-Encoding: ")
+        |  }
+        |
+        |  def send_DNTToS(): Unit = {
+        |    this.socketSOut.print("DNT: ")
+        |  }
+        |
+        |  def send_CONNECTIONToS(): Unit = {
+        |    this.socketSOut.print("Connection: ")
+        |  }
+        |
+        |  def send_UPGRADEIRToS(): Unit = {
+        |    this.socketSOut.print("Upgrade-Insecure-Requests: ")
+        |  }
+        |
+        |  def send_COOKIEToS(): Unit = {
+        |    this.socketSOut.print("Cookie: ")
+        |  }
+        |
+        |  def send_BODYToS(): Unit = {
+        |    this.socketSOut.println(" ")
+        |  }
+        |
+        |  def send_hostStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_userAStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_acceptTStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_acceptLStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_acceptEStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_DNTIntToS(payload: Integer): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_connectionStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_upgradeIRStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_cookieStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload)
+        |  }
+        |
+        |  def send_bodyStrToS(payload: String): Unit = {
+        |    this.socketSOut.println(payload + "\r\n")
+        |  }
+        |
+        |  def receive_httpvStrFromS(): String = {
+        |    var line = ""
+        |    try {
+        |      var i = 0
+        |      while ( {
+        |        i != -1 && i.toChar != ' '
+        |      }) {
+        |        i = socketSIn.read
+        |        line += i.toChar
+        |      }
+        |    } catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error." + e)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_Choice1LabelFromS(): Choice1.Value = {
+        |    var stringLabelChoice1 = ""
+        |    try {
+        |      var i = 0
+        |      while ( {
+        |        i != -1 && i.toChar != ' '
+        |      }) {
+        |        i = socketSIn.read
+        |        stringLabelChoice1 += i.toChar
+        |      }
+        |    } catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error." + e)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelChoice1.trim match {
+        |      case "200" =>
+        |        Choice1._200
+        |      case "404" =>
+        |        Choice1._404
+        |      case _ =>
+        |        Choice1._404
+        |    }
+        |  }
+        |
+        |  def receive_200StrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_404StrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_Choice2LabelFromS(): Choice2.Value = {
+        |    var stringLabelChoice2 = ""
+        |    try {
+        |      var i = 0
+        |      while ( {
+        |        i != -1 && i.toChar != ' '
+        |      }) {
+        |        i = socketSIn.read
+        |        stringLabelChoice2 += i.toChar
+        |      }
+        |    } catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error, unable to get label" + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    stringLabelChoice2.trim match {
+        |      case "Date:" =>
+        |        Choice2.DATE
+        |      case "Server:" =>
+        |        Choice2.SERVER
+        |      case "Strict-Transport-Security:" =>
+        |        Choice2.STRICTTS
+        |      case "Last-Modified:" =>
+        |        Choice2.LASTM
+        |      case "ETag:" =>
+        |        Choice2.ETAG
+        |      case "Accept-Ranges:" =>
+        |        Choice2.ACCEPTR
+        |      case "Content-Length" =>
+        |        Choice2.CONTENTL
+        |      case "Vary:" =>
+        |        Choice2.VARY
+        |      case "Content-Type:" =>
+        |        Choice2.CONTENTT
+        |      case "Via:" =>
+        |        Choice2.VIA
+        |      case "Cache-Control:" =>
+        |        Choice2.CACHEC
+        |      case "P3P:" =>
+        |        Choice2.P3P
+        |      case "X-XSS-Protection:" =>
+        |        Choice2.XXSSPROTECTION
+        |      case "X-Frame-Options:" =>
+        |        Choice2.XFRAMEOPT
+        |      case "Set-Cookie:" =>
+        |        Choice2.SETCOOKIE
+        |      case "Transfer-Encoding:" =>
+        |        Choice2.TRANSFERE
+        |      case "Expires:" =>
+        |        Choice2.EXPIRES
+        |      case "\r\n" =>
+        |        Choice2.BODY
+        |      case _ =>
+        |        Choice2.BODY
+        |    }
+        |  }
+        |
+        |  def receive_dateStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_serverStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_strictTSStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_lastMStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_eTagStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_acceptRStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_contentLIntFromS(): Integer = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line.toInt
+        |  }
+        |
+        |  def receive_varyStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_contentTStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_viaStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_cacheCStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_p3pStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_xxssProtectionStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_xframeOptStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_setCookieStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_transferEStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_expiresStrFromS(): String = {
+        |    var line = ""
+        |    try line = this.socketSIn.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Outpur error. " + e.getMessage)
+        |        System.exit(-1)
+        |    }
+        |    line
+        |  }
+        |
+        |  def receive_bodyStrFromS(): String = CRole.getString(socketSIn)
+        |}
+        |
+        |
+        |import java.io.{BufferedReader, IOException, InputStreamReader}
+        |
+        |
+        |object CMain {
+        |  def safeRead(readerC: BufferedReader): String = {
+        |    var readline = ""
+        |    try readline = readerC.readLine
+        |    catch {
+        |      case e: IOException =>
+        |        System.out.println("Input/Output error, unable to read")
+        |        System.exit(-1)
+        |    }
+        |    readline
+        |  }
+        |
+        |  def main(args: Array[String]): Unit = { // Create the current role
+        |    val Y = new Breaks
+        |    val YInner = new Breaks
+        |    val X = new Breaks
+        |    val XInner = new Breaks
+        |    val currentC = new CRole
+        |    // readerC can be used to input strings, and then use them in send method invocation
+        |    val readerC = new BufferedReader(new InputStreamReader(System.in))
+        |    // Method invocation follows the C typestate
+        |    System.out.print("Choose a label among [REQUEST]: ")
+        |    val sread1 = safeRead(readerC)
+        |    sread1 match {
+        |      case "REQUEST" =>
+        |        currentC.send_REQUESTToS()
+        |        System.out.print("Send to S: ")
+        |        val payload1 = safeRead(readerC)
+        |        currentC.send_requestStrToS(payload1)
+        |        X.breakable {
+        |          do {
+        |            XInner.breakable {
+        |              System.out.print("Choose a label among [HOST, USERA, ACCEPTT, ACCEPTL, ACCEPTE, DNT, CONNECTION, UPGRADEIR, COOKIE, BODY]: ")
+        |              val sread2 = safeRead(readerC)
+        |              sread2 match {
+        |                case "HOST" =>
+        |                  currentC.send_HOSTToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload2 = safeRead(readerC)
+        |                  currentC.send_hostStrToS(payload2)
+        |                  XInner.break()
+        |
+        |                case "USERA" =>
+        |                  currentC.send_USERAToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload3 = safeRead(readerC)
+        |                  currentC.send_userAStrToS(payload3)
+        |                  XInner.break()
+        |
+        |                case "ACCEPTT" =>
+        |                  currentC.send_ACCEPTTToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload4 = safeRead(readerC)
+        |                  currentC.send_acceptTStrToS(payload4)
+        |                  XInner.break()
+        |
+        |                case "ACCEPTL" =>
+        |                  currentC.send_ACCEPTLToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload5 = safeRead(readerC)
+        |                  currentC.send_acceptLStrToS(payload5)
+        |                  XInner.break()
+        |
+        |                case "ACCEPTE" =>
+        |                  currentC.send_ACCEPTEToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload6 = safeRead(readerC)
+        |                  currentC.send_acceptEStrToS(payload6)
+        |                  XInner.break()
+        |
+        |                case "DNT" =>
+        |                  currentC.send_DNTToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload7 = safeRead(readerC).toInt
+        |                  currentC.send_DNTIntToS(payload7)
+        |                  XInner.break()
+        |
+        |                case "CONNECTION" =>
+        |                  currentC.send_CONNECTIONToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload8 = safeRead(readerC)
+        |                  currentC.send_connectionStrToS(payload8)
+        |                  XInner.break()
+        |
+        |                case "UPGRADEIR" =>
+        |                  currentC.send_UPGRADEIRToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload9 = safeRead(readerC)
+        |                  currentC.send_upgradeIRStrToS(payload9)
+        |                  XInner.break()
+        |
+        |                case "COOKIE" =>
+        |                  currentC.send_COOKIEToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload10 = safeRead(readerC)
+        |                  currentC.send_cookieStrToS(payload10)
+        |                  XInner.break()
+        |
+        |                case "BODY" =>
+        |                  currentC.send_BODYToS()
+        |                  System.out.print("Send to S: ")
+        |                  val payload11 = safeRead(readerC)
+        |                  currentC.send_bodyStrToS(payload11)
+        |                  X.break()
+        |
+        |              }
+        |            }
+        |          }
+        |          while ( {
+        |            true
+        |          })
+        |        }
+        |
+        |    }
+        |    val payload12 = currentC.receive_httpvStrFromS()
+        |    System.out.println("Received HTTPV from S: " + payload12)
+        |    currentC.receive_Choice1LabelFromS() match {
+        |      case Choice1._200 =>
+        |        val payload13 = currentC.receive_200StrFromS()
+        |        System.out.println("Received 200 from S: " + payload13)
+        |      case Choice1._404 =>
+        |        val payload14 = currentC.receive_404StrFromS()
+        |        System.out.println("Received 404 from S: " + payload14)
+        |    }
+        |    Y.breakable {
+        |      do {
+        |        YInner.breakable {
+        |          currentC.receive_Choice2LabelFromS() match {
+        |            case Choice2.DATE =>
+        |              val payload15 = currentC.receive_dateStrFromS()
+        |              System.out.println("Received Date from S: " + payload15)
+        |              YInner.break()
+        |            case Choice2.SERVER =>
+        |              val payload16 = currentC.receive_serverStrFromS()
+        |              System.out.println("Received Server from S: " + payload16)
+        |              YInner.break()
+        |            case Choice2.STRICTTS =>
+        |              val payload17 = currentC.receive_strictTSStrFromS()
+        |              System.out.println("Received Strict-Transport-Security from S: " + payload17)
+        |              YInner.break()
+        |            case Choice2.LASTM =>
+        |              val payload18 = currentC.receive_lastMStrFromS()
+        |              System.out.println("Received Last-Modified from S: " + payload18)
+        |              YInner.break()
+        |            case Choice2.ETAG =>
+        |              val payload19 = currentC.receive_eTagStrFromS()
+        |              System.out.println("Received ETag from S: " + payload19)
+        |              YInner.break()
+        |            case Choice2.ACCEPTR =>
+        |              val payload20 = currentC.receive_acceptRStrFromS()
+        |              System.out.println("Received Accept-Ranges from S: " + payload20)
+        |              YInner.break()
+        |            case Choice2.CONTENTL =>
+        |              val payload21 = currentC.receive_contentLIntFromS()
+        |              System.out.println("Received Content-Length from S: " + payload21)
+        |              YInner.break()
+        |            case Choice2.VARY =>
+        |              val payload22 = currentC.receive_varyStrFromS()
+        |              System.out.println("Received Vary from S: " + payload22)
+        |              YInner.break()
+        |            case Choice2.CONTENTT =>
+        |              val payload23 = currentC.receive_contentTStrFromS()
+        |              System.out.println("Received Content-Type from S: " + payload23)
+        |              YInner.break()
+        |            case Choice2.VIA =>
+        |              val payload24 = currentC.receive_viaStrFromS()
+        |              System.out.println("Received Via from S: " + payload24)
+        |              YInner.break()
+        |            case Choice2.CACHEC =>
+        |              val payload25 = currentC.receive_cacheCStrFromS()
+        |              System.out.println("Received Cache-Control from S: " + payload25)
+        |              YInner.break()
+        |            case Choice2.P3P =>
+        |              val payload26 = currentC.receive_p3pStrFromS()
+        |              System.out.println("Received P3P from S: " + payload26)
+        |              YInner.break()
+        |            case Choice2.XXSSPROTECTION =>
+        |              val payload27 = currentC.receive_xxssProtectionStrFromS()
+        |              System.out.println("Received X-XSS-Protection from S: " + payload27)
+        |              YInner.break()
+        |            case Choice2.XFRAMEOPT =>
+        |              val payload28 = currentC.receive_xframeOptStrFromS()
+        |              System.out.println("Received X-Frame-Options from S: " + payload28)
+        |              YInner.break()
+        |            case Choice2.SETCOOKIE =>
+        |              val payload29 = currentC.receive_setCookieStrFromS()
+        |              System.out.println("Received Set-Cookie from S: " + payload29)
+        |              YInner.break()
+        |            case Choice2.TRANSFERE =>
+        |              val payload30 = currentC.receive_transferEStrFromS()
+        |              System.out.println("Received Transfer-Encoding from S: " + payload30)
+        |              YInner.break()
+        |            case Choice2.EXPIRES =>
+        |              val payload31 = currentC.receive_expiresStrFromS()
+        |              System.out.println("Received Expires from S: " + payload31)
+        |              YInner.break()
+        |            case Choice2.BODY =>
+        |              val payload32 = currentC.receive_bodyStrFromS()
+        |              System.out.println("Received Body from S: " + payload32)
+        |              Y.break()
+        |          }
+        |        }
+        |      }
+        |      while (true)
+        |    }
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+  //region iterator
+  "iterator" should "not throw an exception" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |import scala.collection.mutable
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\StateIteratorProtocol.scala")
+        |class StateIterator(var iter: Iterator[_]) {
+        |  def next(): Any = {
+        |    iter.next()
+        |  }
+        |
+        |  def hasNext(): Boolean = {
+        |    if (iter.hasNext) return true
+        |    false
+        |  }
+        |
+        |  def remove(): Unit = {
+        |    iter.drop(1)
+        |  }
+        |}
+        |
+        |
+        |object Main {
+        |  def main(args: Array[String]): Unit = {
+        |    val c = new mutable.HashSet[Integer]()
+        |    var i:Integer = 0
+        |    while ( {
+        |      i < 32
+        |    }) c.add({
+        |      i += 1;
+        |      i - 1
+        |    })
+        |    val iter = new StateIterator(c.iterator)
+        |    val iterate = new Breaks
+        |    val iterateInner = new Breaks
+        |    iterate.breakable {
+        |      do {
+        |        iterateInner.breakable {
+        |          iter.hasNext match {
+        |            case true =>
+        |              System.out.println({i = iter.next.asInstanceOf[Integer]})
+        |              if (i % 2 == 0) iter.remove()
+        |              iterateInner.break()
+        |            case false =>
+        |              iterate.break()
+        |          }
+        |        }
+        |      } while ( {
+        |        true
+        |      })
+        |    }
+        |  }
+        |}
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  //endregion
+
+  //region loop
+  "loop1" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\Loop.scala") class LoopImpl {
+        |  def finished(): Boolean = true
+        |}
+        |
+        |
+        |object ClientTest1 extends App{
+        |  def test(): Unit = {
+        |    val loop = new LoopImpl
+        |    val out = new Breaks
+        |    val outInner = new Breaks
+        |    out.breakable {
+        |      do {
+        |        outInner.breakable {
+        |          loop.finished match {
+        |            case false =>
+        |              outInner.break()
+        |            case true =>
+        |          }
+        |        }
+        |      } while ( {
+        |        false
+        |      })
+        |    }
+        |  }
+        |  test()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "loop2" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\Loop.scala")
+        |class LoopImpl {
+        |  def finished(): Boolean = {true}
+        |}
+        |
+        |object Main{
+        | def test2(): Unit = {
+        |    test(new LoopImpl)
+        |  }
+        |
+        |  def test(loop: LoopImpl): Unit = {
+        |    loop.finished() match {
+        |      case false =>
+        |        test(loop)
+        |      case true =>
+        |
+        |    }
+        |  }
+        |  test2()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "loop3" should "not throw an exception if an instance does not violates its protocol from a method with boolean return values" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename: String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |import scala.util.control.Breaks
+        |
+        |
+        |@Typestate("src\\main\\scala\\exampleProtocols\\Loop.scala") class LoopImpl {
+        |  def finished(): Boolean = true
+        |}
+        |
+        |
+        |object ClientTest4 extends App{
+        |  def test(): Unit = {
+        |    val loop = new LoopImpl
+        |    val out = new Breaks
+        |    val outInner = new Breaks
+        |    out.breakable {
+        |      do {
+        |        outInner.breakable {
+        |          loop.finished match {
+        |            case false =>
+        |              outInner.break()
+        |            case true =>
+        |              out.break()
+        |          }
+        |        }
+        |      } while ( {
+        |        false
+        |      })
+        |    }
+        |  }
+        |  test()
+        |}
+        |""".stripMargin
+    noException should be thrownBy {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }

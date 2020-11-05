@@ -1,6 +1,7 @@
 package ProtocolDSL
 
 import java.io.{FileOutputStream, ObjectOutputStream}
+import java.nio.file.{Files, Paths}
 
 import scala.collection.immutable.HashMap
 import scala.collection.{SortedSet, mutable}
@@ -333,7 +334,11 @@ class ProtocolLang {
    * with name filename.
    * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
-    val oos = new ObjectOutputStream(new FileOutputStream(filename))
+    val path = Paths.get(".\\compiledProtocols\\")
+
+    Files.createDirectory(path)
+    println(path+filename)
+    val oos = new ObjectOutputStream(new FileOutputStream(path+filename))
     oos.writeObject(data)
     oos.close()
   }
