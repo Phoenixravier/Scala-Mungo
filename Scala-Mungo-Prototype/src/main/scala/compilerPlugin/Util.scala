@@ -31,11 +31,7 @@ object Util {
     newInstances
   }
 
-  /** Checks to see if there are duplicates in all the lists of a map(Instance -> list) */
-  def duplicatesInAllListsOfMap(map:mutable.HashMap[(String, Set[Alias]), ListBuffer[Set[State]]]):Boolean={
-    for((instance, list) <- map) for((instance, list) <- map if list.diff(list.distinct).isEmpty) return false
-    true
-  }
+
 
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
@@ -130,17 +126,7 @@ object Util {
     Util.cleanInstances(newInstances)
   }
 
-  def removeAllAliasesInScope(instances: Set[Instance], scope:mutable.Stack[String]): Set[Instance] = {
-    if(scope == null) return instances
-    var newInstances = for (instance <- instances) yield instance
-    for(instance <- newInstances){
-      for(alias <- instance.aliases){
-        if(alias.scope == scope)
-          instance.aliases -= alias
-      }
-    }
-    cleanInstances(newInstances)
-  }
+
 
   def copyInstances(instances:Set[Instance]):Set[Instance]={
     var newInstances:Set[Instance] = Set()

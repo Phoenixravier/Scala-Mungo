@@ -59,12 +59,12 @@ case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
   }
 }
 
-/** Holds information about a class or an object */
-case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Array[Array[State]], states:Array[State],
+/** Holds information about a class or an object with protocol*/
+case class ElementInfo(transitions:Array[Array[State]], states:Array[State],
                        methodToIndices:mutable.HashMap[String, Set[Int]], returnValueToIndice:mutable.HashMap[String, Int],
                        var instances:Set[Instance]){
   override def toString(): String={
-    s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices"
+    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices"
   }
 }
 
@@ -83,19 +83,6 @@ class inconsistentStateMutation(methodName:String, aliasName:String, file:String
   extends Exception(s"In file $file, at line $line, method $methodName changed the state of $aliasName, and not " +
     s"as described in the protocol. Expected states $expectedStates, got states $actualStates")
 
-case class ClassOrObject(name:String, params:ArrayBuffer[Array[String]], body:Seq[Trees#Tree], scope:mutable.Stack[String],
-                         isObject:Boolean=false, var initialised:Boolean=false){
-  override def toString(): String={ s"$name ${showParams(params)} $scope $initialised" }
 
-  def showParams(params:ArrayBuffer[Array[String]]):String={
-    var parameters = ""
-    for(param <- params) {
-      for(par <- param)
-        parameters += par+": "
-      parameters += " ; "
-    }
-    parameters
-  }
-}
 
 
