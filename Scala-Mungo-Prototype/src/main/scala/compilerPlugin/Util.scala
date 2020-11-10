@@ -37,28 +37,8 @@ object Util {
     true
   }
 
-
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
-
-
-  /** Compiles the user protocol and the necessary classes(ProtocolLang), then executes the protocol,
-   * generating the serialised data */
-  def executeFile(filename:String): Unit ={
-    try {
-      println(filename)
-      var className = filename.substring(filename.indexOf("\"") + 1)
-      println(className)
-      className = className.substring(className.lastIndexOf("\\") + 1, className.lastIndexOf("."))
-      println(className)
-      s"executeUserProtocol.bat $filename $className".!
-    }
-    catch{
-      case e: IndexOutOfBoundsException =>
-        if(!filename.contains('.'))
-          throw new Exception("You probably forgot the add the file extension in the path to your protocol")
-    }
-  }
 
   /** Gets rid of the return value in a method name string and keeps the parenthesis at the end */
   def stripReturnValue(methodName:String): String ={

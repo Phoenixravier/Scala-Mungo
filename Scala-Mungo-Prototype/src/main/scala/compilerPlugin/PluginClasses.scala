@@ -27,7 +27,7 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 }
 
 /** Holds an instance classname, its aliases and its current possible states */
-case class Instance(var className: String, var aliases:Set[Alias], var currentStates:Set[State]){
+case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
   def getAliasNames(): Set[String] ={
     for(alias <- aliases) yield alias.name
   }
@@ -47,24 +47,24 @@ case class Instance(var className: String, var aliases:Set[Alias], var currentSt
   }
 
   def containsScopeAlias(): Boolean ={
-    className == null && aliases.nonEmpty && aliases.last.name == "scope"
+    aliases.nonEmpty && aliases.last.name == "scope+"
   }
 
   override def toString(): String={
-    s"$className $aliases $currentStates"
+    s"$aliases $currentStates"
   }
 
   override def hashCode():Int={
-    aliases.hashCode + className.hashCode
+    aliases.hashCode
   }
 }
 
 /** Holds information about a class or an object */
 case class ElementInfo(name:String, scope:mutable.Stack[String], transitions:Array[Array[State]], states:Array[State],
                        methodToIndices:mutable.HashMap[String, Set[Int]], returnValueToIndice:mutable.HashMap[String, Int],
-                       isObject:Boolean=false, var isAssigned:Boolean=false){
+                       instances:Set[Instance]){
   override def toString(): String={
-    s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $isObject"
+    s"$name $scope ${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices"
   }
 }
 

@@ -20,6 +20,7 @@ MUST HAVE
 - [ ] Make errors stack and throw errors at the end rather than throw an error and stop when it happens
 
 SHOULD HAVE
+- [ ] Do the match thing but with if for methods that return boolean values (if(cat.run()))
 - [ ] Deal with class attributes
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions) (CHECK)
 - [ ] Deal with return in functions
@@ -34,7 +35,7 @@ COULD HAVE
 - [ ] Deal with globals (have special scope like GLOBAL, or empty scope, does my code deal with this already?) (CHECK)
 - [ ] Deal with collections (for-yield assignment)
 - [ ] Deal with traits
-- [ ] Short sircuit boolean expressions
+- [ ] Short circuit boolean expressions
 - [ ] Add end to a protocol file if it doesn't have end in it
 - [ ] Add syntactic sugar for in and when so the parenthesis aren't needed
 - [ ] Print instances at end of file/at error (EASY)
@@ -45,7 +46,7 @@ MUST HAVE
 - [ ] Make work on more than a single file
 - [ ] Make code readable
 - [ ] More tests (on Util)
-- [ ] tutorial
+- [ ] Tutorial
 
 SHOULD HAVE
 - [ ] User testing

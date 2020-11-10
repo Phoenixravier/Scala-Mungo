@@ -3,6 +3,8 @@ package ProtocolDSL
 import java.io.{FileOutputStream, ObjectOutputStream}
 import java.nio.file.{Files, Paths}
 
+import com.sun.xml.internal.bind.v2.runtime.Location
+
 import scala.collection.immutable.HashMap
 import scala.collection.{SortedSet, mutable}
 
@@ -264,11 +266,13 @@ class ProtocolLang {
     println("return values are: "+returnValues)
     checkWholeProtocolIsWellFormed()
     ended = true
-    //create the array, print it and encode it into EncodedData.ser
+    //create the array, print it and encode it into objectName.ser
     val arrayOfStates = createStateMachine()
     println("return values array is: "+returnValues.toArray.mkString("Array(", ", ", ")"))
     printNicely(arrayOfStates)
-    sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), "EncodedData.ser")
+    val objectName = getClass.getSimpleName.stripSuffix("$")
+    println("raw is "+objectName)
+    sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), objectName+".ser")
   }
 
   /** Checks that all return values have been written. AKA that there is no or statement without an at statement.
@@ -334,11 +338,12 @@ class ProtocolLang {
    * with name filename.
    * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
+    println(System.getProperty("user.dir"))
     val path = Paths.get(".\\compiledProtocols\\")
-
-    Files.createDirectory(path)
-    println(path+filename)
-    val oos = new ObjectOutputStream(new FileOutputStream(path+filename))
+    if(!(Files.exists(path) && Files.isDirectory(path)))
+      Files.createDirectory(path)
+    println(path+"\\"+filename)
+    val oos = new ObjectOutputStream(new FileOutputStream(path+"\\"+filename))
     oos.writeObject(data)
     oos.close()
   }

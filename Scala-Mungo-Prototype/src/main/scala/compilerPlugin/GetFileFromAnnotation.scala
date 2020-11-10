@@ -44,6 +44,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     var compilationUnit: CompilationUnit = _
     var currentElementInfo: ElementInfo = _
     var savedBreakInstances: mutable.Map[String, ArrayBuffer[Set[Instance]]] = mutable.Map[String, ArrayBuffer[Set[Instance]]]()
+    var protocolledElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
     override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -70,20 +71,13 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      */
     def checkCode(): Unit = {
-      var setOfClassesWithProtocols: Set[String] = Set()
       for (tree@q"$mods class $className[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
-        checkElement(body, className.toString(), getScope(tree), tree) match {
-          case Some(className) => setOfClassesWithProtocols += className
-          case None =>
-        }
+        checkElement(body, className.toString(), getScope(tree), tree)
       }
       for (tree@q"$mods object $name extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
         val objectName = mutable.Stack[String]()
         objectName.push(name.toString())
-        checkElement(body, name.toString(), objectName, tree, isObject = true) match {
-          case Some(objectName) => setOfClassesWithProtocols += objectName
-          case None =>
-        }
+        checkElement(body, name.toString(), objectName, tree, isObject = true)
       }
     }
 
@@ -99,41 +93,33 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param isObject Whether or not the element to check is an Object (as opposed to a Class)
      * @return
      */
-    def checkElement(body: Seq[Trees#Tree], name: String, scope: mutable.Stack[String], tree: Tree, isObject: Boolean = false): Option[String] = {
+    def checkElement(body: Seq[Trees#Tree], name: String, scope: mutable.Stack[String], tree: Tree, isObject: Boolean = false)= {
       val annotations = tree.symbol.annotations
       for (annotation@AnnotationInfo(arg1, arg2, arg3) <- annotations) {
         getFilenameFromTypestateAnnotation(annotation) match {
-          case Some(filename) => //a correct Typestate annotation is being used
-            //execute the DSL in the protocol file and serialize the data into a file
-            println("filename is "+filename)
-            executeFile(filename)
+          case Some(protocolName) => //a correct Typestate annotation is being used
+            println("protocol name is "+protocolName)
             //retrieve the serialized data
-            if (!Files.exists(Paths.get("protocolClasses\\EncodedData.ser")))
-              throw new badlyDefinedProtocolException(s"The protocol at $filename could not be processed, " +
-                s"check you have an end statement at the end of the protocol and that the name of the file is " +
-                s"the same as the name of the protocol and that the path given for the protocol is correct")
-            val (stateMachine, states, returnValuesArray) = Util.getDataFromFile("protocolClasses\\EncodedData.ser")
-            //println("stateMachine are "+stateMachine.mkString("Array(", ", ", ")"))
-            println("states are "+states.mkString("Array(", ", ", ")"))
-            println("ret values are "+returnValuesArray.mkString("Array(", ", ", ")"))
-            checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, filename)
+            if (!Files.exists(Paths.get(s"compiledProtocols\\$protocolName.ser")))
+              throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
+                s"check that the protocol name is the same as the name of the object containing your protocol")
+            val (stateMachine, states, returnValuesArray) = Util.getDataFromFile(s"compiledProtocols\\$protocolName.ser")
+            checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, name, protocolName)
             val methodToIndices = Util.createMethodToIndicesMap(returnValuesArray)
             val returnValueToIndice = Util.createReturnValueToIndiceMap(returnValuesArray)
             val stateToAvailableMethods = Util.createStateToAvailableMethodsMap(returnValuesArray)
             println("state to available methods: "+stateToAvailableMethods)
-            currentElementInfo = ElementInfo(name, scope, stateMachine, states, methodToIndices, returnValueToIndice, isObject)
+            currentElementInfo = ElementInfo(name, scope, stateMachine, states, methodToIndices, returnValueToIndice,
+                                              Set[Instance]())
+            if(isObject)
+              currentElementInfo.instances += Instance(Set(Alias(name, Util.currentScope.clone)), Set(states(0)))
+            protocolledElements += name -> currentElementInfo
+            println("map with protocolled elements is "+protocolledElements)
             println("after being set, cei is "+currentElementInfo)
-            println("checking class " + currentElementInfo.name)
-            checkElementIsUsedCorrectly()
-            Some(name)
           case None =>
-            if(currentElementInfo != null) {
-              println("going through class "+currentElementInfo.name)
-              checkElementIsUsedCorrectly()
-            }
         }
       }
-      None
+      checkElementIsUsedCorrectly()
     }
 
 
@@ -182,10 +168,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def checkInsideObjectBody(code: Seq[Trees#Tree], givenInstances: Set[Instance] = Set()): Set[Instance] = {
       var newInstances = for (instance <- givenInstances) yield instance
-      if (currentElementInfo.isObject && !currentElementInfo.isAssigned) {
-        newInstances += Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone)), Set(currentElementInfo.states(0)))
-        currentElementInfo.isAssigned = true
-      }
       for(line <- code) {
         newInstances = checkInsideFunctionBody(line, newInstances)._1
       }
@@ -204,10 +186,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def checkInsideFunctionBody(code: Trees#Tree, givenInstances: Set[Instance] = Set()): (Set[Instance], Option[Set[Instance]]) = {
       var instances = for (instance <- givenInstances) yield instance
-      if (currentElementInfo.isObject && !currentElementInfo.isAssigned) {
-        instances += Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone)), Set(currentElementInfo.states(0)))
-        currentElementInfo.isAssigned = true
-      }
       var returned: Option[Set[Instance]] = None
       var nbOfLinesToSkip = 0
       for (line <- code) {
@@ -975,12 +953,12 @@ class MyComponent(val global: Global) extends PluginComponent {
         newInstancesAndReturned._2 match {
           case Some(setOfInstances) =>
             var scopeClone = Util.currentScope.clone()
-            var instancesReturned = setOfInstances ++ Set(Instance(null, Set(Alias("scope", scopeClone.clone())), Set())) //delete internal variables
+            var instancesReturned = setOfInstances ++ Set(Instance(null, Set(Alias("scope+", scopeClone.clone())), Set())) //delete internal variables
             scopeClone.pop()
-            instancesReturned = instancesReturned ++ Set(Instance(null, Set(Alias("scope", scopeClone)), Set())) //need to delete the parameters too
+            instancesReturned = instancesReturned ++ Set(Instance(null, Set(Alias("scope+", scopeClone)), Set())) //need to delete the parameters too
             function.returned = Some(Util.copyInstances(instancesReturned))
           case None =>
-            function.returned = Some(Set(Instance(null, Set(Alias("scope", Util.currentScope.clone())), Set())))
+            function.returned = Some(Set(Instance(null, Set(Alias("scope+", Util.currentScope.clone())), Set())))
         }
         //remove aliases inside the body of the function since they can't be used anymore
         newInstances = Util.removeAllAliasesInScope(newInstances, Util.currentScope)
@@ -1063,9 +1041,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         assignParameters(newInstances, element.params, args, null)
         Util.currentScope.push(element.name)
         newInstances +=
-          Instance(currentElementInfo.name, Set(Alias(currentElementInfo.name, Util.currentScope.clone())), Set(currentElementInfo.states(0)))
+          Instance(currentElementInfo.name, Set(Alias(Util.currentScope.clone())), Set(currentElementInfo.states(0)))
         newInstances = checkInsideObjectBody(element.body, newInstances)
-        val scopeInstance = Instance(null, Set(Alias("scope", Util.currentScope.clone())), Set())
+        val scopeInstance = Instance(Set(Alias("scope+", Util.currentScope.clone())), Set())
         for (instance <- newInstances) {
           if (instance.containsAliasInfo(currentElementInfo.name, Util.currentScope))
             returned = Set(Instance(instance.className, instance.aliases, instance.currentStates), scopeInstance)
@@ -1383,7 +1361,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       annotation match {
         case AnnotationInfo(arg1, arg2, arg3) =>
           if (arg1.toString == "Typestate" || arg1.toString == "compilerPlugin.Typestate") {
-            Some(arg2.head.toString())
+            Some(arg2.head.toString().stripSuffix(""""""").stripPrefix("""""""))
           }
           else None
         case _ => None
