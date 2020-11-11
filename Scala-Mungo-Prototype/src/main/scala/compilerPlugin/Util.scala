@@ -139,7 +139,7 @@ object Util {
       for(state <- instance.currentStates){
         states += State(state.name.trim(), state.index)
       }
-      newInstances += Instance(instance.className, aliases, states)
+      newInstances += Instance(aliases, states)
     }
     newInstances
   }
@@ -159,7 +159,7 @@ object Util {
       for (alias <- firstInstance.aliases) {
         secondInstances.find(instance => instance.aliases.contains(alias)) match {
           case Some(instance) =>
-            mergedInstances += Instance(firstInstance.className, firstInstance.aliases ++ instance.aliases,
+            mergedInstances += Instance(firstInstance.aliases ++ instance.aliases,
               firstInstance.currentStates ++ instance.currentStates)
           case None => mergedInstances += firstInstance
         }
