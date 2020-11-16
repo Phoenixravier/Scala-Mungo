@@ -1,57 +1,39 @@
 package compilerPlugin
 
-import Dogs.Kitten
-import compilerPlugin.letters.letter
-
 //import Cats.{Cat => Cat}
 //import Dogs.{Cat => Dog}
 
 class Typestate(filename: String) extends scala.annotation.StaticAnnotation
 
-object letters extends Enumeration {
-  type letter = Value
-  val A,B,C,D = Value
-}
-
 @Typestate("CatProtocol")
-class Cat(nb:Int) {
-  def m(): letter ={
-    letters.A
-  }
-  def jump(): Unit ={
+class Cat(var name: String) {
+  var friend: Cat = _
+  var number = 0
 
+  def walk() = {
+    println(name + " is walking")
   }
-  def grab(): Unit ={
 
+  def walkWithFriend() = {
+    //this.walk()
+    friend.walk()
+    friend.number =4
   }
-  def go(): Unit ={
 
-  }
-  def stop(): Unit ={
+  def setFriend(f : Cat) = {
+    friend = f
 
   }
 }
 
-@Typestate("DogProtocol")
-class Dog {
-  def walk():Unit = println("Jee kävelemme!")
-  def cry():Unit = println("Itkeen :'(")
-  def bark():Unit = println("hau hau")
-  def laze():Unit = println("Olen väsynyt")
-  def stayOnAlert(intruderHere:Boolean): Unit = {
-    if(intruderHere) bark()
-    else laze()
+object Demonstration {
+  def main(args: Array[String]) = {
+    val c1 = new Cat("Charlie")
+    val c2 = new Cat("Tiger")
+    c1.setFriend(c2)
+    c1.walkWithFriend()
+    c2.walk()
+    println(c2.number)
   }
-  def stayOnAlert(str:String, nb:Int): Unit ={
-    println("on alert")
-  }
-}
-
-object main extends App{
-  val cat = new Cat(1)
-  val dog = new Dog()
-  dog.walk()
-  Kitten
-  Kitten
 }
 

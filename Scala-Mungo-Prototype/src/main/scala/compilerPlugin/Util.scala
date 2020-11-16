@@ -1,6 +1,7 @@
 package compilerPlugin
 
-import java.io.{FileInputStream, ObjectInputStream}
+import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 
@@ -16,13 +17,6 @@ object Util {
   val Undefined = "_Undefined_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
 
-  /** Returns protocol data from a file */
-  def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    val ois = new ObjectInputStream(new FileInputStream(filename))
-    val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
-    ois.close
-    stock
-  }
 
   /** Removes all instances with an empty set of aliases */
   def cleanInstances(instances:Set[Instance]): Set[Instance]={
@@ -174,6 +168,37 @@ object Util {
   }
 
 
+  /** Writes the state machine, the array of states and the array of return values (packaged in data) to a file
+   * with name filename.
+   * The state and return value arrays are needed to be able to index properly into the state machine.*/
+  def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
+    val path = Paths.get(".\\compiledProtocols\\")
+    if(!(Files.exists(path) && Files.isDirectory(path)))
+      Files.createDirectory(path)
+    println(path+"\\"+filename)
+    println("user dir in util is "+System.getProperty("user.dir"))
+    val oos = new ObjectOutputStream(new FileOutputStream(path+"\\"+filename))
+    oos.writeObject(data)
+    oos.close()
+    println("file exists is "+Files.exists(Paths.get(s".\\compiledProtocols\\$filename.ser")))
+  }
+
+  def getDataFromProtocol(protocolName:String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
+    println("user dir in util get data is "+System.getProperty("user.dir"))
+    if (!Files.exists(Paths.get(s".\\compiledProtocols\\$protocolName.ser")))
+      throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
+        s"check that the protocol name is the same as the name of the object containing your protocol")
+    getDataFromFile(s".\\compiledProtocols\\$protocolName.ser")
+  }
+
+
+  /** Returns protocol data from a file */
+  def getDataFromFile(filename: String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
+    val ois = new ObjectInputStream(new FileInputStream(filename))
+    val stock = ois.readObject.asInstanceOf[(Array[Array[State]], Array[State], Array[ReturnValue])]
+    ois.close()
+    stock
+  }
 
 }
 

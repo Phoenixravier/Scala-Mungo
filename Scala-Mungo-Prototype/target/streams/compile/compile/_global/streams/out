@@ -1,14 +1,4 @@
 [debug] Acquiring lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock ...
-[warn] C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolDSL\LoopProtocol.scala:10:8: Generated class ProtocolDSL.loopProtocol$ differs only in case from ProtocolDSL.LoopProtocol$.
-[warn]   Such classes will overwrite one another on case-insensitive filesystems.
-[warn] object loopProtocol extends ProtocolLang with App {
-[warn]        ^
-[warn] C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\src\main\scala\ProtocolDSL\LoopProtocol.scala:10:21: Generated class ProtocolDSL.loopProtocol$delayedInit$body differs only in case from ProtocolDSL.LoopProtocol$delayedInit$body.
-[warn]   Such classes will overwrite one another on case-insensitive filesystems.
-[warn] object loopProtocol extends ProtocolLang with App {
-[warn]                     ^
-[warn] 7 deprecations (since 2.13.0)
-[warn] 4 deprecations (since 2.13.3)
-[warn] 11 deprecations in total; re-run with -deprecation for details
-[warn] 5 warnings found
+[warn] 2 deprecations (since 2.13.0); re-run with -deprecation for details
+[warn] one warning found
 [debug] Releasing lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock.

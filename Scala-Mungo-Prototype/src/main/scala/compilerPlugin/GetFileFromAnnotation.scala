@@ -70,6 +70,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     def apply(unit: CompilationUnit): Unit = {
       ckType("happy")
       println("hello, plugin is running")
+      println("current directory is "+new java.io.File(".").getCanonicalPath)
+      println("user dir is "+System.getProperty("user.dir"))
       //println(s"whole source is: \n ${unit.body}")
       //println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
@@ -114,22 +116,18 @@ class MyComponent(val global: Global) extends PluginComponent {
           case Some(protocolName) => //a correct Typestate annotation is being used
             println("protocol name is "+protocolName)
             //retrieve the serialized data
-            if (!Files.exists(Paths.get(s"compiledProtocols\\$protocolName.ser")))
-              throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
-                s"check that the protocol name is the same as the name of the object containing your protocol")
-            val (stateMachine, states, returnValuesArray) = getDataFromFile(s"compiledProtocols\\$protocolName.ser")
+            val (stateMachine, states, returnValuesArray) = getDataFromProtocol(protocolName)
             checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, elementType, protocolName)
             val methodToIndices = createMethodToIndicesMap(returnValuesArray)
             val returnValueToIndice = createReturnValueToIndiceMap(returnValuesArray)
             val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray)
             println("state to available methods: "+stateToAvailableMethods)
-            var currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
+            val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
             if(isObject)
               currentElementInfo.objectInfo = ObjectInfo(objectName, false)
             protocolledElements += elementType -> currentElementInfo
             savedBreakInstances += elementType -> mutable.Map()
             println("map with protocolled elements is "+protocolledElements)
-            println("after being set, cei is "+currentElementInfo)
           case None =>
         }
       }
