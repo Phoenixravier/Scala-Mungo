@@ -1,10 +1,12 @@
 package compilerPlugin
 
+import Dogs.Kitten
 import compilerPlugin.letters.letter
 
 //import Cats.{Cat => Cat}
 //import Dogs.{Cat => Dog}
-class Typestate(protocolName: String) extends scala.annotation.StaticAnnotation
+
+class Typestate(filename: String) extends scala.annotation.StaticAnnotation
 
 object letters extends Enumeration {
   type letter = Value
@@ -12,7 +14,7 @@ object letters extends Enumeration {
 }
 
 @Typestate("CatProtocol")
-class Cat {
+class Cat(nb:Int) {
   def m(): letter ={
     letters.A
   }
@@ -46,12 +48,10 @@ class Dog {
 }
 
 object main extends App{
-  val cat = new Cat()
+  val cat = new Cat(1)
   val dog = new Dog()
-  var x =0
-  cat.m()
   dog.walk()
-  dog.walk()
-  val scope = new Cat()
+  Kitten
+  Kitten
 }
 

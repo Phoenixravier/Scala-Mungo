@@ -60,11 +60,16 @@ case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
 }
 
 /** Holds information about a class or an object with protocol*/
-case class ElementInfo(transitions:Array[Array[State]], states:Array[State],
-                       methodToIndices:mutable.HashMap[String, Set[Int]], returnValueToIndice:mutable.HashMap[String, Int],
-                       var instances:Set[Instance]){
+case class ElementInfo(transitions:Array[Array[State]], states:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]],
+                       returnValueToIndice:mutable.HashMap[String, Int], var instances:Set[Instance], var objectInfo:ObjectInfo=null){
   override def toString(): String={
-    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices"
+    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances"
+  }
+}
+
+case class ObjectInfo(name:String, var isInstantiated:Boolean){
+  override def toString(): String={
+    s"$name $isInstantiated"
   }
 }
 

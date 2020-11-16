@@ -123,12 +123,13 @@ object Util {
     val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasName, scope))
     for (instance <- instancesToUpdate)
       instance.aliases -= Alias(aliasName, scope)
-    Util.cleanInstances(newInstances)
+    cleanInstances(newInstances)
   }
 
 
 
   def copyInstances(instances:Set[Instance]):Set[Instance]={
+    if(instances == null) return null
     var newInstances:Set[Instance] = Set()
     for(instance <- instances){
       var aliases:Set[Alias] = Set()

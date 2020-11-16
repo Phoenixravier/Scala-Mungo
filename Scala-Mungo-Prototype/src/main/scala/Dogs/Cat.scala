@@ -16,3 +16,7 @@ class Cat {
     println("on alert")
   }
 }
+
+object Kitten{
+  println("hello from Kitten")
+}

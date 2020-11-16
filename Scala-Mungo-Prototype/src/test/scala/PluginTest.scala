@@ -27,201 +27,203 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var loopProtocol = ""
   var enumProtocol = ""
   //endregion
+  /*
+    /** Create protocol files before testing */
+    override def beforeAll(): Unit = {
+      protocolWalkTwiceIllegal =
+        """
+          |package ProtocolDSL
+          |
+          |object walkTwiceIllegalProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    in ("State1")
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("walkTwiceIllegalProtocol.scala", Seq(protocolWalkTwiceIllegal))
 
-  /** Create protocol files before testing */
-  override def beforeAll(): Unit = {
-    protocolWalkTwiceIllegal =
-      """
-        |package ProtocolDSL
-        |
-        |object walkTwiceIllegalProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("walkTwiceIllegalProtocol.scala", Seq(protocolWalkTwiceIllegal))
+      protocolWithNotAMethod =
+        """
+          |package ProtocolDSL
+          |
+          |object withNotAMethodProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    in ("State1")
+          |    when ("notAMethod()") goto "State1"
+          |    end
+          |}
+          |""".stripMargin
+      writeFile("withNotAMethodProtocol.scala", Seq(protocolWithNotAMethod))
 
-    protocolWithNotAMethod =
-      """
-        |package ProtocolDSL
-        |
-        |object withNotAMethodProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    in ("State1")
-        |    when ("notAMethod()") goto "State1"
-        |    end
-        |}
-        |""".stripMargin
-    writeFile("withNotAMethodProtocol.scala", Seq(protocolWithNotAMethod))
+      protocolWithoutEnd =
+        """
+          |package ProtocolDSL
+          |
+          |object withoutEndProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    in ("State1")
+          |}
+          |""".stripMargin
+      writeFile("withoutEndProtocol.scala", Seq(protocolWithoutEnd))
 
-    protocolWithoutEnd =
-      """
-        |package ProtocolDSL
-        |
-        |object withoutEndProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    in ("State1")
-        |}
-        |""".stripMargin
-    writeFile("withoutEndProtocol.scala", Seq(protocolWithoutEnd))
+      walkLoop3comeAliveLoop1 =
+        """
+          |package ProtocolDSL
+          |
+          |object walkLoop3comeAliveLoop1Protocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    when ("comeAlive()") goto "init"
+          |    in ("State1")
+          |    when("walk()") goto "State2"
+          |    in ("State2")
+          |    when("walk()") goto "init"
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("walkLoop3comeAliveLoop1Protocol.scala", Seq(walkLoop3comeAliveLoop1))
 
-    walkLoop3comeAliveLoop1 =
-      """
-        |package ProtocolDSL
-        |
-        |object walkLoop3comeAliveLoop1Protocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    when ("comeAlive()") goto "init"
-        |    in ("State1")
-        |    when("walk()") goto "State2"
-        |    in ("State2")
-        |    when("walk()") goto "init"
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("walkLoop3comeAliveLoop1Protocol.scala", Seq(walkLoop3comeAliveLoop1))
+      cannotWalkProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object cannotWalkProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("comeAlive()") goto "init"
+          |    in ("State3")
+          |    when("walk()") goto "init"
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("cannotWalkProtocol.scala", Seq(cannotWalkProtocol))
 
-    cannotWalkProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object cannotWalkProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("comeAlive()") goto "init"
-        |    in ("State3")
-        |    when("walk()") goto "init"
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("cannotWalkProtocol.scala", Seq(cannotWalkProtocol))
+      walkComeAliveWalkLoopProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object walkComeAliveWalkLoopProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    when("comeAlive()") goto "init"
+          |    in ("State1")
+          |    when ("comeAlive()") goto "State2"
+          |    in ("State2")
+          |    when("walk()") goto "init"
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("walkComeAliveWalkLoopProtocol.scala", Seq(walkComeAliveWalkLoopProtocol))
 
-    walkComeAliveWalkLoopProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object walkComeAliveWalkLoopProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    when("comeAlive()") goto "init"
-        |    in ("State1")
-        |    when ("comeAlive()") goto "State2"
-        |    in ("State2")
-        |    when("walk()") goto "init"
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("walkComeAliveWalkLoopProtocol.scala", Seq(walkComeAliveWalkLoopProtocol))
+      decisionWalkProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object decisionWalkProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto
+          |      "State1" at "true" or
+          |      "init" at "false"
+          |    in ("State1")
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
 
-    decisionWalkProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object decisionWalkProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto
-        |      "State1" at "true" or
-        |      "init" at "false"
-        |    in ("State1")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
+      pairsProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object pairsProtocol extends ProtocolLang with App{
+          | in("init")
+          | when ("setLeft(Int)") goto "leftInitialised"
+          |
+          | in("leftInitialised")
+          | when("setRight(Int)") goto "allInitialised"
+          |
+          | in("allInitialised")
+          | when("sum()") goto "allInitialised"
+          |
+          | end()
+          |}
+          |""".stripMargin
+      writeFile("pairsProtocol.scala", Seq(pairsProtocol))
 
-    pairsProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object pairsProtocol extends ProtocolLang with App{
-        | in("init")
-        | when ("setLeft(Int)") goto "leftInitialised"
-        |
-        | in("leftInitialised")
-        | when("setRight(Int)") goto "allInitialised"
-        |
-        | in("allInitialised")
-        | when("sum()") goto "allInitialised"
-        |
-        | end()
-        |}
-        |""".stripMargin
-    writeFile("pairsProtocol.scala", Seq(pairsProtocol))
+      walkComeAliveDifferentProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object walkComeAliveDifferentProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("walk()") goto "State1"
+          |    when("comeAlive()") goto "State2"
+          |    in ("State1")
+          |    in ("State2")
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("walkComeAliveDifferentProtocol.scala", Seq(walkComeAliveDifferentProtocol))
 
-    walkComeAliveDifferentProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object walkComeAliveDifferentProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("walk()") goto "State1"
-        |    when("comeAlive()") goto "State2"
-        |    in ("State1")
-        |    in ("State2")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("walkComeAliveDifferentProtocol.scala", Seq(walkComeAliveDifferentProtocol))
+      loopProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object loopProtocol extends ProtocolLang with App {
+          |  in("init")
+          |  when("finished()") goto "init" at "false" or "end" at "true"
+          |  in("end")
+          |  end()
+          |}
+          |""".stripMargin
+      writeFile("loopProtocol.scala", Seq(loopProtocol))
 
-    loopProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object loopProtocol extends ProtocolLang with App {
-        |  in("init")
-        |  when("finished()") goto "init" at "false" or "end" at "true"
-        |  in("end")
-        |  end()
-        |}
-        |""".stripMargin
-    writeFile("loopProtocol.scala", Seq(loopProtocol))
+      enumProtocol =
+        """
+          |package ProtocolDSL
+          |
+          |object enumProtocol extends ProtocolLang with App{
+          |    in ("init")
+          |    when ("m()") goto
+          |        "S2" at "letters.A" or
+          |        "S3" at "letters.B" or
+          |        "S4" at "letters.C" or
+          |        "S5" at "letters.D"
+          |    in("S2")
+          |    when("go()") goto "S6"
+          |    in("S3")
+          |    when("grab()") goto "S8"
+          |    in("S4")
+          |    when("stop()") goto "S7"
+          |    in("S5")
+          |    when("jump()") goto "S9"
+          |    in("S6")
+          |    in("S7")
+          |    in("S8")
+          |    in("S9")
+          |    end()
+          |}
+          |""".stripMargin
+      writeFile("enumProtocol.scala", Seq(enumProtocol))
+    }
 
-    enumProtocol =
-      """
-        |package ProtocolDSL
-        |
-        |object enumProtocol extends ProtocolLang with App{
-        |    in ("init")
-        |    when ("m()") goto
-        |        "S2" at "letters.A" or
-        |        "S3" at "letters.B" or
-        |        "S4" at "letters.C" or
-        |        "S5" at "letters.D"
-        |    in("S2")
-        |    when("go()") goto "S6"
-        |    in("S3")
-        |    when("grab()") goto "S8"
-        |    in("S4")
-        |    when("stop()") goto "S7"
-        |    in("S5")
-        |    when("jump()") goto "S9"
-        |    in("S6")
-        |    in("S7")
-        |    in("S8")
-        |    in("S9")
-        |    end()
-        |}
-        |""".stripMargin
-    writeFile("enumProtocol.scala", Seq(enumProtocol))
-  }
 
-  /** Delete protocol files after testing */
-  override def afterAll(): Unit = {
-    deleteFile("walkTwiceIllegalProtocol.scala")
-    deleteFile("withNotAMethodProtocol.scala")
-    deleteFile("withoutEndProtocol.scala")
-    deleteFile("walkLoop3comeAliveLoop1Protocol.scala")
-    deleteFile("cannotWalkProtocol.scala")
-    deleteFile("walkComeAliveWalkLoopProtocol.scala")
-    deleteFile("decisionWalkProtocol.scala")
-    deleteFile("pairsProtocol.scala")
-    deleteFile("walkComeAliveDifferentProtocol.scala")
-    deleteFile("loopProtocol.scala")
-    deleteFile("enumProtocol.scala")
-  }
+    /** Delete protocol files after testing */
+    override def afterAll(): Unit = {
+      deleteFile("walkTwiceIllegalProtocol.scala")
+      deleteFile("withNotAMethodProtocol.scala")
+      deleteFile("withoutEndProtocol.scala")
+      deleteFile("walkLoop3comeAliveLoop1Protocol.scala")
+      deleteFile("cannotWalkProtocol.scala")
+      deleteFile("walkComeAliveWalkLoopProtocol.scala")
+      deleteFile("decisionWalkProtocol.scala")
+      deleteFile("pairsProtocol.scala")
+      deleteFile("walkComeAliveDifferentProtocol.scala")
+      deleteFile("loopProtocol.scala")
+      deleteFile("enumProtocol.scala")
+    }
+    */
 
   //region <Tests>
 
@@ -235,14 +237,14 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |class Nonsense(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Nonsense(filename = "walkTwiceIllegalProtocol.scala")
+        |@Nonsense(filename = "walkTwiceIllegalProtocol")
         |class Trash{
         | def comeAlive():Unit = println("The trash awakens")
         | def walk():Unit = println("walking")
         |}
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -272,7 +274,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -290,7 +292,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val exceptedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val exceptedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage == exceptedException.getMessage)
    }
@@ -303,7 +305,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |object Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -320,7 +322,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val exceptedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+    val exceptedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
     assert(actualException.getMessage === exceptedException.getMessage)
   }
@@ -332,7 +334,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def walk(): Unit = println("walking")
         |}
@@ -351,7 +353,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
     assert(actualException.getMessage === expectedException.getMessage)
    }
@@ -366,7 +368,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |object Cat{
         |  def walk(): Unit = println("walking")
         |}
@@ -384,7 +386,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -403,7 +405,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |case object Alive extends DeathState
         |case object Unsure extends DeathState
         |
-        |@Typestate(filename = "withNotAMethodProtocol.scala")
+        |@Typestate(filename = "withNotAMethodProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -430,8 +432,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     assert(actualException.getMessage ===
-      "Methods Set(walk(), notAMethod()) defined in \"withNotAMethodProtocol.scala\" are not a subset of " +
-        "methods Set(comeAlive(), walk(), die()) defined in class Cat")
+      "Methods Set(walk(), notAMethod()) defined in withNotAMethodProtocol are not a subset of " +
+        "methods Set(comeAlive(), walk(), die()) defined in class compilerPlugin.Cat. " +
+        "Methods Set(notAMethod()) are defined in the protocol but not in the class")
   }
 
   "plugin" should "throw an exception if end is not written in the protocol" in {
@@ -448,7 +451,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |case object Alive extends DeathState
         |case object Unsure extends DeathState
         |
-        |@Typestate(filename = "withoutEndProtocol.scala")
+        |@Typestate(filename = "withoutEndProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -478,9 +481,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     assert(actualException.getMessage ===
-      "The protocol at \"withoutEndProtocol.scala\" could not be processed, " +
-        "check you have an end statement at the end of the protocol and that the name of the file is the " +
-        "same as the name of the protocol and that the path given for the protocol is correct")
+      "The protocol withoutEndProtocol could not be processed, " +
+        "check that the protocol name is the same as the name of the object containing your protocol")
   }
 
   "plugin" should "deal with multiple classes with multiple protocols" in {
@@ -497,7 +499,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |case object Alive extends DeathState
         |case object Unsure extends DeathState
         |
-        |@Typestate(filename="walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename="walkTwiceIllegalProtocol")
         |  class Dog extends Serializable{
         |    def walk():Unit = println("Yee kavelemme!")
         |    def cry():Unit = println("Itkeen :'(")
@@ -512,7 +514,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |    }
         |  }
         |
-        |@Typestate(filename = "withNotAMethodProtocol.scala")
+        |@Typestate(filename = "withNotAMethodProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -538,7 +540,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    assert(actualException.getMessage === "Methods Set(walk(), notAMethod()) defined in \"withNotAMethodProtocol.scala\" are not a subset of methods Set(comeAlive(), walk(), die()) defined in class Cat")
+    assert(actualException.getMessage === "Methods Set(walk(), notAMethod()) defined in withNotAMethodProtocol " +
+      "are not a subset of methods Set(comeAlive(), walk(), die()) defined in class compilerPlugin.Cat. " +
+      "Methods Set(notAMethod()) are defined in the protocol but not in the class")
   }
   //endregion
 
@@ -552,7 +556,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -561,7 +565,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |object Main extends App {
         |  val cat = new Cat()
         |  for(i <- 1 to 10) cat.walk()
-        |
         |}
         |
         |""".stripMargin
@@ -569,7 +572,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
  }
@@ -581,7 +584,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -603,7 +606,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -616,7 +619,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
+        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -639,7 +642,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -654,7 +657,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
+        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -689,7 +692,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -719,7 +722,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -734,7 +737,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -765,7 +768,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -779,7 +782,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -809,7 +812,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -824,7 +827,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -855,7 +858,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -869,7 +872,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -892,7 +895,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -907,7 +910,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -933,7 +936,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -947,7 +950,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -982,7 +985,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -997,7 +1000,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1032,7 +1035,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 32)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1046,7 +1049,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Int = 1
@@ -1072,7 +1075,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1087,7 +1090,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Int = 1
@@ -1113,7 +1116,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1127,7 +1130,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Int = 1
@@ -1152,7 +1155,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1167,7 +1170,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Int = 1
@@ -1192,7 +1195,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1206,7 +1209,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1229,7 +1232,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1244,7 +1247,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1269,7 +1272,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1286,7 +1289,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
+        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1311,7 +1314,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1326,7 +1329,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
+        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1348,7 +1351,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("init", 0), State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1363,7 +1366,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "cannotWalkProtocol.scala")
+        |@Typestate(filename = "cannotWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1388,7 +1391,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1403,7 +1406,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "cannotWalkProtocol.scala")
+        |@Typestate(filename = "cannotWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1428,7 +1431,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1443,7 +1446,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol.scala")
+        |@Typestate(filename = "walkLoop3comeAliveLoop1Protocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1461,13 +1464,10 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |
         |""".stripMargin
-    val actualException = intercept[protocolViolatedException]{
+    noException should be thrownBy{
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
-      sortSet(Set(State("State1", 0))), "comeAlive()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
   }
   //endregion
 
@@ -1481,7 +1481,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkComeAliveWalkLoopProtocol.scala")
+        |@Typestate(filename = "walkComeAliveWalkLoopProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1505,7 +1505,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1522,7 +1522,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1544,7 +1544,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1559,7 +1559,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1583,7 +1583,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1597,7 +1597,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1622,7 +1622,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1636,7 +1636,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1664,7 +1664,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1679,7 +1679,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1706,7 +1706,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1719,7 +1719,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1749,7 +1749,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1762,7 +1762,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1797,7 +1797,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1811,7 +1811,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1833,7 +1833,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1847,7 +1847,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1871,7 +1871,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -1886,7 +1886,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -1919,7 +1919,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkComeAliveDifferentProtocol.scala")
+        |@Typestate(filename = "walkComeAliveDifferentProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = comeAlive()
@@ -1946,7 +1946,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkComeAliveDifferentProtocol.scala")
+        |@Typestate(filename = "walkComeAliveDifferentProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = comeAlive()
@@ -1977,7 +1977,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2004,7 +2004,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2019,7 +2019,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2045,7 +2045,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2060,7 +2060,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2083,7 +2083,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2","kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2","kat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2098,7 +2098,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2121,7 +2121,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2136,7 +2136,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -2161,7 +2161,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2178,7 +2178,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2198,7 +2198,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2211,7 +2211,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2229,7 +2229,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2245,7 +2245,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2269,7 +2269,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2284,7 +2284,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2306,7 +2306,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2319,7 +2319,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2345,7 +2345,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2358,7 +2358,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2386,7 +2386,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2399,7 +2399,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2429,7 +2429,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2442,7 +2442,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2463,7 +2463,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2476,7 +2476,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2497,7 +2497,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2512,7 +2512,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2531,7 +2531,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2544,7 +2544,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2565,7 +2565,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2578,7 +2578,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2597,7 +2597,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2612,7 +2612,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2634,7 +2634,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2647,7 +2647,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2670,7 +2670,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2683,7 +2683,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  walk()
         |  def comeAlive(): Unit = println("The cat is alive")
@@ -2702,7 +2702,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2715,7 +2715,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  walk()
         |  def comeAlive(): Unit = println("The cat is alive")
@@ -2735,7 +2735,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2748,7 +2748,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  walk()
         |  walk()
@@ -2767,7 +2767,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2780,7 +2780,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  walk()
         |  walk()
@@ -2800,7 +2800,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2815,7 +2815,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2849,7 +2849,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2862,7 +2862,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2898,7 +2898,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2911,7 +2911,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2945,7 +2945,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -2958,7 +2958,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -2994,7 +2994,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3009,7 +3009,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3031,7 +3031,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3047,7 +3047,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3081,7 +3081,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "decisionWalkProtocol.scala")
+        |@Typestate(filename = "decisionWalkProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3119,7 +3119,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3139,7 +3139,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3153,7 +3153,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3174,7 +3174,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3188,7 +3188,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3211,7 +3211,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3225,7 +3225,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3250,7 +3250,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3264,7 +3264,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3287,7 +3287,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3301,7 +3301,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3326,7 +3326,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3340,7 +3340,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3362,7 +3362,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3376,7 +3376,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3400,7 +3400,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3414,7 +3414,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3435,7 +3435,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3449,7 +3449,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3471,7 +3471,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3485,7 +3485,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3503,7 +3503,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3517,7 +3517,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3537,7 +3537,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3551,7 +3551,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3570,7 +3570,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3584,7 +3584,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3606,7 +3606,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3620,7 +3620,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3642,7 +3642,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3656,7 +3656,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3680,7 +3680,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3693,7 +3693,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3714,7 +3714,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3728,7 +3728,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3751,7 +3751,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3764,7 +3764,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3785,7 +3785,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3799,7 +3799,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -3822,7 +3822,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3835,7 +3835,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "pairsProtocol.scala")
+        |@Typestate(filename = "pairsProtocol")
         |class Pair{
         |  var left:Int=_
         |  var right:Int=_
@@ -3868,7 +3868,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "pairsProtocol.scala")
+        |@Typestate(filename = "pairsProtocol")
         |class Pair{
         |  var left:Int=_
         |  var right:Int=_
@@ -3903,7 +3903,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "pairsProtocol.scala")
+        |@Typestate(filename = "pairsProtocol")
         |class Pair{
         |  var left:Int=_
         |  var right:Int=_
@@ -3925,7 +3925,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "Pair",
+    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "compilerPlugin.Pair",
       sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3938,7 +3938,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "pairsProtocol.scala")
+        |@Typestate(filename = "pairsProtocol")
         |class Pair{
         |  var left:Int=_
         |  var right:Int=_
@@ -3962,7 +3962,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "Pair",
+    val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "compilerPlugin.Pair",
       sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -3979,7 +3979,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4001,8 +4001,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -4014,7 +4014,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4038,8 +4038,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -4051,7 +4051,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4083,7 +4083,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4117,7 +4117,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate("loopProtocol.scala")
+        |@Typestate("loopProtocol")
         |class LoopImpl {
         |  def finished(): Boolean = {true}
         |}
@@ -4160,7 +4160,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  val A,B,C,D = Value
         |}
         |
-        |@Typestate(filename = "enumProtocol.scala")
+        |@Typestate(filename = "enumProtocol")
         |class Cat{
         |  def go() = ???
         |  def grab() = ???
@@ -4210,7 +4210,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4243,7 +4243,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4278,7 +4278,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4309,7 +4309,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4342,7 +4342,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4371,7 +4371,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4401,7 +4401,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4432,7 +4432,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4465,7 +4465,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4497,7 +4497,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4531,7 +4531,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4555,7 +4555,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4568,7 +4568,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4594,7 +4594,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4607,7 +4607,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4631,7 +4631,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4644,7 +4644,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4670,7 +4670,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4683,7 +4683,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4705,7 +4705,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4718,7 +4718,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4742,7 +4742,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4757,7 +4757,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4782,7 +4782,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4795,7 +4795,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4823,7 +4823,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4836,7 +4836,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4861,7 +4861,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4874,7 +4874,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -4901,7 +4901,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -4918,7 +4918,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -4949,7 +4949,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -4985,7 +4985,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Unit = println("walking")
@@ -5019,7 +5019,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -5045,7 +5045,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -5059,7 +5059,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -5081,7 +5081,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
     assert(actualException.getMessage === expectedException.getMessage)
   }
@@ -5096,7 +5096,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
         |
-        |@Typestate(filename = "walkTwiceIllegalProtocol.scala")
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
         |class Cat{
         |  def comeAlive(): Unit = println("The cat is alive")
         |  def walk(): Boolean = true
@@ -5120,7 +5120,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "Cat",
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
     assert(actualException.getMessage === expectedException.getMessage)
   }
