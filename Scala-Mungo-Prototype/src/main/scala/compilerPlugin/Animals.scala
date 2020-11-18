@@ -26,6 +26,8 @@ object Demonstration extends App{
   stash.fill()
   sameStash.get()
   stash.get()
+  stash.fill()
+  sameStash.get()
 
 }
 

@@ -4,6 +4,7 @@ import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 import compilerPlugin.Util._
+import javax.print.attribute.standard.Severity
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -1128,6 +1129,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           for(instance <- instancesToUpdate){
             actualStates ++= instance.currentStates
           }
+
           throw new inconsistentStateMutation(methodName, aliasInfo._1,
             line.pos.source.toString(), line.pos.line, expectedStates, actualStates)
         }
@@ -1203,8 +1205,12 @@ class MyComponent(val global: Global) extends PluginComponent {
           newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
         println("new states are " + newStates)
         for (state <- newStates if state.name == Undefined) {
+          global.reporter.error(line.pos.asInstanceOf[Position], "protocol violated")
+          /*
           throw new protocolViolatedException(sortSet(instance.getAliasNames()), elementType,
             sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+
+           */
         }
         newSetOfStates = newSetOfStates ++ newStates
       }
@@ -1334,18 +1340,18 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     /** Checks that methods in the protocol are a subset of those in the body of the element
      *
-     * @param protocolMethods : names of the methods in the protocol
+     * @param rawProtocolMethods : names of the methods in the protocol
      * @param elementBody : body of the class or object being checked
      * @param filename : name of the file the user code is in to generate a useful error message
      */
-    def checkProtocolMethodsSubsetElementMethods(protocolMethods: Array[String], elementBody: Seq[Trees#Tree],
+    def checkProtocolMethodsSubsetElementMethods(rawProtocolMethods: Array[String], elementBody: Seq[Trees#Tree],
                                                  elementType: String, filename: String): Unit = {
       val elementMethods = getMethodNames(elementBody)
-      val protocolMethods: Set[String] =
-        for (method <- protocolMethods) yield stripReturnValue(method.replaceAll("\\s", ""))
-      if (!(protocolMethods subsetOf elementMethods)) throw new badlyDefinedProtocolException(
-        s"Methods $protocolMethods defined in $filename are not a subset of methods " +
-          s"$elementMethods defined in class $elementType. Methods ${protocolMethods.diff(elementMethods)} are defined in " +
+      val protocolMethods =
+        for (method <- rawProtocolMethods) yield stripReturnValue(method.replaceAll("\\s", ""))
+      if (!(protocolMethods.toSet subsetOf elementMethods)) throw new badlyDefinedProtocolException(
+        s"Methods ${protocolMethods.toSet} defined in $filename are not a subset of methods " +
+          s"$elementMethods defined in class $elementType. Methods ${protocolMethods.toSet.diff(elementMethods)} are defined in " +
           s"the protocol but not in the class")
     }
 
