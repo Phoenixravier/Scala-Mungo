@@ -42,8 +42,6 @@ COULD HAVE
 
 ************OCT****************
 MUST HAVE
-- [ ] Remove need for batch script
-- [ ] Make work on more than a single file
 - [ ] Make code readable
 - [ ] More tests (on Util)
 - [ ] Tutorial
@@ -109,3 +107,5 @@ SHOULD HAVE
 - [x] Build online
 - [x] Build local
 - [x] Technical report on Scala-Mungo
+- [x] Remove need for batch script
+- [x] Make work on more than a single file

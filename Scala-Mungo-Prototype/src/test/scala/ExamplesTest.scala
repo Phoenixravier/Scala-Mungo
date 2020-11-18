@@ -4696,6 +4696,8 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
   }
   //endregion
 
+
+
   //region <Utility functions>
 
   def createCompiler(code:String): (Global, List[BatchSourceFile]) ={

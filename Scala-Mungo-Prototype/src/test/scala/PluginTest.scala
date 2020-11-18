@@ -4002,7 +4002,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -4039,7 +4039,38 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
+    assert(actualException.getMessage === expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if a match statement matches a return value unspecified by the programmer" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate(filename = "walkTrueCaseProtocol")
+        |class Cat{
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        | val cat = new Cat()
+        | cat.walk() match{
+        |   case true =>
+        |   case false =>
+        | }
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("init", 1))), "walk():false", "<test>", 14)
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -4145,6 +4176,33 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
   }
 
+  "plugin" should "not throw an exception if an instance uses match in code by only have single state transition defined for method" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |
+        |@Typestate("walkTwiceIllegalProtocol")
+        |class Cat {
+        |  def walk():Boolean={true}
+        |}
+        |
+        |object Main extends App{
+        |  val cat = new Cat
+        |  cat.walk() match{
+        |   case true =>
+        |   case false =>
+        |  }
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
 
   "plugin" should "not throw an exception if an instance does not violates its protocol from a method with 4 enum return values" in {
     val userCode =

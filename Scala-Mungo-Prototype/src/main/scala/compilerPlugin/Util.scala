@@ -171,23 +171,23 @@ object Util {
    * with name filename.
    * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
-    val path = Paths.get("/compiledProtocols\\")
+    val path = Paths.get("/compiledProtocols/")
     if(!(Files.exists(path) && Files.isDirectory(path)))
       Files.createDirectory(path)
-    println(path+"\\"+filename)
+    println(path+"/"+filename)
     println("user dir in util is "+System.getProperty("user.dir"))
-    val oos = new ObjectOutputStream(new FileOutputStream(path+"\\"+filename))
+    val oos = new ObjectOutputStream(new FileOutputStream(path+"/"+filename))
     oos.writeObject(data)
     oos.close()
-    println("file exists is "+Files.exists(Paths.get(s"/compiledProtocols\\$filename.ser")))
+    println("file exists is "+Files.exists(Paths.get(s"/compiledProtocols/$filename.ser")))
   }
 
   def getDataFromProtocol(protocolName:String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
     println("user dir in util get data is "+System.getProperty("user.dir"))
-    if (!Files.exists(Paths.get(s"/compiledProtocols\\$protocolName.ser")))
+    if (!Files.exists(Paths.get(s"/compiledProtocols/$protocolName.ser")))
       throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
         s"check that the protocol name is the same as the name of the object containing your protocol")
-    getDataFromFile(s"/compiledProtocols\\$protocolName.ser")
+    getDataFromFile(s"/compiledProtocols/$protocolName.ser")
   }
 
 

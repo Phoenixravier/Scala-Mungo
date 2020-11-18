@@ -1171,7 +1171,8 @@ class MyComponent(val global: Global) extends PluginComponent {
             case Some(aliasInfo) =>
               val currentElementInfo = protocolledElements(aliasType)
               if (!currentElementInfo.methodToIndices.contains(methodName) && !currentElementInfo.returnValueToIndice.contains(methodName)) {
-                break
+                if(!methodName.contains(":") || !currentElementInfo.methodToIndices.contains(methodName.substring(0, methodName.indexOf(":"))))
+                  break
               }
               //checks if there is an inconsistent state mutation (FUNCTION)
               val instancesToUpdate = currentElementInfo.instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
@@ -1217,8 +1218,12 @@ class MyComponent(val global: Global) extends PluginComponent {
         var indexSet:Set[Int] = Set()
         if(currentElementInfo.methodToIndices.contains(methodName))
           indexSet = currentElementInfo.methodToIndices(methodName)
-        else
+        else if(currentElementInfo.returnValueToIndice.contains(methodName))
           indexSet = Set(currentElementInfo.returnValueToIndice(methodName))
+        else {
+          val rawMethodName = methodName.substring(0, methodName.indexOf(":"))
+          indexSet = Set(currentElementInfo.methodToIndices(rawMethodName).min)
+        }
         var newStates: Set[State] = Set[State]()
         newStates += currentElementInfo.transitions(state.index)(indexSet.min)
         if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Undefined)
@@ -1252,7 +1257,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                     if(qualifier.hasSymbolField)
                       instanceType = qualifier.symbol.tpe
                     if (qualifier.hasSymbolField) instanceName = qualifier.symbol.name.toString()
-                    val methodCallInfo = (/*_*/ name.toString().appendedAll(getParametersFromTree(exprss)) /*_*/ ,
+                    val methodCallInfo = (/*_*/ name.toString()+ getParametersFromTree(exprss) /*_*/ ,
                         instanceName, instanceType.toString())
                     methodCallInfos += methodCallInfo
                   case _ =>
