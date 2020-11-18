@@ -26,11 +26,11 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 class MyComponent(val global: Global) extends PluginComponent {
   import global._
 
-  /**
+  /** Holds information about a function in the code
    *
    *
-   * @param name
-   * @param params :
+   * @param name : Name of the function
+   * @param params : The parameters of the function, stored in an array with name, type
    * @param returnType : The return type of the function, if it returns anything
    * @param body : The body of the function (the code inside of it)
    * @param scope : The scope of the function
@@ -46,8 +46,18 @@ class MyComponent(val global: Global) extends PluginComponent {
       s"name: $name parameters: $params return type: $returnType scope: $scope body: $body stateCache: $stateCache returned: $returned"
     }
   }
-  case class ClassOrObject(elementType:String, params:ArrayBuffer[(String, String)], body:Seq[Trees#Tree], scope:mutable.Stack[String],
-                           isObject:Boolean=false, var initialised:Boolean=false){
+
+  /** Holds information about an element (a class or object)
+   *
+   * @param elementType : type of the element, this gives a more precise way of identifying the element than just the name
+   * @param params : parameters given to initialise a class. Not applicable to objects
+   * @param body : body of the element
+   * @param scope : scope of the element
+   * @param isObject : true if the element is an object, false if it is a class. Defaults to false
+   * @param initialised : only relevant if the element is an object. Keeps track of if this object has been initialised
+   */
+  case class Element(elementType:String, params:ArrayBuffer[(String, String)], body:Seq[Trees#Tree], scope:mutable.Stack[String],
+                     isObject:Boolean=false, var initialised:Boolean=false){
     override def toString(): String={ s"$elementType ${showParams(params)} $scope $initialised" }
 
     def showParams(params:ArrayBuffer[(String, String)]):String={
@@ -86,7 +96,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       compilationUnit = unit
       //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
-      classAndObjectTraverser.traverse(unit.body)
+      ElementTraverser.traverse(unit.body)
       getProtocolledElements()
       checkFile()
     }
@@ -172,7 +182,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               case mainLine@q"$mods def main[..$tparams](...$paramss): $tpt = $expr" =>
                 currentScope = getScope(line)
                 /*_*/
-                if (getParameters(paramss) == "Array[String]") {
+                if (getParameterTypes(paramss) == "Array[String]") {
                   /*_*/
                   checkObject(line.symbol.tpe.toString(), tname.toString())
                   currentScope.push(tname.toString())
@@ -710,8 +720,8 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param objectType
      * @return
      */
-    def getClosestScopeObject(objectType: String): Option[ClassOrObject] = {
-      val classesAndObjects = classAndObjectTraverser.classesAndObjects
+    def getClosestScopeObject(objectType: String): Option[Element] = {
+      val classesAndObjects = ElementTraverser.elements
       println("all objects are "+classesAndObjects)
       println("object name is "+objectType)
       if (classesAndObjects.isEmpty) return None
@@ -736,7 +746,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def checkObjectFunctionCall(calledOn: global.Tree): Unit = {
       if (calledOn == null) return
       var calledOnType = calledOn.tpe.toString()
-      for (element <- classAndObjectTraverser.classesAndObjects
+      for (element <- ElementTraverser.elements
            if (!element.initialised && element.isObject && element.elementType == calledOnType
              && element.scope == getScope(calledOn))) {
         element.initialised = true
@@ -1054,7 +1064,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def checkInsideClass(scope: mutable.Stack[String], elementType: String, args: List[Tree]): (Boolean, Set[Instance]) = {
       var returned: Set[Instance] = Set()
       println(elementType)
-      for (element <- classAndObjectTraverser.classesAndObjects
+      for (element <- ElementTraverser.elements
            if !element.isObject && element.elementType == elementType && element.scope == scope) {
         println(element.params)
         println(args)
@@ -1205,12 +1215,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
         println("new states are " + newStates)
         for (state <- newStates if state.name == Undefined) {
-          global.reporter.error(line.pos.asInstanceOf[Position], "protocol violated")
-          /*
           throw new protocolViolatedException(sortSet(instance.getAliasNames()), elementType,
             sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
-
-           */
         }
         newSetOfStates = newSetOfStates ++ newStates
       }
@@ -1222,8 +1228,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      */
     object methodTraverser extends Traverser {
-      var methodCallInfos = ListBuffer[(String, String, String)]()
-
+      var methodCallInfos = ListBuffer[(String, String, String)]() //methodName, calledOnName, calledOnType
       override def traverse(tree: Tree): Unit = {
         tree match {
           case app@Apply(fun, args) =>
@@ -1252,37 +1257,35 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
 
-    /** Traverses a tree and collects classes and objects found */
-    object classAndObjectTraverser extends Traverser {
-      var classesAndObjects = ListBuffer[ClassOrObject]()
-
+    /** Traverses a tree and collects elements found inside "elements" */
+    object ElementTraverser extends Traverser {
+      var elements = ListBuffer[Element]()
       override def traverse(tree: Tree): Unit = {
         tree match {
           case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-            classesAndObjects += ClassOrObject(obj.symbol.tpe.toString(), ArrayBuffer(), body, getScope(obj), isObject = true)
+            elements += Element(obj.symbol.tpe.toString(), ArrayBuffer(), body, getScope(obj), isObject = true)
             super.traverse(obj)
-          case cla@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-            val parameters = /*_*/ getParametersWithInstanceNames(paramss) /*_*/
-            classesAndObjects += ClassOrObject(cla.symbol.tpe.toString(), parameters, stats, getScope(cla))
-            super.traverse(cla)
+          case clas@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
+            val parameters = /*_*/ getParameters(paramss) /*_*/
+            elements += Element(clas.symbol.tpe.toString(), parameters, body, getScope(clas))
+            super.traverse(clas)
           case _ =>
             super.traverse(tree)
         }
       }
     }
 
-    /** Gathers function definitions in a tree inside "functions" */
+    /** Gathers function informations in the code inside "functions" */
     object functionTraverser extends Traverser {
       var functions = ListBuffer[Function]()
-
       override def traverse(tree: Tree): Unit = {
         tree match {
           case func@q"$mods def $funcName[..$tparams](...$paramss): $returnType = $body" =>
-            val parameters = /*_*/ getParametersWithInstanceNames(paramss) /*_*/
-            if (funcName.toString() != "<init>")
+            val parameters = /*_*/ getParameters(paramss) /*_*/
+            if (funcName.toString() != "<init>") //ignore constructors here as they will be dealt with better later
               functions +=
-                Function(funcName.toString(), parameters, returnType, body,
-                  getScope(func), Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), returned=None)
+                Function(funcName.toString(), parameters, returnType, body, getScope(func),
+                  Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), returned=None)
             /*_*/ super.traverse(body) /*_*/
           case _ =>
             super.traverse(tree)
@@ -1382,7 +1385,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       for (line <- methodBody) {
         line match {
           case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
-            val parameters = /*_*/ getParameters(paramss) /*_*/
+            val parameters = /*_*/ getParameterTypes(paramss) /*_*/
             methodNames += tname + s"($parameters)"
           case _ =>
         }
@@ -1395,7 +1398,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param params
      * @return
      */
-    def getParameters(params: List[List[ValDef]]): String = {
+    def getParameterTypes(params: List[List[ValDef]]): String = {
       params match {
         case List(List()) => ""
         case List(List(value)) =>
@@ -1418,18 +1421,16 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
     /** Gets parameters from a tree as their name and type in a string array */
-    def getParametersWithInstanceNames(params: List[List[ValDef]]): ArrayBuffer[(String, String)] = {
+    def getParameters(params: List[List[ValDef]]): ArrayBuffer[(String, String)] = {
       params match {
         case List(List()) => ArrayBuffer(("", null))
         case List(List(value)) =>
-          println("TOP")
           ArrayBuffer((value.name.toString(), value.tpt.toString()))
         case List(values) =>
           var parameters: ArrayBuffer[(String, String)] = ArrayBuffer()
           for (elem <- values) {
             parameters += ((elem.name.toString(), elem.symbol.tpe.toString()))
           }
-          println("parameters are "+parameters)
           parameters
         case _ => ArrayBuffer()
       }

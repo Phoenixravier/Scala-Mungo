@@ -16,9 +16,7 @@ class MoneyStash() {
   def get(): Unit ={
     amountOfMoney -= 10
   }
-
 }
-
 
 object Demonstration extends App{
   val stash = new MoneyStash
@@ -26,8 +24,5 @@ object Demonstration extends App{
   stash.fill()
   sameStash.get()
   stash.get()
-  stash.fill()
-  sameStash.get()
-
 }
 
