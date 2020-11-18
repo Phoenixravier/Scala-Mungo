@@ -195,6 +195,13 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
 
+    def getObjectName(rawObjectName: String):String = {
+      if (rawObjectName.lastIndexOf(".") != -1) {
+        val objectName = rawObjectName.substring(rawObjectName.lastIndexOf(".") + 1)
+        return objectName
+      }
+      rawObjectName
+    }
 
     /** Checks a line and updates instances if needed.
      *  Returns a set of instances if relevant.
@@ -215,16 +222,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         case q"$mods def $name[..$tparams](...$paramss): $tpt = $expr" =>
           (getLengthOfTree(line) - 1, None)
-        //assignment
-        case q"val $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
-          (getLengthOfTree(line) - 1, None)
-        case q"var $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
-          (getLengthOfTree(line) - 1, None)
-        case q"$assignee = $newValue" =>
-          processAssignment(assignee.toString, newValue.tpe.toString(), newValue)
-          (getLengthOfTree(line) - 1, None)
         //break and breakable
         case Apply(Select(Select(scope, label), TermName("break")), body) =>
           dealWithBreak(label.toString())
@@ -239,6 +236,16 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         case Apply(Select(Ident(label), TermName("breakable")), body) =>
           dealWithBreakable(label, body)
+          (getLengthOfTree(line) - 1, None)
+        //assignments
+        case q"val $assignee = $newValue" =>
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
+          (getLengthOfTree(line) - 1, None)
+        case q"var $assignee = $newValue" =>
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
+          (getLengthOfTree(line) - 1, None)
+        case q"$assignee = $newValue" =>
+          processAssignment(assignee.toString, newValue.tpe.toString(), newValue)
           (getLengthOfTree(line) - 1, None)
         //for loops
         case q"for (..$generator) $loopBody" =>
@@ -272,6 +279,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           val returned = dealWithFunction(func, functionName, args, instanceCalledOn)
           updateStateIfNeeded(copiedMap, line)
           (getLengthOfTree(line) - 1, returned) //because we are processing the current one already
+        //if, try and match statements
         case q"if ($cond) $ifBody else $elseBody" =>
           val returned = dealWithIfElse(cond, ifBody, elseBody)
           (getLengthOfTree(line) - 1, returned)
@@ -281,10 +289,8 @@ class MyComponent(val global: Global) extends PluginComponent {
         case q"$expr match { case ..$cases }" =>
           /*_*/ processMatchStatement(expr, cases) /*_*/
           (getLengthOfTree(line) - 1, None)
-
-        //All three next cases are to check for solitary object name on a line
+        //All three next cases are to check for a solitary object name on a line
         case Ident(TermName(objectName)) =>
-          println("in raw ident")
           checkObject(line.symbol.typeSignature.toString, objectName)
           if(line.tpe == null) return (0,None)
           getClosestScopeAliasInfo(objectName, line.symbol.typeSignature.toString) match {
@@ -295,12 +301,9 @@ class MyComponent(val global: Global) extends PluginComponent {
               (0, None)
           }
         case Select(location, expr) =>
-          println("in select")
-          var exprString = expr.toString()
-          if (exprString.lastIndexOf(".") != -1)
-            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
-          checkObject(line.symbol.typeSignature.toString, exprString)
-          getClosestScopeAliasInfo(exprString.trim, line.symbol.typeSignature.toString) match {
+          val objectName = getObjectName(expr.toString())
+          checkObject(line.symbol.typeSignature.toString, objectName)
+          getClosestScopeAliasInfo(objectName.trim, line.symbol.typeSignature.toString) match {
             case Some(aliasInfo) =>
               val returned = protocolledElements(line.symbol.typeSignature.toString).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               (0, Some(returned))
@@ -308,12 +311,9 @@ class MyComponent(val global: Global) extends PluginComponent {
               (0, None)
           }
         case Block(List(expr), Literal(Constant(()))) =>
-          println("in block")
-          var exprString = expr.toString()
-          if (exprString.lastIndexOf(".") != -1)
-            exprString = exprString.substring(exprString.lastIndexOf(".") + 1)
-          checkObject(expr.tpe.toString(), exprString)
-          getClosestScopeAliasInfo(exprString.trim, expr.tpe.toString()) match {
+          val objectName = getObjectName(expr.toString())
+          checkObject(expr.tpe.toString(), objectName)
+          getClosestScopeAliasInfo(objectName.trim, expr.tpe.toString()) match {
             case Some(aliasInfo) =>
               val returned = protocolledElements(expr.tpe.toString()).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               (0, Some(returned))
@@ -325,14 +325,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-    def removeAllInstances(): Any = {
-      for((elementType, elementInfo) <- protocolledElements){
-        elementInfo.instances = Set()
-      }
-    }
-
     private def dealWithBreak(label: String) = {
-      println("saved break inst is "+savedBreakInstances)
       for ((elementName, savedInstances) <- savedBreakInstances) {
         if (savedInstances.contains(label)) {
           savedInstances(label) += copyInstances(protocolledElements(elementName).instances)
@@ -340,7 +333,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           savedInstances += (label -> ArrayBuffer(copyInstances(protocolledElements(elementName).instances)))
         println(s"after dealing with break with label $label, saved instances are " + savedInstances)
       }
-      println("saved break inst are "+savedBreakInstances)
     }
 
     def dealWithBreakable(label:Name, body:Seq[Trees#Tree]) = {

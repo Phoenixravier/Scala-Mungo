@@ -36,6 +36,12 @@ object Util {
     }
   }
 
+  def removeAllInstances(): Any = {
+    for(elementInfo <- protocolledElements.values){
+      elementInfo.instances = Set()
+    }
+  }
+
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
 
