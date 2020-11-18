@@ -1,10 +1,7 @@
 package compilerPlugin
 
-import java.nio.file.{Files, Paths}
-
 import ProtocolDSL.{ReturnValue, State}
 import compilerPlugin.Util._
-import javax.print.attribute.standard.Severity
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -63,8 +60,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def showParams(params:ArrayBuffer[(String, String)]):String={
       var parameters = ""
       for(param <- params) {
-        parameters += param._1+": "+param._2
-        parameters += " ; "
+        parameters += param._1 + ": "+param._2 +  " ; "
       }
       parameters
     }
@@ -75,17 +71,25 @@ class MyComponent(val global: Global) extends PluginComponent {
 
   def newPhase(_prev: Phase) = new GetFileFromAnnotationPhase(_prev)
 
-  /** Phase which is ran by the plugin */
+  /** Phase which is run by the plugin */
   class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
+    override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
+
     var compilationUnit: CompilationUnit = _
+
+    /** Contains the state of instances at a break statement
+     *  Structured as a map of breakable label -> elementType -> instances
+     *
+     */
     var savedBreakInstances: mutable.Map[String, mutable.Map[String, ArrayBuffer[Set[Instance]]]] =
       mutable.Map[String, mutable.Map[String, ArrayBuffer[Set[Instance]]]]()
 
-    override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
-    /** Entry point of the plugin. Goes through the code collecting object, class and function bodies, then checks
-     *  the code for protocol violations.
-     *  Goes through apply function once for each file.
+    /** Entry point of the plugin.
+     *  In a first pass, goes through the code collecting element and function information.
+     *  Then it finds all the elements which have a Typestate annotation and creates an entry in the protocolledElemenets
+     *  map for each of them.
+     *  It then checks the code for protocol violations.
      *
      * @param unit : contains tree of the code in body
      */
