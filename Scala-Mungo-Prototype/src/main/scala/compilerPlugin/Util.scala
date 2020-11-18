@@ -26,6 +26,15 @@ object Util {
   }
 
 
+  /** Initialise all the objects in protocolled objects to a single instance in state init
+   *
+   */
+  def initObjects() = {
+    for(elementInfo <- protocolledElements.values){
+      if(elementInfo.objectName != null)
+        elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())), Set(elementInfo.states(0)))
+    }
+  }
 
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet

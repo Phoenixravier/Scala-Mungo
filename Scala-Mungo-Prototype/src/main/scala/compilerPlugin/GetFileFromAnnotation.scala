@@ -1,6 +1,6 @@
 package compilerPlugin
 
-import ProtocolDSL.{ReturnValue, State}
+import ProtocolDSL.State
 import compilerPlugin.Util._
 
 import scala.collection.mutable
@@ -74,7 +74,6 @@ class MyComponent(val global: Global) extends PluginComponent {
   /** Phase which is run by the plugin */
   class GetFileFromAnnotationPhase(prev: Phase) extends StdPhase(prev) {
     override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
-
     var compilationUnit: CompilationUnit = _
 
     /** Contains the state of instances at a break statement
@@ -98,68 +97,9 @@ class MyComponent(val global: Global) extends PluginComponent {
       //println(s"whole source is: \n ${unit.body}")
       //println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
-      //find all the classes, objects and functions in the code so we can jump to them later
       functionTraverser.traverse(unit.body)
       ElementTraverser.traverse(unit.body)
-      getProtocolledElements()
       checkFile()
-    }
-
-    /** Finds objects and classes with protocols and add them to protocolledElements
-     *
-     */
-    def getProtocolledElements(): Unit = {
-      for (tree@q"$mods class $className[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
-        addElementProtocol(body, tree.symbol.tpe.toString(), getScope(tree), tree)
-      }
-      for (tree@q"$mods object $name extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
-        val objectScope = mutable.Stack[String]().push(name.toString())
-        addElementProtocol(body, tree.symbol.tpe.toString(), objectScope, tree, isObject = true, objectName = name.toString())
-      }
-    }
-
-    /** Checks whether the object or class is following its protocol in the code.
-     * It first checks if the element has a typestate annotation, then runs the protocol and collects the information
-     * from it.
-     * Then it checks the methods in the protocol are a subset of those defined in the element.
-     * Then it checks the protocol is followed
-     *
-     * @param body     The code to check
-     * @param elementType     Name of the element
-     * @param tree     The entire code
-     * @param isObject Whether or not the element to check is an Object (as opposed to a Class)
-     * @return
-     */
-    def addElementProtocol(body: Seq[Trees#Tree], elementType: String, scope: mutable.Stack[String],
-                           tree: Tree, isObject: Boolean = false, objectName:String=null)= {
-      val annotations = tree.symbol.annotations
-      for (annotation@AnnotationInfo(arg1, arg2, arg3) <- annotations) {
-        getFilenameFromTypestateAnnotation(annotation) match {
-          case Some(protocolName) => //a correct Typestate annotation is being used
-            println("protocol name is "+protocolName)
-            //retrieve the serialized data
-            val (stateMachine, states, returnValuesArray) = getDataFromProtocol(protocolName)
-            val methodToIndices = createMethodToIndicesMap(returnValuesArray)
-            val returnValueToIndice = createReturnValueToIndiceMap(returnValuesArray)
-            val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray) //could use in error message to tell users what methods are available in the current state
-            checkProtocolMethodsSubsetElementMethods(methodToIndices.keys.toArray, body, elementType, protocolName)
-            val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
-            if(isObject)
-              currentElementInfo.objectInfo = ObjectInfo(objectName, false)
-            protocolledElements += elementType -> currentElementInfo
-            savedBreakInstances += elementType -> mutable.Map()
-            println("map with protocolled elements is "+protocolledElements)
-          case None =>
-        }
-      }
-    }
-
-
-    def assignObjects() = {
-      for((elementType, elementInfo) <- protocolledElements){
-        if(elementInfo.objectInfo != null)
-          elementInfo.instances += Instance(Set(Alias(elementInfo.objectInfo.name, currentScope.clone())), Set(elementInfo.states(0)))
-      }
     }
 
     /** Checks that a class or object is following its protocol
@@ -176,7 +116,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             if (parent.toString() == "App") {
               currentScope = getScope(line)
               currentScope.push(tname.toString())
-              assignObjects()
+              initObjects()
               checkInsideObjectBody(body)
               break
             }
@@ -190,7 +130,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                   /*_*/
                   checkObject(line.symbol.tpe.toString(), tname.toString())
                   currentScope.push(tname.toString())
-                  assignObjects()
+                  initObjects()
                   currentScope.push("main")
                   checkInsideFunctionBody(expr)
                 }
@@ -201,9 +141,20 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-    /** Goes inside "App" object to see if there are instances with protocols and if they are following their protocol
-     * Analyses the code line by line with checkInsideFunctionBody. Takes instances or creates a new set of them and returns
-     * updated ones
+
+    def printInstances() = {
+      println("\nInstances:")
+      for((elementType, elementInfo) <- protocolledElements){
+        println("For "+elementType+": ")
+        for(instance <- elementInfo.instances){
+          println(instance)
+        }
+        println()
+      }
+    }
+
+    /** Goes inside an object to see if there are instances with protocols and if they are following their protocol
+     *  Analyses the code line by line with checkInsideFunctionBody.
      *
      * @param code The code to check
      */
@@ -211,21 +162,16 @@ class MyComponent(val global: Global) extends PluginComponent {
       for(line <- code) {
         checkInsideFunctionBody(line)
       }
-      println("\nInstances:")
-      for((elementType, elementInfo) <- protocolledElements){
-        println(elementType)
-        for(instance <- elementInfo.instances){
-          println(instance)
-        }
-      }
+      printInstances()
     }
 
 
-    /** Checks the code inside the body of a function for protocol violations.
-     * Goes line by line and skips lines if needed (for example when at a definition or a loop).
+    /** Checks the code inside a function for protocol violations.
+     *  Goes line by line and skips lines if needed (for example when at a definition or a loop).
+     *  Returns a set of instances wrapped in an option
      *
-     * @param code           The code to check
-     * @return
+     * @param code  The code to check
+     * @return  What is returned from the function, if applicable
      */
     def checkInsideFunctionBody(code: Trees#Tree): (Option[Set[Instance]]) = {
       var returned: Option[Set[Instance]] = None
@@ -238,53 +184,30 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
           val NbLinesToSkipAndReturned = processLine(line)
           nbOfLinesToSkip = NbLinesToSkipAndReturned._1
-          if(nbOfLinesToSkip == -1)
+          if(nbOfLinesToSkip == -1) //indicates a break statement has just been processed
               return None
           if (NbLinesToSkipAndReturned._2.isDefined) // do this to avoid erasing returned element
             returned = NbLinesToSkipAndReturned._2
         }
       }
-      println("\nInstances:")
-      for((elementType, elementInfo) <- protocolledElements){
-        println(elementType)
-        for(instance <- elementInfo.instances){
-          println(instance)
-        }
-      }
+      printInstances()
       returned
     }
 
 
 
-    /** Checks a line and returns possibly updated instances.
-     * Has different cases for different types of line
+    /** Checks a line and updates instances if needed.
+     *  Returns a set of instances if relevant.
+     *  Has different cases for different types of line.
      *
      * @param line      line of code to analyse
-     * @return
+     * @return Set of instances returned by the line
      */
     def processLine(line: Trees#Tree): (Int, Option[Set[Instance]]) = {
       println(s"checking line at line number " + line.pos.line)
       println(s"instances before checking line are ")
-      for((elementType, elementInfo) <- protocolledElements){
-        println("Type: "+elementType)
-        println("Instances: "+elementInfo.instances)
-      }
-      //println(showRaw(line))
+      printInstances()
       line match {
-        case Apply(Select(Select(scope, label), TermName("break")), body) =>
-          dealWithBreak(label.toString())
-          removeAllInstances()
-          (-1, None)
-        case Apply(Select(Ident(TermName(label)), TermName("break")), List()) =>
-          dealWithBreak(label)
-          removeAllInstances()
-          (-1, None)
-        case Apply(Select(Select(scope, label), TermName("breakable")), body) =>
-          dealWithBreakable(label, body)
-          (getLengthOfTree(line) - 1, None)
-        case Apply(Select(Ident(label), TermName("breakable")), body) =>
-          dealWithBreakable(label, body)
-          (getLengthOfTree(line) - 1, None)
         //definitions to skip over (object, class, function)
         case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
           (getLengthOfTree(line) - 1, None)
@@ -301,6 +224,21 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           processAssignment(assignee.toString, newValue.tpe.toString(), newValue)
+          (getLengthOfTree(line) - 1, None)
+        //break and breakable
+        case Apply(Select(Select(scope, label), TermName("break")), body) =>
+          dealWithBreak(label.toString())
+          removeAllInstances()
+          (-1, None)
+        case Apply(Select(Ident(TermName(label)), TermName("break")), List()) =>
+          dealWithBreak(label)
+          removeAllInstances()
+          (-1, None)
+        case Apply(Select(Select(scope, label), TermName("breakable")), body) =>
+          dealWithBreakable(label, body)
+          (getLengthOfTree(line) - 1, None)
+        case Apply(Select(Ident(label), TermName("breakable")), body) =>
+          dealWithBreakable(label, body)
           (getLengthOfTree(line) - 1, None)
         //for loops
         case q"for (..$generator) $loopBody" =>
@@ -1268,10 +1206,12 @@ class MyComponent(val global: Global) extends PluginComponent {
         tree match {
           case obj@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
             elements += Element(obj.symbol.tpe.toString(), ArrayBuffer(), body, getScope(obj), isObject = true)
+            addElementProtocolIfItExists(body, obj.symbol.tpe.toString(), tree, objectName = tname.toString())
             super.traverse(obj)
           case clas@q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
             val parameters = /*_*/ getParameters(paramss) /*_*/
             elements += Element(clas.symbol.tpe.toString(), parameters, body, getScope(clas))
+            addElementProtocolIfItExists(body, clas.symbol.tpe.toString(), tree)
             super.traverse(clas)
           case _ =>
             super.traverse(tree)
@@ -1299,6 +1239,49 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
 //endregion
+
+    def isTypestateAnnotation(annotations: List[global.AnnotationInfo]): (Boolean, String) = {
+      for (annotation@AnnotationInfo(arg1, arg2, arg3) <- annotations) {
+        getFilenameFromTypestateAnnotation(annotation) match {
+          case Some(protocolName) =>
+            return (true, protocolName)
+          case None =>
+            return (false, "")
+        }
+      }
+      (false, "")
+    }
+
+    /** Checks whether the object or class is following its protocol in the code.
+     * It first checks if the element has a typestate annotation, then runs the protocol and collects the information
+     * from it.
+     * Then it checks the methods in the protocol are a subset of those defined in the element.
+     * Then it checks the protocol is followed
+     *
+     * @param body     The code to check
+     * @param elementType     Name of the element
+     * @param tree     The entire code
+     * @param objectName If this is an object, then the name of the object, otherwise: null
+     * @return
+     */
+    def addElementProtocolIfItExists(body: Seq[Trees#Tree], elementType: String,
+                                     tree: Tree, objectName:String=null)= {
+      if(isTypestateAnnotation(tree.symbol.annotations)._1) {
+        val protocolName = isTypestateAnnotation(tree.symbol.annotations)._2
+        //retrieve the serialized data
+        val (stateMachine, states, returnValuesArray) = getDataFromProtocol(protocolName)
+        val methodToIndices = createMethodToIndicesMap(returnValuesArray)
+        val returnValueToIndice = createReturnValueToIndiceMap(returnValuesArray)
+        val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray) //could use in error message to tell users what methods are available in the current state
+        checkProtocolMethodsSubsetElementMethods(methodToIndices.keys.toArray, body, elementType, protocolName)
+        val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
+        if (objectName != null)
+          currentElementInfo.objectName = objectName
+        protocolledElements += elementType -> currentElementInfo
+        savedBreakInstances += elementType -> mutable.Map()
+        println("map with protocolled elements is " + protocolledElements)
+      }
+    }
 
     /** Gets the scope of a tree from its symbol.
      * It will check if the tree has a symbol field unless specified not to.
