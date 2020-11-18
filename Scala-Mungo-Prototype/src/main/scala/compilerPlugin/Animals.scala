@@ -19,8 +19,22 @@ class MoneyStash() {
 
 }
 
+@Typestate("CWeirdProtocol")
+class C(){
+  def m(): Unit ={
+    val local = new C()
+    local.m()
+  }
 
-object Demonstration extends App{
+}
+
+object main extends App{
+  val c = new C()
+  c.m()
+}
+
+
+object Demonstration {
   val stash = new MoneyStash
   val sameStash = stash
   stash.fill()

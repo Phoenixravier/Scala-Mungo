@@ -1,6 +1,6 @@
 [debug] Acquiring lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock ...
-[warn] 7 deprecations (since 2.13.0)
-[warn] 4 deprecations (since 2.13.3)
-[warn] 11 deprecations in total; re-run with -deprecation for details
+[warn] 3 deprecations (since 2.13.0)
+[warn] 3 deprecations (since 2.13.3)
+[warn] 6 deprecations in total; re-run with -deprecation for details
 [warn] three warnings found
 [debug] Releasing lock on file C:\Year five\Project\Scala-Mungo\Scala-Mungo-Prototype\project\target\.sbt-compilation-infos\scala-mungo-prototype-compile\.sbt-idea-lock.

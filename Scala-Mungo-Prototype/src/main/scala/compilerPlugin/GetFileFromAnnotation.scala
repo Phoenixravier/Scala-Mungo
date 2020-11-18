@@ -1451,7 +1451,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       params match {
         case List(List()) => ArrayBuffer(("", null))
         case List(List(value)) =>
-          println("TOP")
           ArrayBuffer((value.name.toString(), value.tpt.toString()))
         case List(values) =>
           var parameters: ArrayBuffer[(String, String)] = ArrayBuffer()
