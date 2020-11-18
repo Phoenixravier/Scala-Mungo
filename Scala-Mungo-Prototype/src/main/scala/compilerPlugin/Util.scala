@@ -15,6 +15,7 @@ object Util {
 
   val Undefined = "_Undefined_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
+  var protocolledElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
 
   /** Removes all instances with an empty set of aliases */
@@ -164,6 +165,49 @@ object Util {
     }
     println("merged instances are "+mergedInstances)
     mergedInstances
+  }
+
+
+  /** Removes alias from instances */
+  def removeAliases(elementType:String, aliasName: String) = {
+    getClosestScopeAliasInfo(aliasName, elementType) match {
+      case Some(aliasInfo) =>
+        val instancesToUpdate = protocolledElements(elementType).instances.filter(instance =>
+          instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+        for (instance <- instancesToUpdate)
+          instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
+      case None =>
+    }
+    protocolledElements(elementType).instances = cleanInstances(protocolledElements(elementType).instances)
+  }
+
+
+  /** Gets the instance with the closest scope to the current scope with the given name if it exists. If not,
+   * returns None.
+   * Works by copying the current scope and then checking if there is an instance which matches name and the copied
+   * scope. If not then it will reduce the current scope and do the same search there until it finds the instance
+   * with the same name with the longest possible scope which is still a subset of the current scope.
+   *
+   * @param name
+   * @return
+   */
+  def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
+    if (elementType != null) {
+      if (protocolledElements.contains(elementType)) {
+        if (protocolledElements(elementType).instances.isEmpty) return None
+        val curScope = currentScope.clone()
+        while (curScope.nonEmpty) {
+          for (instance <- protocolledElements(elementType).instances) {
+            for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
+              return Some(alias.name, alias.scope)
+            }
+          }
+          curScope.pop()
+        }
+      }
+      None
+    }
+    None
   }
 
 

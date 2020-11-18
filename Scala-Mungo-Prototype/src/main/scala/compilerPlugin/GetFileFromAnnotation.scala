@@ -25,6 +25,18 @@ class GetFileFromAnnotation(val global: Global) extends Plugin {
 class MyComponent(val global: Global) extends PluginComponent {
   import global._
 
+  /**
+   *
+   *
+   * @param name
+   * @param params :
+   * @param returnType : The return type of the function, if it returns anything
+   * @param body : The body of the function (the code inside of it)
+   * @param scope : The scope of the function
+   * @param stateCache : contains a mapping of parameters (elementType, parameterNames, statesBefore) to nextStates.
+   *                   There can be several parameter names if a function is called with duplicate values as arguments.
+   * @param returned : The instances if any, that this function returns
+   */
   case class Function(name: String, params: ArrayBuffer[(String, String)],
                       returnType: Trees#Tree, body: Trees#Tree, scope: mutable.Stack[String],
                       var stateCache: Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]],
@@ -57,7 +69,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     var compilationUnit: CompilationUnit = _
     var savedBreakInstances: mutable.Map[String, mutable.Map[String, ArrayBuffer[Set[Instance]]]] =
       mutable.Map[String, mutable.Map[String, ArrayBuffer[Set[Instance]]]]()
-    var protocolledElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
     override def name: String = "compilerPlugin.GetFileFromAnnotation.this.name"
 
@@ -68,10 +79,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param unit : contains tree of the code in body
      */
     def apply(unit: CompilationUnit): Unit = {
-      ckType("happy")
       println("hello, plugin is running")
-      println("current directory is "+new java.io.File(".").getCanonicalPath)
-      println("user dir is "+System.getProperty("user.dir"))
       //println(s"whole source is: \n ${unit.body}")
       //println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
@@ -82,7 +90,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       checkFile()
     }
 
-    /** Finds objects and classes with protocols
+    /** Finds objects and classes with protocols and add them to protocolledElements
      *
      */
     def getProtocolledElements(): Unit = {
@@ -90,8 +98,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         addElementProtocol(body, tree.symbol.tpe.toString(), getScope(tree), tree)
       }
       for (tree@q"$mods object $name extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
-        val objectScope = mutable.Stack[String]()
-        objectScope.push(name.toString())
+        val objectScope = mutable.Stack[String]().push(name.toString())
         addElementProtocol(body, tree.symbol.tpe.toString(), objectScope, tree, isObject = true, objectName = name.toString())
       }
     }
@@ -117,11 +124,10 @@ class MyComponent(val global: Global) extends PluginComponent {
             println("protocol name is "+protocolName)
             //retrieve the serialized data
             val (stateMachine, states, returnValuesArray) = getDataFromProtocol(protocolName)
-            checkProtocolMethodsSubsetClassMethods(returnValuesArray, body, elementType, protocolName)
             val methodToIndices = createMethodToIndicesMap(returnValuesArray)
             val returnValueToIndice = createReturnValueToIndiceMap(returnValuesArray)
-            val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray)
-            println("state to available methods: "+stateToAvailableMethods)
+            val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray) //could use in error message to tell users what methods are available in the current state
+            checkProtocolMethodsSubsetElementMethods(methodToIndices.keys.toArray, body, elementType, protocolName)
             val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
             if(isObject)
               currentElementInfo.objectInfo = ObjectInfo(objectName, false)
@@ -697,42 +703,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       newMap
     }
 
-    /** Gets the instance with the closest scope to the current scope with the given name if it exists. If not,
-     * returns None.
-     * Works by copying the current scope and then checking if there is an instance which matches name and the copied
-     * scope. If not then it will reduce the current scope and do the same search there until it finds the instance
-     * with the same name with the longest possible scope which is still a subset of the current scope.
-     *
-     * @param name
-     * @return
-     */
-    def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
-      if (elementType != null) {
-        println("inside get closest")
-        println("protocolledElements is " + protocolledElements)
-        println("element type " + elementType)
-        println("keys are " + protocolledElements.keys)
-        if (protocolledElements.contains(elementType)) {
-          println("got type")
-          if (protocolledElements(elementType).instances.isEmpty) return None
-          println("not empty")
-          val curScope = currentScope.clone()
-          println("current scope is " + curScope)
-          while (curScope.nonEmpty) {
-            for (instance <- protocolledElements(elementType).instances) {
-              println("got instance " + instance)
-              println("aliases are " + instance.aliases)
-              for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
-                return Some(alias.name, alias.scope)
-              }
-            }
-            curScope.pop()
-          }
-        }
-        None
-      }
-      None
-    }
 
     /** Gets the named object of closest scope to the current scope.
      *
@@ -1143,6 +1113,26 @@ class MyComponent(val global: Global) extends PluginComponent {
       givenToFunctionParam
     }
 
+    def checkForInconsistentStateMutation(instancesToUpdate: Set[Instance], originalInstances: Set[Instance],
+                                          aliasInfo:(String, mutable.Stack[String]), aliasType:String,
+                                         methodName:String, line:Trees#Tree) = {
+        for (instance <- originalInstances) {
+          updateInstance(instance, methodName, line, protocolledElements(aliasType), aliasType)
+        }
+        if (!(instancesToUpdate == originalInstances)) {
+          var expectedStates:Set[State] = Set()
+          for(instance <- originalInstances){
+            expectedStates ++= instance.currentStates
+          }
+          var actualStates:Set[State] = Set()
+          for(instance <- instancesToUpdate){
+            actualStates ++= instance.currentStates
+          }
+          throw new inconsistentStateMutation(methodName, aliasInfo._1,
+            line.pos.source.toString(), line.pos.line, expectedStates, actualStates)
+        }
+    }
+
     /** For a given line of code, checks if it is a method on an instance with protocol and if so updates its state
      *
      * @param line
@@ -1162,8 +1152,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           methodName = methodName.substring(0,methodName.indexOf("(")+1) + methodName.substring(methodName.lastIndexOf(".")+1)
         }
         println("method name is "+methodName)
-        println("alias name is "+methodCallInfo._2)
-        println("alias type is "+methodCallInfo._3)
         val aliasName = methodCallInfo._2
         val aliasType = methodCallInfo._3
         breakable {
@@ -1175,27 +1163,12 @@ class MyComponent(val global: Global) extends PluginComponent {
                   break
               }
               //checks if there is an inconsistent state mutation (FUNCTION)
-              val instancesToUpdate = currentElementInfo.instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-              println("instances to update are "+instancesToUpdate)
-              val originalInstances = mapBeforeFunction(aliasType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-              println("original instances are "+originalInstances)
+              val instancesToUpdate =
+                currentElementInfo.instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              val originalInstances =
+                mapBeforeFunction(aliasType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               if (!(instancesToUpdate == originalInstances)) {
-                println("instances are not equal")
-                for (instance <- originalInstances) {
-                  updateInstance(instance, methodName, line, currentElementInfo, aliasType)
-                }
-                if (!(instancesToUpdate == originalInstances)) {
-                  var expectedStates:Set[State] = Set()
-                  for(instance <- originalInstances){
-                    expectedStates ++= instance.currentStates
-                  }
-                  var actualStates:Set[State] = Set()
-                  for(instance <- instancesToUpdate){
-                    actualStates ++= instance.currentStates
-                  }
-                  throw new inconsistentStateMutation(methodName, aliasInfo._1,
-                    line.pos.source.toString(), line.pos.line, expectedStates, actualStates)
-                }
+                checkForInconsistentStateMutation(instancesToUpdate, originalInstances, aliasInfo, aliasType, methodName, line)
               }
               else {
                 for (instance <- instancesToUpdate) {
@@ -1298,13 +1271,13 @@ class MyComponent(val global: Global) extends PluginComponent {
 
       override def traverse(tree: Tree): Unit = {
         tree match {
-          case func@q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>
+          case func@q"$mods def $funcName[..$tparams](...$paramss): $returnType = $body" =>
             val parameters = /*_*/ getParametersWithInstanceNames(paramss) /*_*/
-            if (tname.toString() != "<init>")
+            if (funcName.toString() != "<init>")
               functions +=
-                Function(tname.toString(), parameters, tpt, expr,
-                  getScope(func), Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), None)
-            /*_*/ super.traverse(expr) /*_*/
+                Function(funcName.toString(), parameters, returnType, body,
+                  getScope(func), Map[ArrayBuffer[(String, Set[String], Set[State])], ArrayBuffer[Set[State]]](), returned=None)
+            /*_*/ super.traverse(body) /*_*/
           case _ =>
             super.traverse(tree)
         }
@@ -1313,18 +1286,6 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
 //endregion
-    /** Removes alias from instances */
-    def removeAliases(elementType:String, aliasName: String) = {
-      getClosestScopeAliasInfo(aliasName, elementType) match {
-        case Some(aliasInfo) =>
-          val instancesToUpdate = protocolledElements(elementType).instances.filter(instance =>
-            instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-          for (instance <- instancesToUpdate)
-            instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
-        case None =>
-      }
-      protocolledElements(elementType).instances = cleanInstances(protocolledElements(elementType).instances)
-    }
 
     /** Gets the scope of a tree from its symbol.
      * It will check if the tree has a symbol field unless specified not to.
@@ -1344,6 +1305,11 @@ class MyComponent(val global: Global) extends PluginComponent {
       objectScope
     }
 
+    /** Gets the scope of a symbol by looking through its owner chain
+     *
+     * @param symbol
+     * @return mutable stack representing the scope of the given symbol
+     */
     def getScope(symbol: Symbol): mutable.Stack[String] = {
       val objectScope = mutable.Stack[String]()
       for (symbol <- symbol.owner.ownerChain.reverse)
@@ -1366,21 +1332,20 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-    /** Checks that methods in return values are a subset of those in stats
+    /** Checks that methods in the protocol are a subset of those in the body of the element
      *
-     * @param returnValuesArray
-     * @param stats
-     * @param filename
+     * @param protocolMethods : names of the methods in the protocol
+     * @param elementBody : body of the class or object being checked
+     * @param filename : name of the file the user code is in to generate a useful error message
      */
-    def checkProtocolMethodsSubsetClassMethods(returnValuesArray: Array[ReturnValue], stats: Seq[Trees#Tree], elementType: String, filename: String): Unit = {
-      val classMethods = getMethodNames(stats)
-      var protocolMethods: Set[String] = Set()
-      for (i <- returnValuesArray.indices) {
-        protocolMethods += stripReturnValue(returnValuesArray(i).parentMethod.name.replaceAll("\\s", ""))
-      }
-      if (!(protocolMethods subsetOf classMethods)) throw new badlyDefinedProtocolException(
+    def checkProtocolMethodsSubsetElementMethods(protocolMethods: Array[String], elementBody: Seq[Trees#Tree],
+                                                 elementType: String, filename: String): Unit = {
+      val elementMethods = getMethodNames(elementBody)
+      val protocolMethods: Set[String] =
+        for (method <- protocolMethods) yield stripReturnValue(method.replaceAll("\\s", ""))
+      if (!(protocolMethods subsetOf elementMethods)) throw new badlyDefinedProtocolException(
         s"Methods $protocolMethods defined in $filename are not a subset of methods " +
-          s"$classMethods defined in class $elementType. Methods ${protocolMethods.diff(classMethods)} are defined in " +
+          s"$elementMethods defined in class $elementType. Methods ${protocolMethods.diff(elementMethods)} are defined in " +
           s"the protocol but not in the class")
     }
 
