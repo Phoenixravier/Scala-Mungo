@@ -5,9 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 
-import scala.sys.process._
 import scala.collection.{SortedSet, mutable}
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 
 object Util {
