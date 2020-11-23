@@ -1,9 +1,9 @@
 package compilerPlugin
 
-import ProtocolDSL.State
+import ProtocolDSL.{ReturnValue, State}
 import compilerPlugin.Util._
 
-import scala.collection.mutable
+import scala.collection.{SortedSet, mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
@@ -385,7 +385,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       getClosestScopeAliasInfo(assignee, assigneeType) match {
         case Some(assigneeAliasInfo) =>
           returnedAssigned match {
-            case Some(returnedInstances) =>
+            case Some(returned) =>
+              val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
               removeAliases(assigneeType, assigneeAliasInfo._1)
               addAssigneeToAssigned(assigneeAliasInfo._1, assigneeAliasInfo._2, assigneeType, returnedInstances)
             case None =>
@@ -404,12 +405,17 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assigned  In val/var x = y, this is y.
      */
     def processNovelAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree) = {
+      println("in process novel")
+      println(s"assignee is $assignee and assigned is $assigned")
       val returnedAssigned = checkInsideFunctionBody(assigned)
+      println("returned is "+returnedAssigned)
       returnedAssigned match {
-        case Some(returnedInstances) =>
+        case Some(returned) =>
+          val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
           addAssigneeToAssigned(assignee, currentScope.clone(), assigneeType, returnedInstances)
         case None =>
       }
+      println("after novel assignment, instances are "+protocolledElements)
     }
 
     /** Adds the assignee alias (assigneeName, assigneeScope) to the assigned instances.
@@ -795,6 +801,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def assignParameters(parameters: ArrayBuffer[(String, String)], args: List[Tree], calledOn: Tree) = {
       if (calledOn != null && protocolledElements.contains(calledOn.symbol.tpe.toString())) {
+        println("inside if")
         processNovelAssignment(getSimpleClassName(calledOn.symbol.tpe.toString()), calledOn.symbol.tpe.toString(), calledOn)
       }
       var i = 0
@@ -959,10 +966,14 @@ class MyComponent(val global: Global) extends PluginComponent {
              && function.scope == getScope(func, dontCheckSymbolField = true)
              && typesMatch(function.params, args))) {
         currentScope.push(function.name) //push scope so parameters will be scoped inside the function
+        println(s"before assigning parameters to method ${function.name}, instances are "+protocolledElements)
         assignParameters(function.params, args, calledOn)
+        println(s"after assigning parameters to method ${function.name}, instances are "+protocolledElements)
         val cacheEntry = dealWithCache(function)
-        if(cacheEntry == null)
+        if(cacheEntry == null) {
+          println("returning "+function.returned)
           return function.returned
+        }
         //check inside the function body
         currentScope.push("body")
         val returned = checkInsideFunctionBody(function.body)
@@ -970,7 +981,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         //figuring out what is returned PUT THIS INTO ITS OWN FUNCTION
         returned match {
           case Some(setOfInstances) =>
-            var scopeClone = currentScope.clone()
+            val scopeClone = currentScope.clone()
             var instancesReturned = setOfInstances ++ Set(Instance(Set(Alias("scope+", scopeClone.clone())), Set())) //delete internal variables
             scopeClone.pop()
             instancesReturned = instancesReturned ++ Set(Instance(Set(Alias("scope+", scopeClone)), Set())) //need to delete the parameters too
@@ -981,11 +992,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         //remove aliases inside the body of the function since they can't be used anymore
         removeAllAliasesInScope(currentScope)
         currentScope.pop()
-        //construct array of next states
-        val nextStates = findNextStates(cacheEntry)
         //update cache
-        function.stateCache += cacheEntry -> nextStates
-        //delete aliases in function here
+        function.stateCache += cacheEntry -> findNextStates(cacheEntry)
+        //delete aliases defined in the function
         removeAllAliasesInScope(currentScope)
         currentScope.pop()
         return function.returned
@@ -993,6 +1002,16 @@ class MyComponent(val global: Global) extends PluginComponent {
       None
     }
 
+    /** Check cache for hit with the current instances.
+     *  If there is a hit with next states then change the states and return null, indicating that the
+     *  dealWithFunction function should return.
+     *  If there is a hit with null then we are in a recursive function and should thus skip the next call and
+     *  return null
+     *  If there is no hit, create a new cache entry and return it
+     *
+     * @param function function to check the cache of
+     * @return either a new entry for the cache or null if we should leave the function as a result of a cache hit
+     */
     def dealWithCache(function: Function):(ArrayBuffer[(String,Set[String], Set[State])]) = {
       //create map
       val givenToFunctionParams= createMap(function.params)
@@ -1023,14 +1042,11 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     /** Checks if the object given has been seen before. If not, executes the code inside it.
      *
-     * @param objectName
-     * @return
+     * @param objectName object to check
      */
     def checkObject(objectType: String, objectName: String) = {
-      println("inside check object")
       getClosestScopeObject(objectType) match {
         case Some(obj) =>
-          println("found an object "+obj)
           obj.initialised = true
           currentScope.push(objectName)
           checkInsideObjectBody(obj.body)
@@ -1041,27 +1057,25 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
     /** Checks for a new x function and executes the code within the class if found. Renames instances to
-     * constructor parameter names if needed.
+     *  constructor parameter names if needed.
      *
-     * @param funcCall
+     * @param function function to check
+     * @param args possible constructor arguments for the function
+     * @return 1:true if the
      */
-    def checkNewFunction(funcCall: global.Apply, args: List[Tree]): (Boolean, Boolean, Set[Instance]) = {
-      println("in check new function")
+    def checkNewFunction(function: global.Apply, args: List[Tree]): (Boolean, Boolean, Set[Instance]) = {
       var isCurrentType = false
       var returned: Set[Instance] = Set()
-      funcCall match {
+      function match {
         case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
           parents match {
             case List(item) =>
-              println("in list item")
-              //note here getScope is called on the symbol owner of funcCall since we want to skip the class name in the scope
+              //note here getScope is called on the symbol owner of the function since we want to skip the class name in the scope
               val IsCurrentTypeAndReturned =
-                checkInsideClass(getScope(funcCall.symbol.owner), funcCall.tpe.toString(), args)
+                checkInsideClass(getScope(function.symbol.owner), function.tpe.toString(), args)
               isCurrentType = IsCurrentTypeAndReturned._1
               returned = IsCurrentTypeAndReturned._2
-              println("returned is "+returned)
             case List(Apply(className, arg2)) =>
-              println("in apply classname")
               val IsCurrentTypeAndReturned = checkInsideClass(getScope(className), className.tpe.toString(), args)
               isCurrentType = IsCurrentTypeAndReturned._1
               returned = IsCurrentTypeAndReturned._2
@@ -1079,9 +1093,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       else elementType
     }
 
+    /** Checks inside a class body
+     *
+     * @param scope scope of the class
+     * @param elementType type of the class
+     * @param args constructor arguments
+     * @return
+     */
     def checkInsideClass(scope: mutable.Stack[String], elementType: String, args: List[Tree]): (Boolean, Set[Instance]) = {
       var returned: Set[Instance] = Set()
-      println(elementType)
       for (element <- ElementTraverser.elements
            if !element.isObject && element.elementType == elementType && element.scope == scope) {
         println(element.params)
@@ -1210,6 +1230,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       methodTraverser.methodCallInfos = ListBuffer[(String, String, String)]()
     }
 
+    def getPossibleMethods(elementType: String, states: Set[State]):Set[ReturnValue] = {
+      var possibleMethods = protocolledElements(elementType).stateToAvailableMethods.values.last
+      println("state map is "+protocolledElements(elementType).stateToAvailableMethods)
+      for(state <- states) {
+        possibleMethods = possibleMethods.intersect(protocolledElements(elementType).stateToAvailableMethods(state))
+      }
+      possibleMethods
+    }
+
     def updateInstance(instance: Instance, methodName: String, line: Trees#Tree, currentElementInfo: ElementInfo, elementType:String) = {
       var newSetOfStates: Set[State] = Set()
       for (state <- instance.currentStates) {
@@ -1229,12 +1258,27 @@ class MyComponent(val global: Global) extends PluginComponent {
           newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
         println("new states are " + newStates)
         for (state <- newStates if state.name == Undefined) {
+          val possibleNextMethods = getPossibleMethods(elementType, instance.currentStates)
           throw new protocolViolatedException(sortSet(instance.getAliasNames()), elementType,
-            sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line)
+            sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line,
+            formatMethods(sortSet(possibleNextMethods)))
         }
         newSetOfStates = newSetOfStates ++ newStates
       }
       instance.currentStates = newSetOfStates
+    }
+
+    def formatMethods(methods:SortedSet[ReturnValue]): String={
+      var formattedMethods = ""
+      for(method <- methods){
+        if(method.valueName != Any)
+          formattedMethods += method.parentMethod.name + ":" + method.valueName + " "
+          else formattedMethods += method.parentMethod.name + " "
+
+      }
+      if(formattedMethods == "")
+        formattedMethods = "No methods are available in this state."
+      formattedMethods
     }
 
     //region<Traversers>
@@ -1343,10 +1387,12 @@ class MyComponent(val global: Global) extends PluginComponent {
         //retrieve the serialized data
         val (stateMachine, states, returnValuesArray) = getDataFromProtocol(protocolName)
         val methodToIndices = createMethodToIndicesMap(returnValuesArray)
+        val returnValueStringToIndice = createReturnValueStringToIndiceMap(returnValuesArray)
         val returnValueToIndice = createReturnValueToIndiceMap(returnValuesArray)
-        val stateToAvailableMethods = createStateToAvailableMethodsMap(returnValuesArray) //could use in error message to tell users what methods are available in the current state
+        val stateToAvailableMethods = createStateToAvailableMethodsMap(stateMachine, returnValueToIndice, states) //could use in error message to tell users what methods are available in the current state
         checkProtocolMethodsSubsetElementMethods(methodToIndices.keys.toArray, body, elementType, protocolName)
-        val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueToIndice, Set[Instance]())
+        val currentElementInfo = ElementInfo(stateMachine, states, methodToIndices, returnValueStringToIndice,
+                                              stateToAvailableMethods, Set[Instance]())
         if (objectName != null)
           currentElementInfo.objectName = objectName
         protocolledElements += elementType -> currentElementInfo
@@ -1507,7 +1553,8 @@ class MyComponent(val global: Global) extends PluginComponent {
       var copiedMap = mutable.Map[String, ElementInfo]()
       for((elementType, elementInfo) <- map){
         copiedMap += (elementType -> ElementInfo(elementInfo.transitions, elementInfo.states,
-          elementInfo.methodToIndices, elementInfo.returnValueToIndice, copyInstances(elementInfo.instances)))
+          elementInfo.methodToIndices, elementInfo.returnValueToIndice, elementInfo.stateToAvailableMethods,
+          copyInstances(elementInfo.instances)))
       }
       copiedMap
     }

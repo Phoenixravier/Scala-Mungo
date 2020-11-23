@@ -1,15 +1,14 @@
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import ProtocolDSL.State
-import compilerPlugin.{GetFileFromAnnotation, inconsistentStateMutation, protocolViolatedException}
+import compilerPlugin.GetFileFromAnnotation
 import org.scalatest._
 
 import scala.collection.SortedSet
 import scala.reflect.internal.util.BatchSourceFile
-import scala.tools.nsc.{Settings, _}
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.ConsoleReporter
+import scala.tools.nsc.{Settings, _}
 
 
 class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{

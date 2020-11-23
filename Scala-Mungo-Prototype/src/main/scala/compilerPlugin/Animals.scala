@@ -30,8 +30,7 @@ object Demonstration extends App{
     10
   }
   val stash = new MoneyStash
-  for(x <- fillStash(stash) to getStash(stash)){
-    println("iteration "+x)
-  }
+  stash.get()
+  stash.get()
 }
 
