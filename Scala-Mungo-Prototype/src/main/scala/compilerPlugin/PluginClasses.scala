@@ -1,10 +1,7 @@
 package compilerPlugin
+import ProtocolDSL.{ReturnValue, State}
 
-import ProtocolDSL.State
-
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.{SortedSet, mutable}
-import scala.reflect.api.Trees
 
 /** Holds an alias' name and scope */
 case class Alias(var name:String, var scope: mutable.Stack[String]) extends Cloneable {
@@ -61,24 +58,22 @@ case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
 
 /** Holds information about a class or an object with protocol*/
 case class ElementInfo(transitions:Array[Array[State]], states:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]],
-                       returnValueToIndice:mutable.HashMap[String, Int], var instances:Set[Instance], var objectInfo:ObjectInfo=null){
+                       returnValueToIndice:mutable.HashMap[String, Int], stateToAvailableMethods: mutable.HashMap[State, Set[ReturnValue]],
+                       var instances:Set[Instance], var objectName:String=null){
   override def toString(): String={
-    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances"
-  }
-}
-
-case class ObjectInfo(name:String, var isInstantiated:Boolean){
-  override def toString(): String={
-    s"$name $isInstantiated"
+    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances $objectName"
   }
 }
 
 
 /** Error for when a protocol is violated */
 class protocolViolatedException(aliasNames:SortedSet[String], className:String, states:SortedSet[State], methodName:String,
-                                file:String, line:Int)
+                                file:String, line:Int, nextMethods: String)
   extends Exception(s"Invalid transition in instance with alias(es) $aliasNames of type $className " +
-    s"from state(s) $states with method $methodName in file $file at line $line")
+    s"from state(s) $states with method $methodName in file $file at line $line. Possible methods to use in this state " +
+    s"are: $nextMethods")
+
+
 
 /** Error for when the user defines their protocol wrong */
 class badlyDefinedProtocolException(message:String) extends Exception(message)
@@ -87,7 +82,4 @@ class inconsistentStateMutation(methodName:String, aliasName:String, file:String
                                 expectedStates:Set[State], actualStates:Set[State])
   extends Exception(s"In file $file, at line $line, method $methodName changed the state of $aliasName, and not " +
     s"as described in the protocol. Expected states $expectedStates, got states $actualStates")
-
-
-
 

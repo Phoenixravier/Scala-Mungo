@@ -5,16 +5,16 @@ import java.nio.file.{Files, Paths}
 
 import ProtocolDSL.{ReturnValue, State}
 
-import scala.sys.process._
 import scala.collection.{SortedSet, mutable}
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.api.Trees
 
 object Util {
 
 
   val Undefined = "_Undefined_"
+  val Any = "_Any_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
+  var protocolledElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
 
   /** Removes all instances with an empty set of aliases */
@@ -25,6 +25,21 @@ object Util {
   }
 
 
+  /** Initialise all the objects in protocolled objects to a single instance in state init
+   *
+   */
+  def initObjects() = {
+    for(elementInfo <- protocolledElements.values){
+      if(elementInfo.objectName != null)
+        elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())), Set(elementInfo.states(0)))
+    }
+  }
+
+  def removeAllInstances(): Any = {
+    for(elementInfo <- protocolledElements.values){
+      elementInfo.instances = Set()
+    }
+  }
 
   /** Sorts a set */
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
@@ -88,21 +103,39 @@ object Util {
     methodToIndices
   }
 
-  def createReturnValueToIndiceMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[String, Int] = {
+  def createReturnValueStringToIndiceMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[String, Int] = {
     var returnValueToIndice:mutable.HashMap[String, Int] = mutable.HashMap()
     for(returnValue <- returnValuesArray)
       returnValueToIndice += Util.stripReturnValue(returnValue.parentMethod.name) + ":" +returnValue.valueName -> returnValue.index
     returnValueToIndice
   }
 
-  def createStateToAvailableMethodsMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[State, Set[ReturnValue]] = {
+  def createReturnValueToIndiceMap(returnValuesArray: Array[ReturnValue]): mutable.HashMap[ReturnValue, Int] = {
+    var returnValueToIndice:mutable.HashMap[ReturnValue, Int] = mutable.HashMap()
+    for(returnValue <- returnValuesArray)
+      returnValueToIndice += returnValue -> returnValue.index
+    returnValueToIndice
+  }
+
+  def createStateToAvailableMethodsMap(stateMachine: Array[Array[State]], returnValueToIndice:mutable.HashMap[ReturnValue, Int],
+                                       states:Array[State]): mutable.HashMap[State, Set[ReturnValue]] = {
     var stateToAvailableMethods:mutable.HashMap[State, Set[ReturnValue]] = mutable.HashMap()
-    for(returnValue <- returnValuesArray){
-      if(!stateToAvailableMethods.contains(returnValue.parentMethod.currentState))
-        stateToAvailableMethods += returnValue.parentMethod.currentState -> Set(returnValue)
-      else
-        stateToAvailableMethods(returnValue.parentMethod.currentState) += returnValue
+    val indiceToReturnValue = returnValueToIndice.map(_.swap)
+    for(state <- states){
+      var i = 0
+      var methodIndicesForState:Set[Int] = Set()
+      println("next states row is "+stateMachine(state.index).mkString("Array(", ", ", ")"))
+      for(nextState <- stateMachine(state.index)) {
+        if (nextState.name != Undefined)
+          methodIndicesForState += i
+        i += 1
+      }
+      var possibleMethods:Set[ReturnValue] = Set()
+      for(indice <- methodIndicesForState)
+        possibleMethods += indiceToReturnValue(indice)
+      stateToAvailableMethods += state -> possibleMethods
     }
+    println("state to av is "+stateToAvailableMethods)
     stateToAvailableMethods
   }
 
@@ -167,27 +200,68 @@ object Util {
   }
 
 
+  /** Removes alias from instances */
+  def removeAliases(elementType:String, aliasName: String) = {
+    getClosestScopeAliasInfo(aliasName, elementType) match {
+      case Some(aliasInfo) =>
+        val instancesToUpdate = protocolledElements(elementType).instances.filter(instance =>
+          instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+        for (instance <- instancesToUpdate)
+          instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
+      case None =>
+    }
+    protocolledElements(elementType).instances = cleanInstances(protocolledElements(elementType).instances)
+  }
+
+
+  /** Gets the instance with the closest scope to the current scope with the given name if it exists. If not,
+   * returns None.
+   * Works by copying the current scope and then checking if there is an instance which matches name and the copied
+   * scope. If not then it will reduce the current scope and do the same search there until it finds the instance
+   * with the same name with the longest possible scope which is still a subset of the current scope.
+   *
+   * @param name
+   * @return
+   */
+  def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
+    if (elementType != null) {
+      if (protocolledElements.contains(elementType)) {
+        if (protocolledElements(elementType).instances.isEmpty) return None
+        val curScope = currentScope.clone()
+        while (curScope.nonEmpty) {
+          for (instance <- protocolledElements(elementType).instances) {
+            for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
+              return Some(alias.name, alias.scope)
+            }
+          }
+          curScope.pop()
+        }
+      }
+      None
+    }
+    None
+  }
+
+
   /** Writes the state machine, the array of states and the array of return values (packaged in data) to a file
    * with name filename.
    * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
-    val path = Paths.get("/compiledProtocols/")
-    if(!(Files.exists(path) && Files.isDirectory(path)))
-      Files.createDirectory(path)
-    println(path+"/"+filename)
-    println("user dir in util is "+System.getProperty("user.dir"))
+    println("in send data, user dir is "+sys.props.get("user.dir"))
+    val path = Paths.get("compiledProtocols")
+    Files.createDirectories(path)
     val oos = new ObjectOutputStream(new FileOutputStream(path+"/"+filename))
     oos.writeObject(data)
     oos.close()
-    println("file exists is "+Files.exists(Paths.get(s"/compiledProtocols/$filename.ser")))
   }
 
   def getDataFromProtocol(protocolName:String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    println("user dir in util get data is "+System.getProperty("user.dir"))
-    if (!Files.exists(Paths.get(s"/compiledProtocols/$protocolName.ser")))
+    println("in get data, user dir is "+sys.props.get("user.dir"))
+    val path = Paths.get("compiledProtocols")
+    if (!Files.exists(Paths.get(s"compiledProtocols/$protocolName.ser")))
       throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
         s"check that the protocol name is the same as the name of the object containing your protocol")
-    getDataFromFile(s"/compiledProtocols/$protocolName.ser")
+    getDataFromFile(s"compiledProtocols/$protocolName.ser")
   }
 
 
@@ -200,5 +274,3 @@ object Util {
   }
 
 }
-
-
