@@ -1,7 +1,5 @@
 package compilerPlugin
 
-import java.nio.file.{Files, Paths}
-
 import ProtocolDSL.{ReturnValue, State}
 import compilerPlugin.Util._
 

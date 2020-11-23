@@ -20,26 +20,22 @@ class MoneyStash() {
 }
 
 @Typestate("CWeirdProtocol")
-class C(){
-  def m(): Unit ={
-    val local = new C()
-    local.m()
+class Cat{
+  var friend:Cat = null
+  def walk(): Boolean = true
+  def walkFriend(): Unit ={
+    friend.walk()
   }
-
+  def setFriend(f:Cat): Unit ={
+    friend = f
+  }
 }
 
-object main extends App{
-  val c = new C()
-  c.m()
-}
-
-
-object Demonstration {
-  val stash = new MoneyStash
-  val sameStash = stash
-  stash.fill()
-  sameStash.get()
-  stash.get()
-
+object Main extends App{
+  val cat1 = new Cat()
+  val cat2 = new Cat()
+  cat1.setFriend(cat2)
+  cat1.walkFriend()
+  cat2.walk()
 }
 
