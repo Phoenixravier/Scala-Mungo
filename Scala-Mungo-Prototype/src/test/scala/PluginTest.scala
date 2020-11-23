@@ -1,4 +1,3 @@
-
 import java.io.{BufferedWriter, File, FileWriter}
 
 import ProtocolDSL.State
@@ -7,9 +6,9 @@ import org.scalatest._
 
 import scala.collection.SortedSet
 import scala.reflect.internal.util.BatchSourceFile
-import scala.tools.nsc.{Settings, _}
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.ConsoleReporter
+import scala.tools.nsc.{Settings, _}
 
 
 class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll{
@@ -42,7 +41,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("walkTwiceIllegalProtocol.scala", Seq(protocolWalkTwiceIllegal))
-
       protocolWithNotAMethod =
         """
           |package ProtocolDSL
@@ -56,7 +54,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("withNotAMethodProtocol.scala", Seq(protocolWithNotAMethod))
-
       protocolWithoutEnd =
         """
           |package ProtocolDSL
@@ -68,7 +65,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("withoutEndProtocol.scala", Seq(protocolWithoutEnd))
-
       walkLoop3comeAliveLoop1 =
         """
           |package ProtocolDSL
@@ -85,7 +81,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("walkLoop3comeAliveLoop1Protocol.scala", Seq(walkLoop3comeAliveLoop1))
-
       cannotWalkProtocol =
         """
           |package ProtocolDSL
@@ -99,7 +94,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("cannotWalkProtocol.scala", Seq(cannotWalkProtocol))
-
       walkComeAliveWalkLoopProtocol =
         """
           |package ProtocolDSL
@@ -116,7 +110,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("walkComeAliveWalkLoopProtocol.scala", Seq(walkComeAliveWalkLoopProtocol))
-
       decisionWalkProtocol =
         """
           |package ProtocolDSL
@@ -131,7 +124,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
-
       pairsProtocol =
         """
           |package ProtocolDSL
@@ -150,7 +142,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("pairsProtocol.scala", Seq(pairsProtocol))
-
       walkComeAliveDifferentProtocol =
         """
           |package ProtocolDSL
@@ -165,7 +156,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("walkComeAliveDifferentProtocol.scala", Seq(walkComeAliveDifferentProtocol))
-
       loopProtocol =
         """
           |package ProtocolDSL
@@ -178,7 +168,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |}
           |""".stripMargin
       writeFile("loopProtocol.scala", Seq(loopProtocol))
-
       enumProtocol =
         """
           |package ProtocolDSL
@@ -207,8 +196,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
           |""".stripMargin
       writeFile("enumProtocol.scala", Seq(enumProtocol))
     }
-
-
     /** Delete protocol files after testing */
     override def afterAll(): Unit = {
       deleteFile("walkTwiceIllegalProtocol.scala")
@@ -284,7 +271,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  val cat = new Cat()
         |  cat.walk()
         |  cat.walk()
-        |
         |}
         |
         |""".stripMargin
@@ -292,10 +278,10 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val exceptedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage == exceptedException.getMessage)
-   }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
 
   "plugin" should "throw an exception when an invalid transition happens in an object" in {
     val userCode =
@@ -322,9 +308,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
 
-    val exceptedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
-    assert(actualException.getMessage === exceptedException.getMessage)
+    val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception when an invalid transition happens in a class in main" in {
@@ -354,9 +340,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15)
-    assert(actualException.getMessage === expectedException.getMessage)
-   }
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
 
   "plugin" should "throw an exception when an invalid transition happens in an object in main" in {
     val userCode =
@@ -387,8 +373,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception when protocol methods are not a subset of ones in class" in {
@@ -573,9 +559,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
- }
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
 
   "plugin" should "throw an exception if an instance defined inside a for loop violates its protocol" in {
     val userCode =
@@ -607,8 +593,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance after being in a valid for loop violates its protocol" in {
@@ -643,7 +629,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 21)
+      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 21, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -723,8 +709,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the to generator of a for loop in main" in {
@@ -769,8 +755,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the until generator of a for loop" in {
@@ -813,8 +799,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the until generator of a for loop in main" in {
@@ -859,8 +845,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator of a for loop" in {
@@ -885,6 +871,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  def getCatAgeRange(cat:Cat): List[Int] ={
         |    println("inside get cat age range")
         |    cat.walk()
+        |    cat.walk()
         |    List(0,10)
         |  }
         |}
@@ -896,8 +883,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator of a for loop in main" in {
@@ -925,6 +912,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |   def getCatAgeRange(cat:Cat): List[Int] ={
         |    println("inside get cat age range")
         |    cat.walk()
+        |    cat.walk()
         |    List(0,10)
         |  }
         |
@@ -937,8 +925,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the multiple generators of a for loop" in {
@@ -986,8 +974,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the multiple generators  of a for loop in main" in {
@@ -1036,8 +1024,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 32)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 32, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator with guard of a for loop" in {
@@ -1076,8 +1064,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator with guard of a for loop in main" in {
@@ -1117,8 +1105,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator with multiple guards of a for loop" in {
@@ -1156,8 +1144,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator with multiple guards of a for loop in main" in {
@@ -1196,8 +1184,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator of a for yield loop" in {
@@ -1222,6 +1210,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |
         |  def getBirthAgeRange(kitty: Cat):List[Int] = {
         |    kitty.walk()
+        |    kitty.walk()
         |    List(0,10)
         |  }
         |}
@@ -1233,8 +1222,9 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the generator of a for yield loop in main" in {
@@ -1261,6 +1251,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |  def getBirthAgeRange(kitty: Cat):List[Int] = {
         |    kitty.walk()
+        |    kitty.walk()
         |    List(0,10)
         |  }
         |
@@ -1273,8 +1264,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -1315,7 +1306,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25)
+      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1352,7 +1343,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0), State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22)
+      sortSet(Set(State("init", 0), State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1392,8 +1383,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("init", 0))), "walk()", "<test>", 23, "comeAlive() ")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if the condition inside a while causes a protocol violation" in {
@@ -1432,8 +1423,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0))), "walk()", "<test>", 23)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("init", 0))), "walk()", "<test>", 23, "comeAlive() ")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a protocol violation happens after a while(true) loop" in {
@@ -1506,7 +1497,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 19)
+      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 19, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   //endregion
@@ -1545,7 +1536,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1584,8 +1575,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function" in {
@@ -1623,8 +1614,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions" in {
@@ -1665,8 +1656,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a nested function in main" in {
@@ -1707,8 +1698,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside two nested functions in main" in {
@@ -1750,8 +1741,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an outer functions called by an inner one in main" in {
@@ -1798,8 +1789,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function" in {
@@ -1834,8 +1825,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance defined in a function violates its protocol inside a function in main" in {
@@ -1872,8 +1863,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "not throw an exception if two instances with the same name do one legal method each" in {
@@ -2005,8 +1996,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with multiple parameters" in {
@@ -2046,8 +2037,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with duplicate parameters" in {
@@ -2084,8 +2075,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2","kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with parameters returned from functions" in {
@@ -2122,8 +2113,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a function with parameters returned from functions in main" in {
@@ -2162,8 +2153,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   //endregion
@@ -2199,8 +2190,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after a method giving multiple states" in {
@@ -2230,8 +2221,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -2270,8 +2261,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance could violate its protocol after an if else statement" in {
@@ -2307,8 +2298,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement" in {
@@ -2346,8 +2337,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement in main" in {
@@ -2387,8 +2378,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an if else statement inside a for loop" in {
@@ -2409,16 +2400,16 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         | def main(args: Array[String]): Unit = {
         |    val cat = new Cat()
         |    for(y <- 1 to 10){
-          |    var x = 1
-          |    if(x == 1){
-          |     val kitty = new Cat()
-          |     kitty.walk()
-          |     kitty.walk()
-          |     cat.walk()
-          |     }
-          |    else
-          |     cat.walk()
-          |    cat.walk()
+        |    var x = 1
+        |    if(x == 1){
+        |     val kitty = new Cat()
+        |     kitty.walk()
+        |     kitty.walk()
+        |     cat.walk()
+        |     }
+        |    else
+        |     cat.walk()
+        |    cat.walk()
         |    }
         |  }
         |}
@@ -2430,8 +2421,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol after a singular if statement" in {
@@ -2464,8 +2455,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the condition of the if in main" in {
@@ -2498,8 +2489,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the condition of the if" in {
@@ -2532,8 +2523,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the  complex condition of the if in main" in {
@@ -2566,8 +2557,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in the complex condition of the if" in {
@@ -2598,8 +2589,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -2635,8 +2626,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a class construtor in main" in {
@@ -2671,8 +2662,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol after its constructor" in {
@@ -2703,8 +2694,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol after its constructor in main" in {
@@ -2736,8 +2727,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in its own constructor" in {
@@ -2768,8 +2759,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol in its own constructor in main" in {
@@ -2801,8 +2792,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object constructor" in {
@@ -2850,8 +2841,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor in main" in {
@@ -2899,8 +2890,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone" in {
@@ -2946,8 +2937,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object construtor, alone in main" in {
@@ -2995,8 +2986,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside an object containing main" in {
@@ -3032,8 +3023,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -3140,8 +3131,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an aliased instance violated its protocol in main" in {
@@ -3175,8 +3166,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance returned from a function violated its protocol" in {
@@ -3212,8 +3203,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance returned from a function violated its protocol in main" in {
@@ -3251,8 +3242,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a used instance returned from a function violated its protocol" in {
@@ -3288,8 +3279,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a used instance returned from a function violated its protocol in main" in {
@@ -3327,8 +3318,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance passed through a function violates its protocol" in {
@@ -3363,8 +3354,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance passed through a function violates its protocol in main" in {
@@ -3401,8 +3392,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via regular assignment violated its protocol" in {
@@ -3436,8 +3427,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via regular assignment violated its protocol in main" in {
@@ -3472,8 +3463,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself violated its protocol" in {
@@ -3504,8 +3495,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself violated its protocol in main" in {
@@ -3538,8 +3529,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself in an if/else violated its protocol" in {
@@ -3571,8 +3562,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself in an if/else violated its protocol in main" in {
@@ -3607,8 +3598,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself from a function violated its protocol" in {
@@ -3643,8 +3634,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance assigned to itself from a function violated its protocol in main" in {
@@ -3681,8 +3672,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via val = if/else violated its protocol" in {
@@ -3715,8 +3706,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via val = if/else violated its protocol in main" in {
@@ -3752,8 +3743,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via if/else violated its protocol" in {
@@ -3786,8 +3777,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance aliased via if/else violated its protocol in main" in {
@@ -3823,8 +3814,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "not throw an exception in the valid pairs example" in {
@@ -3926,7 +3917,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "compilerPlugin.Pair",
-      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 20)
+      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 20, "setRight(Int) ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -3963,7 +3954,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("p", "p2")), "compilerPlugin.Pair",
-      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 21)
+      sortSet(Set(State("leftInitialised", 1))), "sum()", "<test>", 21, "setRight(Int) ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -4002,8 +3993,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance violates its protocol inside a match statement in main" in {
@@ -4039,8 +4030,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a match statement matches a return value unspecified by the programmer" in {
@@ -4070,8 +4061,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 1))), "walk():false", "<test>", 14)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("init", 1))), "walk():false", "<test>", 14, "walk():true walk():Any ")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "not throw an exception if an instance does not violates its protocol inside a match statement" in {
@@ -4614,8 +4605,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if two mutually recursive methods violate protocol in main" in {
@@ -4653,8 +4644,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if two mutually recursive methods with parameters violate protocol" in {
@@ -4690,8 +4681,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if two mutually recursive methods with parameters violate protocol in main" in {
@@ -4729,8 +4720,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a recursive method taking duplicate protocolled values violates protocol" in {
@@ -4764,8 +4755,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a recursive method taking duplicate protocolled values violates protocol in main" in {
@@ -4801,8 +4792,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -4841,8 +4832,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if a method in a companion object violates protocol in main" in {
@@ -4882,8 +4873,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if after an apply method in a companion object protocol is violated" in {
@@ -4920,8 +4911,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if after an apply method in a companion object protocol is violated in main" in {
@@ -4960,8 +4951,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   //endregion
@@ -5104,8 +5095,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance calls an illegal method after a nested breakable/break block" in {
@@ -5140,8 +5131,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
 
   "plugin" should "throw an exception if an instance calls an illegal method after a labelled nested breakable/break block" in {
@@ -5179,8 +5170,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
-    assert(actualException.getMessage === expectedException.getMessage)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -5368,8 +5359,3 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   def sortSet[A](unsortedSet: Set[A])(implicit ordering: Ordering[A]): SortedSet[A] = SortedSet.empty[A] ++ unsortedSet
   //endregion
 }
-
-
-
-
-
