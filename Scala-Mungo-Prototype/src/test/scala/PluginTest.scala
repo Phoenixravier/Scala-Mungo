@@ -5210,7 +5210,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   "plugin" should "throw an exception if an instance calls an illegal method after being a field, set with dot" in {
@@ -5247,7 +5247,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   "plugin" should "not throw an exception if an instance with the same name as a field walks once" in {
@@ -5314,7 +5314,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24)
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 

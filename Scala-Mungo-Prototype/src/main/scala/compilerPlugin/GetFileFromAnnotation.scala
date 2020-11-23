@@ -104,7 +104,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def apply(unit: CompilationUnit): Unit = {
       println("hello, plugin is running")
       //println(s"whole source is: \n ${unit.body}")
-      //println("raw is: "+showRaw(unit.body))
+      println("raw is: "+showRaw(unit.body))
       compilationUnit = unit
       functionTraverser.traverse(unit.body)
       ElementTraverser.traverse(unit.body)
@@ -124,6 +124,9 @@ class MyComponent(val global: Global) extends PluginComponent {
           for (parent <- parents) {
             if (parent.toString() == "App") {
               currentScope = getScope(line)
+              for (element <- ElementTraverser.elements if
+              (element.elementType == line.symbol.tpe.toString() && element.scope == getScope(line)))
+                element.initialised = true
               currentScope.push(tname.toString())
               initObjects()
               checkInsideObjectBody(body)
@@ -193,13 +196,17 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
           val NbLinesToSkipAndReturned = processLine(line)
           nbOfLinesToSkip = NbLinesToSkipAndReturned._1
+          println("lines to skip is "+nbOfLinesToSkip)
           if(nbOfLinesToSkip == -1) //indicates a break statement has just been processed
             return None
-          if (NbLinesToSkipAndReturned._2.isDefined) // do this to avoid erasing returned element
+          println("returned before is is "+NbLinesToSkipAndReturned._2)
+          if (NbLinesToSkipAndReturned._2 == null || NbLinesToSkipAndReturned._2.isDefined) // do this to avoid erasing returned element
             returned = NbLinesToSkipAndReturned._2
+          println("returned after if is "+returned)
         }
       }
       printInstances()
+      println(s"returned from $code is "+returned)
       returned
     }
 
@@ -216,11 +223,11 @@ class MyComponent(val global: Global) extends PluginComponent {
      *  Returns a set of instances if relevant.
      *  Has different cases for different types of line.
      *
-     * @param line      line of code to analyse
+     * @param line  line of code to analyse
      * @return Set of instances returned by the line
      */
     def processLine(line: Trees#Tree): (Int, Option[Set[Instance]]) = {
-      println(s"checking line at line number " + line.pos.line)
+      println(s"checking line ${showRaw(line)} at line number " + line.pos.line)
       println(s"instances before checking line are ")
       printInstances()
       line match {
@@ -247,14 +254,32 @@ class MyComponent(val global: Global) extends PluginComponent {
           dealWithBreakable(label, body)
           (getLengthOfTree(line) - 1, None)
         //assignments
+        case ValDef(mods, TermName(assignee), assigneeType, Literal(Constant(null)))  =>
+          println("recognised null in assignment")
+          println("type is "+assigneeType)
+          if(protocolledElements.contains(assigneeType.toString))
+            protocolledElements(assigneeType.toString).instances +=
+              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
+          (getLengthOfTree(line) - 1, None)
+        case ValDef(mods, TermName(assignee), assigneeType, EmptyTree) =>
+          println("recognised _ in assignment")
+          println("type is "+assigneeType)
+          if(protocolledElements.contains(assigneeType.toString))
+            protocolledElements(assigneeType.toString).instances +=
+              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
+          (getLengthOfTree(line) - 1, None)
+        case ValDef(mods, TermName(assignee), assigneeType, assigned) =>
+          /*_*/ processNovelAssignment(assignee, assigneeType.toString, assigned) /*_*/
+          (getLengthOfTree(line) - 1, None)
         case q"val $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
+          println("recognised assignment from match")
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"var $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString(), newValue) /*_*/
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
-          processAssignment(assignee.toString, newValue.tpe.toString(), newValue)
+          processAssignment(assignee.toString, newValue.tpe.toString, newValue)
           (getLengthOfTree(line) - 1, None)
         //for loops
         case q"for (..$generator) $loopBody" =>
@@ -284,6 +309,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           updateStateIfNeeded(copiedMap, line)
           (getLengthOfTree(line) - 1, returned) //because we are processing the current one already
         case func@Apply(Select(instanceCalledOn, functionName), args) =>
+          println("found function with called on "+instanceCalledOn)
           var copiedMap = copyMap(protocolledElements)
           val returned = dealWithFunction(func, functionName, args, instanceCalledOn)
           updateStateIfNeeded(copiedMap, line)
@@ -329,6 +355,9 @@ class MyComponent(val global: Global) extends PluginComponent {
             case None =>
               (0, None)
           }
+        case q"null" =>
+          println("recognised null")
+          (0, null)
         case _ =>
           (0, None)
       }
@@ -381,7 +410,10 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assigned  in x = y, y
      */
     def processAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree) = {
+      println("assignee is "+assignee)
+      println("assigned is "+assigned)
       val returnedAssigned = checkInsideFunctionBody(assigned)
+      println("returnedAssigned is "+returnedAssigned)
       getClosestScopeAliasInfo(assignee, assigneeType) match {
         case Some(assigneeAliasInfo) =>
           returnedAssigned match {
@@ -407,12 +439,16 @@ class MyComponent(val global: Global) extends PluginComponent {
     def processNovelAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree) = {
       println("in process novel")
       println(s"assignee is $assignee and assigned is $assigned")
+      println("raw assigned is "+showRaw(assigned))
       val returnedAssigned = checkInsideFunctionBody(assigned)
       println("returned is "+returnedAssigned)
       returnedAssigned match {
         case Some(returned) =>
           val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
           addAssigneeToAssigned(assignee, currentScope.clone(), assigneeType, returnedInstances)
+        case null =>
+          println("got case null")
+          protocolledElements(assigneeType).instances += Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
         case None =>
       }
       println("after novel assignment, instances are "+protocolledElements)
@@ -941,7 +977,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return what is returned from the function, if applicable
      */
     def dealWithFunction(func: global.Apply, functionName: global.Name, args: List[global.Tree], calledOn: Tree = null):
-    Option[Set[Instance]] = {
+                          Option[Set[Instance]] = {
       //region <Checks>
 
       //check for an assignment function, don't want to check args or do anything else in this case
@@ -976,8 +1012,10 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
         //check inside the function body
         currentScope.push("body")
+        println("function body is "+function.body)
         val returned = checkInsideFunctionBody(function.body)
         println("after checking function, instances are "+protocolledElements)
+        println("returned is "+returned)
         //figuring out what is returned PUT THIS INTO ITS OWN FUNCTION
         returned match {
           case Some(setOfInstances) =>
@@ -986,8 +1024,11 @@ class MyComponent(val global: Global) extends PluginComponent {
             scopeClone.pop()
             instancesReturned = instancesReturned ++ Set(Instance(Set(Alias("scope+", scopeClone)), Set())) //need to delete the parameters too
             function.returned = Some(copyInstances(instancesReturned))
+          case null =>
+            function.returned = null
           case None =>
             function.returned = Some(Set(Instance(Set(Alias("scope+", currentScope.clone())), Set())))
+
         }
         //remove aliases inside the body of the function since they can't be used anymore
         removeAllAliasesInScope(currentScope)

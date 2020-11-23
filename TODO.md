@@ -15,6 +15,7 @@ TESTS
 Test that the constructor of a class like Cat without parameters is gone through (one which matches List(Ident(name)) rather than List(Apply(elementName, arg2)) (which is tested)
 Test that only the relevant instances exist in the set of instances (as opposed to null scope for example or instances which should have been deleted upon leaving a function)
 
+
 ************SEP***************
 MUST HAVE
 
