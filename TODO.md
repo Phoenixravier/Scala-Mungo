@@ -17,11 +17,9 @@ Test that only the relevant instances exist in the set of instances (as opposed 
 
 ************SEP***************
 MUST HAVE
-- [ ] Make errors stack and throw errors at the end rather than throw an error and stop when it happens
 
 SHOULD HAVE
 - [ ] Do the match thing but with if for methods that return boolean values (if(cat.run()))
-- [ ] Deal with class attributes
 - [ ] Deal with functions inside a class which use parameters defined in that class (the richint, to/until thing discovered in for loop conditions) (CHECK)
 - [ ] Deal with return in functions
 
@@ -59,7 +57,8 @@ SHOULD HAVE
 
 
 ### In Progress
-- [ ] Add interesting examples
+- [ ] Add interesting aliasing examples
+- [ ] Deal with class attributes
 
 
 ### Done ✓
@@ -109,3 +108,5 @@ SHOULD HAVE
 - [x] Technical report on Scala-Mungo
 - [x] Remove need for batch script
 - [x] Make work on more than a single file
+- [x] Add interesting non aliasing examples
+- [x] Make possible transitions show on transition error
