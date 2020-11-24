@@ -242,6 +242,20 @@ object Util {
     None
   }
 
+  /** Prints instances nicely
+   *
+   */
+  def printInstances() = {
+    println("\nInstances:")
+    for((elementType, elementInfo) <- protocolledElements){
+      println("For "+elementType+": ")
+      for(instance <- elementInfo.instances){
+        println(instance)
+      }
+      println()
+    }
+  }
+
 
   /** Writes the state machine, the array of states and the array of return values (packaged in data) to a file
    * with name filename.

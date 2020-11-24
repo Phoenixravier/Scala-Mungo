@@ -1,7 +1,7 @@
 import java.io.{BufferedWriter, File, FileWriter}
 
 import ProtocolDSL.State
-import compilerPlugin.{GetFileFromAnnotation, inconsistentStateMutation, protocolViolatedException}
+import compilerPlugin.{GetFileFromAnnotation, inconsistentStateMutation, protocolViolatedException, usedUninitialisedException}
 import org.scalatest._
 
 import scala.collection.SortedSet
@@ -5173,6 +5173,186 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
+  //endregion
+
+  //region <null and _ initialisations>
+  "plugin" should "throw an exception if an instance calls a method while it is uninitialised as null" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  def getNull():Cat = null
+        |  var cat:Cat = getNull()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[usedUninitialisedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new usedUninitialisedException("walk()", sortSet(Set("cat")), "compilerPlugin.Cat", 16)
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
+  "plugin" should "throw an exception if an instance calls a method while it is uninitialised as _" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat:Cat = _
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[usedUninitialisedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new usedUninitialisedException("walk()", sortSet(Set("cat")), "compilerPlugin.Cat", 17)
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
+
+  "plugin" should "throw an exception if an instance calls an illegal method after being initialised after being null" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |import scala.util.control.Breaks
+        |import scala.util.control.Breaks.{break, breakable}
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  def getNull():Cat = null
+        |  var cat:Cat = getNull()
+        |  cat = new Cat
+        |  cat.walk()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
+  "plugin" should "throw an exception if an instance calls an illegal method after being initialised after being _" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat:Cat = _
+        |  cat = new Cat
+        |  cat.walk()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    val actualException = intercept[protocolViolatedException] {
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+    val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+    assert(actualException.getMessage == expectedException.getMessage)
+  }
+
+  "plugin" should "not throw an exception if an instance gets initialised properly after being set to null" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat:Cat = null
+        |  cat = new Cat()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+  "plugin" should "not throw an exception if an instance gets initialised properly after being set to _" in {
+    val userCode =
+      """
+        |package compilerPlugin
+        |
+        |
+        |class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+        |
+        |@Typestate(filename = "walkTwiceIllegalProtocol")
+        |class Cat{
+        |  def comeAlive(): Unit = println("The cat is alive")
+        |  def walk(): Boolean = true
+        |}
+        |
+        |object Main extends App{
+        |  var cat:Cat = _
+        |  cat = new Cat()
+        |  cat.walk()
+        |}
+        |
+        |""".stripMargin
+    noException should be thrownBy{
+      val (compiler, sources) = createCompiler(userCode)
+      new compiler.Run() compileSources (sources)
+    }
+  }
+
   //endregion
 
   //region <CLASS ATTRIBUTES>

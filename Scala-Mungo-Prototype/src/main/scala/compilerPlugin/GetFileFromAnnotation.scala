@@ -154,17 +154,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
 
-    def printInstances() = {
-      println("\nInstances:")
-      for((elementType, elementInfo) <- protocolledElements){
-        println("For "+elementType+": ")
-        for(instance <- elementInfo.instances){
-          println(instance)
-        }
-        println()
-      }
-    }
-
     /** Goes inside an object to see if there are instances with protocols and if they are following their protocol
      *  Analyses the code line by line with checkInsideFunctionBody.
      *
@@ -774,7 +763,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       val curScope = currentScope.clone()
       while (curScope.nonEmpty) {
         for (element <- classesAndObjects) {
-          if (element.elementType == objectType && element.scope == curScope) {
+          if (element.elementType == objectType && element.scope == curScope && element.isObject) {
             return Option(element)
           }
         }
@@ -1088,10 +1077,12 @@ class MyComponent(val global: Global) extends PluginComponent {
     def checkObject(objectType: String, objectName: String) = {
       getClosestScopeObject(objectType) match {
         case Some(obj) =>
-          obj.initialised = true
-          currentScope.push(objectName)
-          checkInsideObjectBody(obj.body)
-          currentScope.pop()
+          if(!obj.initialised) {
+            obj.initialised = true
+            currentScope.push(objectName)
+            checkInsideObjectBody(obj.body)
+            currentScope.pop()
+          }
         case _ =>
       }
     }
@@ -1283,6 +1274,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     def updateInstance(instance: Instance, methodName: String, line: Trees#Tree, currentElementInfo: ElementInfo, elementType:String) = {
       var newSetOfStates: Set[State] = Set()
       for (state <- instance.currentStates) {
+        if(state.name == Undefined)
+          throw new usedUninitialisedException(methodName, sortSet(instance.getAliasNames()), elementType, line.pos.line)
         println("found method name " + methodName)
         var indexSet:Set[Int] = Set()
         if(currentElementInfo.methodToIndices.contains(methodName))

@@ -73,7 +73,8 @@ class protocolViolatedException(aliasNames:SortedSet[String], className:String, 
     s"from state(s) $states with method $methodName in file $file at line $line. Possible methods to use in this state " +
     s"are: $nextMethods")
 
-
+class usedUninitialisedException(method:String, aliases:SortedSet[String], instType:String, line:Int) extends
+  Exception(s"Called method $method at line $line on instance with aliases $aliases of type $instType when it was uninitialised.")
 
 /** Error for when the user defines their protocol wrong */
 class badlyDefinedProtocolException(message:String) extends Exception(message)
