@@ -5,7 +5,7 @@ import compilerPlugin.Util._
 
 import scala.collection.{SortedSet, mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.reflect.api.Trees
+import scala.reflect.api.{Symbols, Trees}
 import scala.tools.nsc.plugins.{Plugin, PluginComponent}
 import scala.tools.nsc.{Global, Phase}
 import scala.util.control.Breaks._
@@ -219,6 +219,11 @@ class MyComponent(val global: Global) extends PluginComponent {
       println(s"checking line ${showRaw(line)} at line number " + line.pos.line)
       println(s"instances before checking line are ")
       printInstances()
+      //special case for _ pattern as it can't be matched with case statements
+      if(line == EmptyTree.asInstanceOf[Tree]) {
+        println("recognised _")
+        return (0, null)
+      }
       line match {
         //definitions to skip over (object, class, function)
         case q"$modifs object $tname extends { ..$earlydefins } with ..$pparents { $sself => ..$body }" =>
@@ -246,19 +251,28 @@ class MyComponent(val global: Global) extends PluginComponent {
         case ValDef(mods, TermName(assignee), assigneeType, Literal(Constant(null)))  =>
           println("recognised null in assignment")
           println("type is "+assigneeType)
+          processNovelAssignment(assignee, assigneeType.toString, Literal(Constant(null)).asInstanceOf[Tree], line.symbol.owner.asInstanceOf[Symbol])
+          /*
           if(protocolledElements.contains(assigneeType.toString))
             protocolledElements(assigneeType.toString).instances +=
-              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
+              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)), mutable.Map())
+
+           */
           (getLengthOfTree(line) - 1, None)
         case ValDef(mods, TermName(assignee), assigneeType, EmptyTree) =>
           println("recognised _ in assignment")
           println("type is "+assigneeType)
+          processNovelAssignment(assignee, assigneeType.toString, EmptyTree.asInstanceOf[Tree], line.symbol.owner.asInstanceOf[Symbol])
+          /*
           if(protocolledElements.contains(assigneeType.toString))
             protocolledElements(assigneeType.toString).instances +=
-              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
+              Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)), mutable.Map())
+
+           */
           (getLengthOfTree(line) - 1, None)
         case ValDef(mods, TermName(assignee), assigneeType, assigned) =>
-          /*_*/ processNovelAssignment(assignee, assigneeType.toString, assigned) /*_*/
+          println("owner of assignment statement is "+line.symbol.owner)
+          /*_*/ processNovelAssignment(assignee, assigneeType.toString, assigned, line.symbol.owner.asInstanceOf[Symbol]) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"val $assignee = $newValue" =>
           println("recognised assignment from match")
@@ -425,20 +439,48 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assignee  In val/var x = y, this is x. Always comes as a new val or var.
      * @param assigned  In val/var x = y, this is y.
      */
-    def processNovelAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree) = {
+    def processNovelAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree, owner: Symbol=null) = {
       println("in process novel")
       println(s"assignee is $assignee and assigned is $assigned")
       println("raw assigned is "+showRaw(assigned))
+      println("assignee owner is "+owner)
+
       val returnedAssigned = checkInsideFunctionBody(assigned)
       println("returned is "+returnedAssigned)
-      returnedAssigned match {
-        case Some(returned) =>
-          val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
-          addAssigneeToAssigned(assignee, currentScope.clone(), assigneeType, returnedInstances)
-        case null =>
-          println("got case null")
-          protocolledElements(assigneeType).instances += Instance(Set(Alias(assignee, currentScope.clone())), Set(State(Undefined, -1)))
-        case None =>
+      if(owner != null && protocolledElements.contains(owner.tpe.toString())){
+        println(s"found owner ${owner.tpe} in elements")
+        getClosestScopeAliasInfo(getSimpleClassName(owner.tpe.toString()), owner.tpe.toString()) match{
+          case Some(aliasInfo) =>
+            println("found alias info "+aliasInfo)
+            var instancesToUpdate =
+              protocolledElements(owner.tpe.toString).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+            println("instances to update are "+instancesToUpdate)
+
+            for(instance <- instancesToUpdate){
+              returnedAssigned match{
+                case Some(instances) =>
+                  instance.fields += (assignee -> instances)
+                case null =>
+                  instance.fields += (assignee -> Set(Instance(Set(), Set(State(Undefined, -1)), mutable.Map())))
+                case None =>
+                  println("didn'T match anything for returned")
+              }
+            }
+          case None =>
+            println("didnt find an aliasinfo")
+        }
+      }
+      else {
+        returnedAssigned match {
+          case Some(returned) =>
+            val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
+            addAssigneeToAssigned(assignee, currentScope.clone(), assigneeType, returnedInstances)
+          case null =>
+            println("got case null")
+            protocolledElements(assigneeType).instances += Instance(Set(Alias(assignee, currentScope.clone())),
+              Set(State(Undefined, -1)), mutable.Map())
+          case None =>
+        }
       }
       println("after novel assignment, instances are "+protocolledElements)
     }
@@ -1009,14 +1051,14 @@ class MyComponent(val global: Global) extends PluginComponent {
         returned match {
           case Some(setOfInstances) =>
             val scopeClone = currentScope.clone()
-            var instancesReturned = setOfInstances ++ Set(Instance(Set(Alias("scope+", scopeClone.clone())), Set())) //delete internal variables
+            var instancesReturned = setOfInstances ++ Set(Instance(Set(Alias("scope+", scopeClone.clone())), Set(), mutable.Map())) //delete internal variables
             scopeClone.pop()
-            instancesReturned = instancesReturned ++ Set(Instance(Set(Alias("scope+", scopeClone)), Set())) //need to delete the parameters too
+            instancesReturned = instancesReturned ++ Set(Instance(Set(Alias("scope+", scopeClone)), Set(), mutable.Map())) //need to delete the parameters too
             function.returned = Some(copyInstances(instancesReturned))
           case null =>
             function.returned = null
           case None =>
-            function.returned = Some(Set(Instance(Set(Alias("scope+", currentScope.clone())), Set())))
+            function.returned = Some(Set(Instance(Set(Alias("scope+", currentScope.clone())), Set(), mutable.Map())))
 
         }
         //remove aliases inside the body of the function since they can't be used anymore
@@ -1143,13 +1185,14 @@ class MyComponent(val global: Global) extends PluginComponent {
         currentScope.push(elementType)
         if(protocolledElements.contains(elementType))
           protocolledElements(elementType).instances +=
-            Instance(Set(Alias(getSimpleClassName(elementType), currentScope.clone())), Set(protocolledElements(elementType).states(0)))
+            Instance(Set(Alias(getSimpleClassName(elementType), currentScope.clone())),
+              Set(protocolledElements(elementType).states(0)), mutable.Map())
         checkInsideObjectBody(element.body)
-        val scopeInstance = Instance(Set(Alias("scope+", currentScope.clone())), Set())
+        val scopeInstance = Instance(Set(Alias("scope+", currentScope.clone())), Set(), mutable.Map())
         if(protocolledElements.contains(elementType)) {
           for (instance <- protocolledElements(elementType).instances) {
             if (instance.containsAliasInfo(getSimpleClassName(elementType), currentScope))
-              returned = Set(Instance(instance.aliases, instance.currentStates), scopeInstance)
+              returned = Set(Instance(instance.aliases, instance.currentStates, instance.fields), scopeInstance)
           }
         }
         removeAllAliasesInScope(currentScope)

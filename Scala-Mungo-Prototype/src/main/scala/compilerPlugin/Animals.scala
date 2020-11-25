@@ -1,5 +1,7 @@
 package compilerPlugin
 
+import scala.collection.mutable
+
 class Typestate(filename: String) extends scala.annotation.StaticAnnotation
 @Typestate("CatProtocol")
 class Cat{
@@ -19,19 +21,14 @@ class Cat{
   }
 }
 object Printer{
+  var cat:Cat = null
   println("printing")
 }
 
 object Main extends App{
-  val cat = new Cat()
-  var cat2 = new Cat()
-  cat.friend = cat2
-  val cat3 = cat.friend
-  cat.incrFriendAge()
-  println(cat.age)
-  println(cat.friend.age)
-  println(cat2.age)
-  println(cat3.age)
+  var cat:Cat = new Cat
+  cat.friend = new Cat
+
 
 }
 

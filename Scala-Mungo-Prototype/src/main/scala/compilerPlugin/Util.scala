@@ -31,7 +31,8 @@ object Util {
   def initObjects() = {
     for(elementInfo <- protocolledElements.values){
       if(elementInfo.objectName != null)
-        elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())), Set(elementInfo.states(0)))
+        elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
+          Set(elementInfo.states(0)), mutable.Map())
     }
   }
 
@@ -160,17 +161,23 @@ object Util {
     for(instance <- instances){
       var aliases:Set[Alias] = Set()
       var states:Set[State] = Set()
-      for(alias <- instance.aliases){
+      var fields:mutable.Map[String, Set[Instance]] = mutable.Map()
+      for(alias <- instance.aliases)
         aliases += Alias(alias.name.trim(), alias.scope.clone())
-      }
-      for(state <- instance.currentStates){
+      for(state <- instance.currentStates)
         states += State(state.name.trim(), state.index)
-      }
-      newInstances += Instance(aliases, states)
+      for((fieldName, instance) <- instance.fields )
+        fields += fieldName -> instance
+      newInstances += Instance(aliases, states, fields)
     }
     newInstances
   }
 
+
+  //TODO implement this, should merge fields of instances and return merged map
+  def mergeFields(firstInstance: Instance, instance: Instance): mutable.Map[String, Set[Instance]] = {
+    mutable.Map()
+  }
 
   /** For two sets of instances, if and instance is present in both of them, merges the different states
    * associated with it into one instance. Copies over the remaining instances which are only present once.
@@ -187,7 +194,7 @@ object Util {
         secondInstances.find(instance => instance.aliases.contains(alias)) match {
           case Some(instance) =>
             mergedInstances += Instance(firstInstance.aliases ++ instance.aliases,
-              firstInstance.currentStates ++ instance.currentStates)
+              firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
           case None => mergedInstances += firstInstance
         }
       }

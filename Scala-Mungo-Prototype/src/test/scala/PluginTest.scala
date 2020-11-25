@@ -5203,7 +5203,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-    val expectedException = new usedUninitialisedException("walk()", sortSet(Set("cat")), "compilerPlugin.Cat", 16)
+    val expectedException = new usedUninitialisedException("walk()", sortSet(Set("cat")), "compilerPlugin.Cat", 18)
     assert(actualException.getMessage == expectedException.getMessage)
   }
   "plugin" should "throw an exception if an instance calls a method while it is uninitialised as _" in {

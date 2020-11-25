@@ -8,7 +8,8 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
   override def clone(): Alias = super.clone().asInstanceOf[Alias]
 
   override def toString(): String={
-    s"$name ${scope.reverse.mkString(".")}"
+    val printableScope = if(scope != null) scope.reverse.mkString(".") else "null"
+    s"$name $printableScope"
   }
 
   override def equals(alias:Any): Boolean ={
@@ -24,7 +25,7 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 }
 
 /** Holds an instance classname, its aliases and its current possible states */
-case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
+case class Instance(var aliases:Set[Alias], var currentStates:Set[State], var fields:mutable.Map[String, Set[Instance]]){
   def getAliasNames(): Set[String] ={
     for(alias <- aliases) yield alias.name
   }
@@ -48,7 +49,7 @@ case class Instance(var aliases:Set[Alias], var currentStates:Set[State]){
   }
 
   override def toString(): String={
-    s"$aliases $currentStates"
+    s"$aliases $currentStates $fields"
   }
 
   override def hashCode():Int={
