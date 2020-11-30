@@ -8,16 +8,25 @@ class Cat{
   var friend:Cat = null
   var friend4:Cat = _
   var age = 0
+  var container:CatContainer = _
   def walk(): Boolean = true
   def walkFriend(): Unit ={
-    friend.walk()
+    Cat.this.friend.walk()
   }
   def setFriend4(f:Cat): Unit ={
     friend4 = f
-    friend4.friend = new Cat()
+  }
+  def setFriend(f:Cat): Unit ={
+    friend = f
   }
   def incrFriendAge(): Unit ={
     friend.age += 1
+  }
+}
+class CatContainer{
+  var cat:Cat=null
+  def dash(): Unit ={
+
   }
 }
 object Printer{
@@ -27,9 +36,10 @@ object Printer{
 
 object Main extends App{
   var cat:Cat = new Cat
-  cat.friend = new Cat
-
-
+  var cat2 = new Cat
+  cat.setFriend(cat2)
+  cat.walkFriend()
+  cat2.walk()
 }
 
 
