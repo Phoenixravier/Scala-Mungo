@@ -14,7 +14,7 @@ object Util {
   val Undefined = "_Undefined_"
   val Any = "_Any_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
-  var protocolledElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
+  var trackedElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
 
   /** Removes all instances with an empty set of aliases */
@@ -29,15 +29,20 @@ object Util {
    *
    */
   def initObjects() = {
-    for(elementInfo <- protocolledElements.values){
-      if(elementInfo.objectName != null)
-        elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
-          Set(elementInfo.states(0)), mutable.Map())
+    for(elementInfo <- trackedElements.values){
+      if(elementInfo.objectName != null) {
+        if(elementInfo.states != null)
+          elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
+            Set(elementInfo.states(0)), mutable.Map())
+        else
+          elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
+            Set(), mutable.Map())
+      }
     }
   }
 
   def removeAllInstances(): Any = {
-    for(elementInfo <- protocolledElements.values){
+    for(elementInfo <- trackedElements.values){
       elementInfo.instances = Set()
     }
   }
@@ -211,13 +216,13 @@ object Util {
   def removeAliases(elementType:String, aliasName: String) = {
     getClosestScopeAliasInfo(aliasName, elementType) match {
       case Some(aliasInfo) =>
-        val instancesToUpdate = protocolledElements(elementType).instances.filter(instance =>
+        val instancesToUpdate = trackedElements(elementType).instances.filter(instance =>
           instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
         for (instance <- instancesToUpdate)
           instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
       case None =>
     }
-    protocolledElements(elementType).instances = cleanInstances(protocolledElements(elementType).instances)
+    trackedElements(elementType).instances = cleanInstances(trackedElements(elementType).instances)
   }
 
 
@@ -232,11 +237,11 @@ object Util {
    */
   def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
     if (elementType != null) {
-      if (protocolledElements.contains(elementType)) {
-        if (protocolledElements(elementType).instances.isEmpty) return None
+      if (trackedElements.contains(elementType)) {
+        if (trackedElements(elementType).instances.isEmpty) return None
         val curScope = currentScope.clone()
         while (curScope.nonEmpty) {
-          for (instance <- protocolledElements(elementType).instances) {
+          for (instance <- trackedElements(elementType).instances) {
             for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
               return Some(alias.name, alias.scope)
             }
@@ -254,7 +259,7 @@ object Util {
    */
   def printInstances() = {
     println("\nInstances:")
-    for((elementType, elementInfo) <- protocolledElements){
+    for((elementType, elementInfo) <- trackedElements){
       println("For "+elementType+": ")
       for(instance <- elementInfo.instances){
         println(instance)

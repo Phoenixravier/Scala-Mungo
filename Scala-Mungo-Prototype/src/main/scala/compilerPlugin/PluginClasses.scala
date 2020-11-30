@@ -62,7 +62,10 @@ case class ElementInfo(transitions:Array[Array[State]], states:Array[State], met
                        returnValueToIndice:mutable.HashMap[String, Int], stateToAvailableMethods: mutable.HashMap[State, Set[ReturnValue]],
                        var instances:Set[Instance], var objectName:String=null){
   override def toString(): String={
-    s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances $objectName"
+    if(transitions != null)
+      s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances $objectName"
+    else
+      s"$instances"
   }
 }
 

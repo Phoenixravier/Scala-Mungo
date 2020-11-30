@@ -29,6 +29,7 @@ class CatContainer{
 
   }
 }
+
 object Printer{
   var cat:Cat = null
   println("printing")
