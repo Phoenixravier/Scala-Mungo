@@ -164,13 +164,20 @@ object Util {
     if(instances == null) return null
     var newInstances:Set[Instance] = Set()
     for(instance <- instances){
+      println(instance)
       var aliases:Set[Alias] = Set()
       var states:Set[State] = Set()
       var fields:mutable.Map[String, Set[Instance]] = mutable.Map()
       for(alias <- instance.aliases)
         aliases += Alias(alias.name.trim(), alias.scope.clone())
-      for(state <- instance.currentStates)
-        states += State(state.name.trim(), state.index)
+      if(instance.currentStates == null) states = null
+      else {
+        for (state <- instance.currentStates) {
+          if (state == null) states += null
+          else states += State(state.name.trim(), state.index)
+        }
+      }
+
       for((fieldName, instance) <- instance.fields )
         fields += fieldName -> instance
       newInstances += Instance(aliases, states, fields)
@@ -180,8 +187,18 @@ object Util {
 
 
   //TODO implement this, should merge fields of instances and return merged map
-  def mergeFields(firstInstance: Instance, instance: Instance): mutable.Map[String, Set[Instance]] = {
-    mutable.Map()
+  def mergeFields(firstInstance: Instance, secondInstance: Instance): mutable.Map[String, Set[Instance]] = {
+    var newFields = mutable.Map[String, Set[Instance]]()
+    for((fieldName, instances) <- firstInstance.fields){
+      if(secondInstance.fields.contains(fieldName))
+        newFields += (fieldName -> (instances ++ secondInstance.fields(fieldName)))
+      else
+        newFields += (fieldName -> instances)
+    }
+    for((fieldName, instances) <- secondInstance.fields if !newFields.contains(fieldName)){
+      newFields += (fieldName -> instances)
+    }
+    newFields
   }
 
   /** For two sets of instances, if and instance is present in both of them, merges the different states
