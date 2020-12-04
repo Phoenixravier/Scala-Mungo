@@ -23,11 +23,15 @@ class Cat{
     friend.age += 1
   }
 }
-class CatContainer{
+class CatContainer(){
   var cat:Cat=null
-  def dash(): Unit ={
-
+  def dash(cat:Cat): Unit ={
+    var cat = new Cat()
   }
+}
+
+object Cat{
+
 }
 
 object Printer{
@@ -41,6 +45,14 @@ object Main extends App{
   cat.setFriend(cat2)
   cat.walkFriend()
   cat2.walk()
+  Dog
+  var fox = Cat
+  fox = Cat
+
+}
+
+object Dog{
+
 }
 
 

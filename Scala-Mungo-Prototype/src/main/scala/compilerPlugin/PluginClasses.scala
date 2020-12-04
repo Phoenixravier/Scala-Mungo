@@ -25,7 +25,7 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 }
 
 /** Holds an instance classname, its aliases and its current possible states */
-case class Instance(var aliases:Set[Alias], var currentStates:Set[State], var fields:mutable.Map[String, Set[Instance]]){
+case class Instance(var aliases:Set[Alias], var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]]){
   def getAliasNames(): Set[String] ={
     for(alias <- aliases) yield alias.name
   }

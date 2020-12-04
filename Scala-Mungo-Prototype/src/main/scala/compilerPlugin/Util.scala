@@ -167,7 +167,7 @@ object Util {
       println(instance)
       var aliases:Set[Alias] = Set()
       var states:Set[State] = Set()
-      var fields:mutable.Map[String, Set[Instance]] = mutable.Map()
+      var fields:mutable.Map[Alias, Set[Instance]] = mutable.Map()
       for(alias <- instance.aliases)
         aliases += Alias(alias.name.trim(), alias.scope.clone())
       if(instance.currentStates == null) states = null
@@ -187,8 +187,8 @@ object Util {
 
 
   //TODO implement this, should merge fields of instances and return merged map
-  def mergeFields(firstInstance: Instance, secondInstance: Instance): mutable.Map[String, Set[Instance]] = {
-    var newFields = mutable.Map[String, Set[Instance]]()
+  def mergeFields(firstInstance: Instance, secondInstance: Instance): mutable.Map[Alias, Set[Instance]] = {
+    var newFields = mutable.Map[Alias, Set[Instance]]()
     for((fieldName, instances) <- firstInstance.fields){
       if(secondInstance.fields.contains(fieldName))
         newFields += (fieldName -> (instances ++ secondInstance.fields(fieldName)))
@@ -255,11 +255,14 @@ object Util {
   def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
     if (elementType != null) {
       if (trackedElements.contains(elementType)) {
+        println("found element in tracked elements")
         if (trackedElements(elementType).instances.isEmpty) return None
+        println("passed break")
         val curScope = currentScope.clone()
         while (curScope.nonEmpty) {
           for (instance <- trackedElements(elementType).instances) {
             for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
+              println(s"returning $alias")
               return Some(alias.name, alias.scope)
             }
           }
@@ -277,7 +280,8 @@ object Util {
   def printInstances() = {
     println("\nInstances:")
     for((elementType, elementInfo) <- trackedElements){
-      println("For "+elementType+": ")
+      var classOrObject = if(elementInfo.objectName != null) "object" else "class"
+      println(s"For $classOrObject $elementType: ")
       for(instance <- elementInfo.instances){
         println(instance)
       }
