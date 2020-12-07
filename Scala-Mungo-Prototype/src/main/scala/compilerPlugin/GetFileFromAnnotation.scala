@@ -54,7 +54,7 @@ class MyComponent(val global: Global) extends PluginComponent {
    * @param initialised : only relevant if the element is an object. Keeps track of if this object has been initialised
    */
   case class Element(elementType: String, owner:Symbol, params: ArrayBuffer[(String, String)], body: Seq[Trees#Tree], scope: mutable.Stack[String],
-                     isObject: Boolean = false, var initialised: Boolean = false) {
+                     isObject: Boolean = false, var initialised: Boolean = false, var id:Int=0) {
     override def toString(): String = {
       s"$elementType ${showParams(params)} $scope $initialised"
     }
@@ -115,23 +115,22 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      * */
     def checkFile(): Unit = {
-      for (line@q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
+      for (line@q"$mods object $objectName extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
         breakable {
+          val mainObjectType = line.symbol.tpe.toString()
           for (parent <- parents) {
             if (parent.toString() == "App") {
               currentScope = getScope(line)
-              val mainObjectType = line.symbol.tpe.toString()
               for (element <- ElementTraverser.elements if
                 (element.elementType == mainObjectType && element.scope == getScope(line)))
                 element.initialised = true
-              currentScope.push(tname.toString())
+              currentScope.push(objectName.toString())
               initObjects()
               currentInstance.push(
-                trackedElements(mainObjectType).instances.filter(instance => instance.containsAliasInfo(tname.toString(), currentScope)).last)
-              println("current object after assigning to main is:")
-              println(currentInstance.head)
+                trackedElements(mainObjectType).instances.filter(instance => instance.containsAliasInfo(objectName.toString(), currentScope)).last)
               checkInsideObjectBody(body) //all the code is checked here
               currentInstance.pop()
+              println("POP0")
               break
             }
           }
@@ -142,11 +141,20 @@ class MyComponent(val global: Global) extends PluginComponent {
                 /*_*/
                 if (getParameterTypes(paramss) == "Array[String]") {
                   /*_*/
-                  checkObject(line.symbol.tpe.toString(), tname.toString())
-                  currentScope.push(tname.toString())
+                  currentScope.push(objectName.toString())
                   initObjects()
+                  currentScope.pop()
+                  checkObject(mainObjectType, objectName.toString())
+                  currentScope.push(objectName.toString())
                   currentScope.push("main")
-                  checkInsideFunctionBody(expr)
+                  getClosestScopeAliasInfo(objectName.toString(), mainObjectType) match{
+                    case Some(aliasInfo) =>
+                      currentInstance.push(trackedElements(mainObjectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)).head)
+                    case None =>
+                  }
+                  checkInsideFunctionBody(expr) //all the code is checked here
+                  currentScope.pop()
+                  currentScope.pop()
                 }
               case _ =>
             }
@@ -432,7 +440,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                 }
               }
             }
-            for (scopeToRemove <- scopesToRemove) removeAllAliasesInScope(scopeToRemove)
+            for (scopeToRemove <- scopesToRemove) removeAllFieldsInScope(scopeToRemove)
           case None =>
         }
       }
@@ -462,51 +470,23 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("raw assigned is " + showRaw(assigned))
       println("assignee owner is " + owner)
       val returnedAssigned = checkInsideFunctionBody(assigned)
+      println(s"after returned, assignee is $assignee and assigned is $assigned")
       println("returned is " + returnedAssigned)
-      if (owner != null && trackedElements.contains(owner.tpe.toString())) {
-        println(s"found owner ${owner.tpe} in elements")
-        println("simple name is "+getSimpleClassName(owner.tpe.toString()))
-        println("type is "+owner.tpe.toString())
-        getClosestScopeAliasInfo(getSimpleClassName(owner.tpe.toString()), owner.tpe.toString()) match {
-          case Some(aliasInfo) =>
-            println("found alias info " + aliasInfo)
-            var instancesToUpdate =
-              trackedElements(owner.tpe.toString).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-            println("instances to update are " + instancesToUpdate)
-            var scopesToRemove: ArrayBuffer[mutable.Stack[String]] = ArrayBuffer()
-            for (instance <- instancesToUpdate) {
-              breakable {
-                if (instance.containsScopeAlias()) {
-                  scopesToRemove += instance.aliases.last.scope
-                  break()
-                }
-                returnedAssigned match {
-                  case Some(instances) =>
-                    instance.fields += (Alias(assignee, currentScope.clone()) -> removeScopeInstances(instances))
-                  case null =>
-                    instance.fields += (Alias(assignee, currentScope.clone()) -> Set(Instance(Set(), Set(State(Undefined, -1)), mutable.Map())))
-                  case None =>
-                    println("didn't match anything for returned")
-                }
-              }
-            }
-            for (scopeToRemove <- scopesToRemove) removeAllAliasesInScope(scopeToRemove)
-          case None =>
-            println("didnt find an aliasinfo")
+      println("owner is "+owner)
+      println("current instance is "+currentInstance.head)
+      if(currentInstance.nonEmpty){
+        var scopesToRemove: ArrayBuffer[mutable.Stack[String]] = ArrayBuffer() //todo this doesn't work at the moment
+        breakable {
+          returnedAssigned match {
+            case Some(instances) =>
+              currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> removeScopeInstances(instances))
+            case null =>
+              currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> Set(Instance(Set(), Set(State(Undefined, -1)), mutable.Map())))
+            case None =>
+              println("didn't match anything for returned")
+          }
         }
-      }
-      else {
-        returnedAssigned match {
-          case Some(returned) =>
-            val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten //TODO CHECK THIS WORKS without copying
-            println("returned instances are "+returnedInstances)
-            addAssigneeToAssigned(assignee, currentScope.clone(), assigneeType, returned)
-          case null =>
-            println("got case null")
-            trackedElements(assigneeType).instances += Instance(Set(Alias(assignee, currentScope.clone())),
-              Set(State(Undefined, -1)), mutable.Map())
-          case None =>
-        }
+        for (scopeToRemove <- scopesToRemove) removeAllFieldsInScope(scopeToRemove) //todo this doesn't work at the moment
       }
       println("after novel assignment, instances are " + trackedElements)
     }
@@ -1008,22 +988,31 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param calledOn   what the function is called on (in x.y(), x)
      */
     def assignParameters(parameters: ArrayBuffer[(String, String)], owner: Symbol, args: List[Tree], calledOn: Tree) = {
-      println("in assign parameters")
-      println(args)
-      println(calledOn)
       //adding calledOn as current element to deal with this.method() calls inside its own function
       if (calledOn != null) {
-        val calledOnType = calledOn.symbol.tpe.toString()
         println(s"$calledOn is not null")
-        methodTraverser.traverse(calledOn)
-        val methodCallInfo = methodTraverser.methodCallInfos.head
-        methodTraverser.methodCallInfos = ListBuffer[MethodCallInfo]()
-        getRelevantInstancesAndType(methodCallInfo.owner, methodCallInfo.names) match{
-          case Some(instancesAndType) =>
-            currentInstance.push(instancesAndType._1.head)
+        getOwnerAndFields(calledOn) match{
+          case Some(ownerAndFields) =>
+            println("got some owner and fields "+ownerAndFields)
+            getRelevantInstancesAndType(ownerAndFields._1, ownerAndFields._2) match{
+              case Some(instancesAndType) =>
+                println("got some instances and type")
+                currentInstance.push(instancesAndType._1.head)
+                println(s"PUSHED $calledOn")
+              case None =>
+                //in main function where owners don't work like in App case, so need to improvise..
+                var fields = getFields(calledOn)
+                getClosestScopeAliasInfo(currentInstance.head.aliases.last.name, currentInstance.head.aliases.last.name) match{
+                  case Some(aliasInfo) =>
+                    getRelevantInstancesFromAliasInfo(currentInstance.head.aliases.last.name, (aliasInfo._1, aliasInfo._2), fields)
+                  case None =>
+                }
+
+            }
           case None =>
         }
         //todo (check) can delete this since we don't want to create a new instance anymore, just want to get correct current object and use that
+        //val calledOnType = calledOn.symbol.tpe.toString()
         //processNovelAssignment(getSimpleClassName(calledOnType), calledOnType, calledOn)
       }
       println("processing normal arguments")
@@ -1217,7 +1206,10 @@ class MyComponent(val global: Global) extends PluginComponent {
         val cacheEntry = dealWithCache(function)
         if (cacheEntry == null) {
           println("returning " + function.returned)
-          if(calledOn != null) currentInstance.pop()
+          if(calledOn != null) {
+            currentInstance.pop()
+            println("POP1")
+          }
           return getReturnedFromFunction(function.returned)
         }
         //check inside the function body
@@ -1247,7 +1239,10 @@ class MyComponent(val global: Global) extends PluginComponent {
         //delete aliases defined in the function
         removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
-        if(calledOn != null) currentInstance.pop()
+        if(calledOn != null) {
+          currentInstance.pop()
+          println("POP2")
+        }
         return getReturnedFromFunction(function.returned)
       }
       None
@@ -1310,6 +1305,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             }
             checkInsideObjectBody(obj.body)
             currentInstance.pop()
+            println("POP3")
             currentScope.pop()
           }
         case _ =>
@@ -1370,36 +1366,38 @@ class MyComponent(val global: Global) extends PluginComponent {
       //find correct class to go through
       for (element <- ElementTraverser.elements
            if !element.isObject && element.elementType == elementType && element.scope == scope) {
+        val newInstanceName = getSimpleClassName(elementType)+s"@${element.id}"
         currentScope.push(elementType)
         if (trackedElements.contains(elementType)) {
           if(trackedElements(elementType).states != null) {
             println("creating new instance with states, as class is protocolled")
-            var newClassInstance = Instance(Set(Alias(getSimpleClassName(elementType), currentScope.clone())),
+            var newClassInstance = Instance(Set(Alias(newInstanceName, currentScope.clone())),
               Set(trackedElements(elementType).states(0)), mutable.Map())
             trackedElements(elementType).instances += newClassInstance
             currentInstance.push(newClassInstance)
-            println(s"after assigning current object to new class ${getSimpleClassName(elementType)}, current object is:")
-            println(currentInstance.head)
           } else{
             println("creating new instance with null, as class is not protocolled")
-            trackedElements(elementType).instances +=
-              Instance(Set(Alias(getSimpleClassName(elementType), currentScope.clone())),
-                null, mutable.Map())
+            var newClassInstance = Instance(Set(Alias(newInstanceName, currentScope.clone())), null, mutable.Map())
+            trackedElements(elementType).instances += newClassInstance
+            currentInstance.push(newClassInstance)
           }
         }
         assignParameters(element.params, element.owner, args, null)
         println("after assigning parameters, instances are " + trackedElements)
         checkInsideObjectBody(element.body)
-        val scopeInstance = Instance(Set(Alias("scope+", currentScope.clone())), Set(), mutable.Map())
         if (trackedElements.contains(elementType)) {
           for (instance <- trackedElements(elementType).instances) {
-            if (instance.containsAliasInfo(getSimpleClassName(elementType), currentScope))
-              returned = Set(Instance(instance.aliases, instance.currentStates, instance.fields), scopeInstance)
+            if (instance.containsAliasInfo(newInstanceName, currentScope)) {
+              returned = Set(instance)
+              println("in check inside class, returned is "+returned)
+            }
           }
         }
-        //don't want to remove created instances anymore => removeTopLevelAliasesInScope(currentScope)
+        //todo (check) don't want to remove created instances anymore => removeTopLevelAliasesInScope(currentScope)
+        element.id += 1
         currentScope.pop()
         currentInstance.pop()
+        println("POP4")
       }
       (trackedElements.contains(elementType), returned)
     }
@@ -1615,7 +1613,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       Some(relevantInstances, fieldName)
     }
 
-    def getRelevantInstancesAndType(owner:global.Symbol, names: mutable.Stack[(String, String)]):
+    def getRelevantInstancesAndType(owner:global.Symbol, fields: mutable.Stack[(String, String)]):
                                                         Option[(Set[Instance], String)] ={
       breakable {
         if (trackedElements.contains(owner.tpe.toString())) {
@@ -1623,28 +1621,28 @@ class MyComponent(val global: Global) extends PluginComponent {
           val ownerType = owner.tpe.toString()
           getClosestScopeAliasInfo(getSimpleClassName(ownerType), ownerType) match {
             case Some(aliasInfo) =>
-              return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, names)
+              return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
             case None =>
               println("did not find alias from name " + getSimpleClassName(ownerType))
               getClosestScopeAliasInfo(owner.name.toString, ownerType) match {
                 case Some(aliasInfo) =>
-                  return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, names)
+                  return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
                 case None =>
               }
           }
         }
         else {
-          if (names.isEmpty) break()
+          if (fields.isEmpty) break()
           println("owner is not in elements")
-          var nameAndElementType = names.pop()
-          while (names.nonEmpty && !trackedElements.contains(nameAndElementType._2)) {
-            nameAndElementType = names.pop()
+          var nameAndElementType = fields.pop()
+          while (fields.nonEmpty && !trackedElements.contains(nameAndElementType._2)) {
+            nameAndElementType = fields.pop()
           }
           println("name and element type is " + nameAndElementType)
           if (!trackedElements.contains(nameAndElementType._2)) break()
           getClosestScopeAliasInfo(nameAndElementType._1, nameAndElementType._2) match {
             case Some(aliasInfo) =>
-              return getRelevantInstancesFromAliasInfo(nameAndElementType._2, aliasInfo, names)
+              return getRelevantInstancesFromAliasInfo(nameAndElementType._2, aliasInfo, fields)
             case None =>
           }
         }
@@ -1779,11 +1777,41 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
+    def getFields(qualifier: Tree): mutable.Stack[(String, String)]={
+      var qualifierTree = qualifier
+      println("qualifier tree is "+qualifierTree)
+      val fields = mutable.Stack[(String, String)]() //name and type of each field
+      do{
+        fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+        qualifierTree = qualifierTree.children.last
+      } while(qualifierTree.children.nonEmpty)
+      fields
+    }
+
+    /** Gets the owner of an expression and the fields following it.
+     *  The fields are stored inside a stack with (name, type) and the topmost element is the leftmost element of the expression (expr)
+     *
+     * @param expr
+     * @return the owner as a symbol, and the fields as a Stack of string tuples
+     */
+    def getOwnerAndFields(qualifier:Tree): Option[(Symbol, mutable.Stack[(String, String)])]={
+        println("inside get owner and fields, qualifier is "+qualifier)
+        var qualifierTree = qualifier
+        println("qualifier tree is "+qualifierTree)
+        val fields = mutable.Stack[(String, String)]() //name and type of each field
+        while(qualifierTree.children.nonEmpty){
+          fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+          qualifierTree = qualifierTree.children.last
+        }
+        val owner = qualifierTree.symbol
+        Some(owner, fields)
+    }
+
     /** Traverses a tree and collects (methodName, aliasName) from method application statements
      *
      */
     object methodTraverser extends Traverser {
-      var methodCallInfos = ListBuffer[MethodCallInfo]() //methodName, fieldName, parentName, parentType
+      var methodCallInfos = ListBuffer[MethodCallInfo]()
       override def traverse(tree: Tree): Unit = {
         tree match {
           case app@Apply(fun, args) =>
@@ -1791,18 +1819,15 @@ class MyComponent(val global: Global) extends PluginComponent {
               case q"$expr(...$exprss)" =>
                 expr match {
                   case select@Select(qualifier, name) =>
-                    var qualifierTree = qualifier
-                    var names = mutable.Stack[(String, String)]() //name and type of each field
-                    while(qualifierTree.children.nonEmpty){
-                      names.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
-                      qualifierTree = qualifierTree.children.last
+                    getOwnerAndFields(qualifier) match {
+                      case Some(ownerAndFields) =>
+                        /*_*/
+                        methodCallInfos += MethodCallInfo(name + getParameterTypesFromTree(exprss),
+                          ownerAndFields._1, ownerAndFields._2, exprss)
+                        /*_*/
+                        println("added entry " + methodCallInfos)
+                      case None =>
                     }
-                    val owner = qualifierTree.symbol
-                    /*_*/
-                    methodCallInfos += MethodCallInfo(name.toString() + getParameterTypesFromTree(exprss) ,
-                      owner, names,  exprss )
-                    /*_*/
-                    println("added entry "+methodCallInfos)
                   case _ =>
                 }
               case _ =>

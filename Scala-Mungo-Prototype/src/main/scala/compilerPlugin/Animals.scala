@@ -39,10 +39,15 @@ object Printer{
   println("printing")
 }
 
-object Main extends App{
-  var cat = new Cat()
-  Dog
-  cat.walk()
+object Main{
+  def main(args: Array[String]): Unit = {
+    val cat = new Cat()
+    val cat1 = new Cat()
+    val cat2 = new Cat()
+    val cat3 = new Cat()
+    cat.friend.walk()
+    cat.walk()
+  }
 }
 
 object Dog{
