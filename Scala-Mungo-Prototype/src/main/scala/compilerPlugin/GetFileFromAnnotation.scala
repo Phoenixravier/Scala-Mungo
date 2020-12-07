@@ -261,10 +261,10 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         case q"val $assignee = $newValue" =>
           println("recognised assignment from match")
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue, line.symbol.owner.asInstanceOf[Symbol]) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"var $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
+          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue, line.symbol.owner.asInstanceOf[Symbol]) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           processAssignment(mutable.Stack((assignee.toString, newValue.tpe.toString)), newValue, line.symbol.owner.asInstanceOf[Symbol])
@@ -426,37 +426,8 @@ class MyComponent(val global: Global) extends PluginComponent {
                 }
               }
             }
-          case None =>
-            if(names.size == 1){
-              val (assignee, assigneeType) = names.pop()
-              getClosestScopeAliasInfo(assignee, assigneeType) match {
-                case Some(assigneeAliasInfo) =>
-                  returnedAssigned match {
-                    case Some(returned) =>
-                      val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
-                      removeAliases(assigneeType, assigneeAliasInfo._1)
-                      addAssigneeToAssigned(assigneeAliasInfo._1, assigneeAliasInfo._2, assigneeType, returnedInstances)
-                    case None =>
-                  }
-                case None =>
-              }
-            }
-            else if(names.size == 0){
-              val assignee = owner.toString
-              val assigneeType = owner.tpe.toString
-              getClosestScopeAliasInfo(assignee, assigneeType) match {
-                case Some(assigneeAliasInfo) =>
-                  returnedAssigned match {
-                    case Some(returned) =>
-                      val returnedInstances = Util.copyInstances(returned) //keep this or function.returned might get overwritten
-                      removeAliases(assigneeType, assigneeAliasInfo._1)
-                      addAssigneeToAssigned(assigneeAliasInfo._1, assigneeAliasInfo._2, assigneeType, returnedInstances)
-                    case None =>
-                  }
-                case None =>
-              }
-            }
             for (scopeToRemove <- scopesToRemove) removeAllAliasesInScope(scopeToRemove)
+          case None =>
         }
       }
     }
@@ -565,7 +536,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
       for (scopeToRemove <- scopesToRemove) {
-        removeAllAliasesInScope(scopeToRemove)
+        removeTopLevelAliasesInScope(scopeToRemove)
       }
     }
 
@@ -755,7 +726,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         if (loopType == LoopType.whileLoop) checkInsideFunctionBody(cond)
         assignScope(loopType)
         checkInsideFunctionBody(loopContent)
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
         if (loopType == LoopType.dowhileLoop) checkInsideFunctionBody(cond)
         updateMap(instanceToInterimStates)
@@ -1249,12 +1220,12 @@ class MyComponent(val global: Global) extends PluginComponent {
 
         }
         //remove aliases inside the body of the function since they can't be used anymore
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
         //update cache
         function.stateCache += cacheEntry -> findNextStates(cacheEntry)
         //delete aliases defined in the function
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
         return getReturnedFromFunction(function.returned)
       }
@@ -1283,13 +1254,13 @@ class MyComponent(val global: Global) extends PluginComponent {
       //mutate state if possible and skip recursive call if needed
       if (cacheHit && function.stateCache(parameters) != null) {
         mutateInstances(parameters, function)
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         println("cached result, skipping")
         currentScope.pop()
         return null
       }
       if (cacheHit && function.stateCache(parameters) == null) {
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         println("recursing")
         currentScope.pop()
         return null
@@ -1393,7 +1364,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               returned = Set(Instance(instance.aliases, instance.currentStates, instance.fields), scopeInstance)
           }
         }
-        removeAllAliasesInScope(currentScope)
+        removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
       }
       (trackedElements.contains(elementType), returned)
@@ -1543,9 +1514,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         if (trackedElements.contains(owner.tpe.toString())) {
           println("found owner in elements")
           val ownerType = owner.tpe.toString()
-          println(getSimpleClassName(ownerType))
-          println(ownerType)
-          println(currentScope)
           getClosestScopeAliasInfo(getSimpleClassName(ownerType), ownerType) match {
             case Some(aliasInfo) =>
               return getRelevantInstancesAndFieldNameFromAliasInfo(ownerType, aliasInfo, names)
@@ -1592,9 +1560,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     def getRelevantInstancesAndFieldNameFromAliasInfo(ownerType:String, aliasInfo:(String, mutable.Stack[String]),
                                                       names:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
       println("in get relevant instances and field name from alias info")
-      println(ownerType)
-      println(aliasInfo)
-      println(names)
       if(names.isEmpty) return None
       var relevantInstances = trackedElements(ownerType).instances.filter(instance =>
         instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
@@ -2095,8 +2060,12 @@ class MyComponent(val global: Global) extends PluginComponent {
       copiedMap
     }
 
+    def removeAllAliasesInScope(scope: mutable.Stack[String]): Unit ={
+      removeAllFieldsInScope(scope)
+      removeTopLevelAliasesInScope(scope)
+    }
 
-    def removeAllAliasesInScope(scope: mutable.Stack[String]) = {
+    def removeTopLevelAliasesInScope(scope: mutable.Stack[String]) = {
       breakable {
         if (scope == null) break()
         for ((elementType, elementInfo) <- trackedElements) {
@@ -2109,6 +2078,29 @@ class MyComponent(val global: Global) extends PluginComponent {
           trackedElements(elementType).instances = cleanInstances(elementInfo.instances)
         }
         println(s"after removing instances with scope $scope, instances are " + trackedElements)
+      }
+    }
+
+    def removeScopedFromInstances(instances: Set[Instance], scope: mutable.Stack[String]): Set[Instance]={
+      for(instance <- instances){
+        for((fieldAlias, instances) <- instance.fields){
+          if (fieldAlias.scope == scope)
+            instance.fields -= fieldAlias
+          else if(instances != null && instances != Set())
+            removeScopedFromInstances(instances, scope)
+        }
+      }
+      instances
+    }
+
+    def removeAllFieldsInScope(scope: mutable.Stack[String]) = {
+      breakable {
+        if (scope == null) break()
+        for ((elementType, elementInfo) <- trackedElements) {
+          trackedElements(elementType).instances  = removeScopedFromInstances(elementInfo.instances, scope)
+          trackedElements(elementType).instances = cleanInstances(elementInfo.instances)
+        }
+        println(s"after removing fields with scope $scope, instances are " + trackedElements)
       }
     }
 

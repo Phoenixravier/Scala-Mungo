@@ -40,15 +40,11 @@ object Printer{
 }
 
 object Main extends App{
-  var cat:Cat = new Cat
-  var cat2 = new Cat
-  cat.setFriend(cat2)
-  cat.walkFriend()
-  cat2.walk()
-  Dog
-  var fox = Cat
-  fox = Cat
-
+  var cat = new Cat()
+  walkCat(cat)
+  def walkCat(cat:Cat){
+    val cat = new Cat()
+  }
 }
 
 object Dog{
