@@ -41,10 +41,8 @@ object Printer{
 
 object Main extends App{
   var cat = new Cat()
-  walkCat(cat)
-  def walkCat(cat:Cat){
-    val cat = new Cat()
-  }
+  Dog
+  cat.walk()
 }
 
 object Dog{

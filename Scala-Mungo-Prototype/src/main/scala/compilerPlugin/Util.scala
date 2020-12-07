@@ -14,6 +14,7 @@ object Util {
   val Undefined = "_Undefined_"
   val Any = "_Any_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
+  var currentInstance:mutable.Stack[Instance] = mutable.Stack()
   var trackedElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
 
 
@@ -287,6 +288,8 @@ object Util {
       }
       println()
     }
+    println("current object is:")
+    println(currentInstance.head)
   }
 
 
