@@ -1,3 +1,5 @@
+/*
+
 import ProtocolDSL.State
 import compilerPlugin.{Alias, Instance}
 import compilerPlugin.Util._
@@ -160,3 +162,5 @@ class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
   }
   //endregion
 }
+
+ */

@@ -25,14 +25,9 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 }
 
 /** Holds an instance classname, its aliases and its current possible states */
-case class Instance(var aliases:Set[Alias], var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]]){
-  def getAliasNames(): Set[String] ={
-    for(alias <- aliases) yield alias.name
-  }
-
-  def updateAlias(aliasToRemove:Alias, aliasToAdd:Alias): Unit ={
-    aliases -= aliasToRemove
-    aliases += aliasToAdd
+case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]], var id:Int = 0){
+  def getAliasName(): String ={
+    alias.name
   }
 
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
@@ -41,19 +36,29 @@ case class Instance(var aliases:Set[Alias], var currentStates:Set[State], var fi
   }
 
   def containsAliasInfo(aliasName:String, aliasScope:mutable.Stack[String]): Boolean ={
-    aliases.contains(Alias(aliasName, aliasScope))
+    alias == Alias(aliasName, aliasScope)
   }
 
   def containsScopeAlias(): Boolean ={
-    aliases.nonEmpty && aliases.last.name == "scope+"
+    alias != null && alias.name == "scope+"
   }
 
   override def toString(): String={
-    s"$aliases $currentStates $fields"
+    var fieldsString = ""
+    for((name, instances) <- fields){
+      if(instances != null && instances.nonEmpty)
+        fieldsString += s" $name -> $instances\n"
+      else
+        fieldsString += s" $name -> null\n"
+    }
+    if(alias != null)
+      s"${alias.name+"@"+id} ${alias.scope} $currentStates \n Fields:\n $fieldsString"
+    else
+      s"null $currentStates"
   }
 
   override def hashCode():Int={
-    aliases.hashCode
+    alias.hashCode
   }
 }
 

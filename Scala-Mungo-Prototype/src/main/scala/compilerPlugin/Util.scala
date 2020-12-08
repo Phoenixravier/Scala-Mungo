@@ -21,7 +21,7 @@ object Util {
   /** Removes all instances with an empty set of aliases */
   def cleanInstances(instances:Set[Instance]): Set[Instance]={
     var newInstances = for(instance <- instances) yield instance
-    for(instance <- newInstances if instance.aliases.isEmpty) newInstances -= instance
+    for(instance <- newInstances if instance.alias == null) newInstances -= instance
     newInstances
   }
 
@@ -33,10 +33,10 @@ object Util {
     for(elementInfo <- trackedElements.values){
       if(elementInfo.objectName != null) {
         if(elementInfo.states != null)
-          elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
+          elementInfo.instances += Instance(Alias(elementInfo.objectName, currentScope.clone()),
             Set(elementInfo.states(0)), mutable.Map())
         else
-          elementInfo.instances += Instance(Set(Alias(elementInfo.objectName, currentScope.clone())),
+          elementInfo.instances += Instance(Alias(elementInfo.objectName, currentScope.clone()),
             Set(), mutable.Map())
       }
     }
@@ -89,12 +89,6 @@ object Util {
     length
   }
 
-  /** Searches through instances for an instance with an empty set and adds the alias there */
-  def addInMissingAlias(instances: Set[Instance], name: String):Set[Instance] = {
-    val newInstances = for(instance <- instances) yield instance
-    for(instance <- newInstances if instance.aliases.isEmpty) instance.aliases += Alias(name, currentScope.clone)
-    newInstances
-  }
 
   /** Creates a hashmap from method names (e.g. "walk(String)")
    * to indices at which it is present in the transitions array (including all the return values it might have)
@@ -151,26 +145,13 @@ object Util {
     scopeStack.reverse.mkString(".")
   }
 
-  def removeAliasesInScope(instances: Set[Instance], aliasName: String, scope:mutable.Stack[String]): Set[Instance] = {
-    var newInstances = for (instance <- instances) yield instance
-    val instancesToUpdate = newInstances.filter(instance => instance.containsAliasInfo(aliasName, scope))
-    for (instance <- instancesToUpdate)
-      instance.aliases -= Alias(aliasName, scope)
-    cleanInstances(newInstances)
-  }
-
-
-
   def copyInstances(instances:Set[Instance]):Set[Instance]={
     if(instances == null) return null
     var newInstances:Set[Instance] = Set()
     for(instance <- instances){
       println(instance)
-      var aliases:Set[Alias] = Set()
       var states:Set[State] = Set()
       var fields:mutable.Map[Alias, Set[Instance]] = mutable.Map()
-      for(alias <- instance.aliases)
-        aliases += Alias(alias.name.trim(), alias.scope.clone())
       if(instance.currentStates == null) states = null
       else {
         for (state <- instance.currentStates) {
@@ -178,10 +159,9 @@ object Util {
           else states += State(state.name.trim(), state.index)
         }
       }
-
       for((fieldName, instance) <- instance.fields )
         fields += fieldName -> instance
-      newInstances += Instance(aliases, states, fields)
+      newInstances += Instance(instance.alias, states, fields, instance.id)
     }
     newInstances
   }
@@ -205,7 +185,7 @@ object Util {
   /** For two sets of instances, if and instance is present in both of them, merges the different states
    * associated with it into one instance. Copies over the remaining instances which are only present once.
    *
-   * @param firstInstances  First of the instance sets, to merge with hte second one
+   * @param firstInstances  First of the instance sets, to merge with the second one
    * @param secondInstances Second of the instance sets, to merge with the first one
    * @return
    */
@@ -213,34 +193,19 @@ object Util {
     println(s"merging $firstInstances with $secondInstances")
     var mergedInstances: Set[Instance] = Set()
     for (firstInstance <- firstInstances) {
-      for (alias <- firstInstance.aliases) {
-        secondInstances.find(instance => instance.aliases.contains(alias)) match {
-          case Some(instance) =>
-            mergedInstances += Instance(firstInstance.aliases ++ instance.aliases,
-              firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
-          case None => mergedInstances += firstInstance
-        }
+      val alias = firstInstance.alias
+      secondInstances.find(instance => instance.alias == alias) match {
+        case Some(instance) =>
+          mergedInstances += Instance(alias,
+            firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
+        case None => mergedInstances += firstInstance
       }
     }
-    for (secondInstance <- secondInstances) if(!firstInstances.exists(instance => instance.aliases == secondInstance.aliases)) {
+    for (secondInstance <- secondInstances) if(!firstInstances.exists(instance => instance.alias == secondInstance.alias)) {
       mergedInstances += secondInstance
     }
     println("merged instances are "+mergedInstances)
     mergedInstances
-  }
-
-
-  /** Removes alias from instances */
-  def removeAliases(elementType:String, aliasName: String) = {
-    getClosestScopeAliasInfo(aliasName, elementType) match {
-      case Some(aliasInfo) =>
-        val instancesToUpdate = trackedElements(elementType).instances.filter(instance =>
-          instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-        for (instance <- instancesToUpdate)
-          instance.aliases -= Alias(aliasInfo._1, aliasInfo._2)
-      case None =>
-    }
-    trackedElements(elementType).instances = cleanInstances(trackedElements(elementType).instances)
   }
 
 
@@ -262,9 +227,9 @@ object Util {
         val curScope = currentScope.clone()
         while (curScope.nonEmpty) {
           for (instance <- trackedElements(elementType).instances) {
-            for (alias <- instance.aliases if alias.name == name && alias.scope == curScope) {
-              println(s"returning $alias")
-              return Some(alias.name, alias.scope)
+             if (instance.alias.name == name && instance.alias.scope == curScope) {
+              println(s"returning ${instance.alias}")
+              return Some(instance.alias.name, instance.alias.scope)
             }
           }
           curScope.pop()
@@ -288,7 +253,7 @@ object Util {
       }
       println()
     }
-    println("current object is:")
+    println("current instance is:")
     println(currentInstance.head)
   }
 

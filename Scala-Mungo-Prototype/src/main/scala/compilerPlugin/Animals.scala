@@ -42,11 +42,10 @@ object Printer{
 object Main{
   def main(args: Array[String]): Unit = {
     val cat = new Cat()
-    val cat1 = new Cat()
-    val cat2 = new Cat()
-    val cat3 = new Cat()
-    cat.friend.walk()
-    cat.walk()
+    def walkCat(cat:Cat){
+      val cat = new Cat()
+    }
+    walkCat(cat)
   }
 }
 
