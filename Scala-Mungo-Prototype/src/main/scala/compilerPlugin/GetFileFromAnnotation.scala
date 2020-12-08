@@ -117,17 +117,17 @@ class MyComponent(val global: Global) extends PluginComponent {
     def checkFile(): Unit = {
       for (line@q"$mods object $objectName extends { ..$earlydefns } with ..$parents { $self => ..$body }" <- compilationUnit.body) {
         breakable {
-          val mainObjectType = line.symbol.tpe.toString()
+          val objectType = line.symbol.tpe.toString()
           for (parent <- parents) {
             if (parent.toString() == "App") {
               currentScope = getScope(line)
               for (element <- ElementTraverser.elements if
-                (element.elementType == mainObjectType && element.scope == getScope(line)))
+                (element.elementType == objectType && element.scope == getScope(line)))
                 element.initialised = true
-              currentScope.push(objectName.toString())
+              currentScope.push(objectType)
               initObjects()
               currentInstance.push(
-                trackedElements(mainObjectType).instances.filter(instance => instance.containsAliasInfo(mainObjectType, currentScope)).last)
+                trackedElements(objectType).instances.filter(instance => instance.containsAliasInfo(objectType, currentScope)).last)
               checkInsideObjectBody(body) //all the code is checked here
               currentInstance.pop()
               println("POP0")
@@ -142,17 +142,17 @@ class MyComponent(val global: Global) extends PluginComponent {
                 if (getParameterTypes(paramss) == "Array[String]") {
                   /*_*/
                   println("found main")
-                  currentScope.push(objectName.toString())
+                  currentScope.push(objectType)
                   initObjects()
                   currentScope.pop()
-                  checkObject(mainObjectType, objectName.toString())
-                  currentScope.push(objectName.toString())
+                  checkObject(objectType)
+                  currentScope.push(objectType)
                   currentScope.push("main")
-                  println(mainObjectType)
-                  getClosestScopeAliasInfo(mainObjectType, mainObjectType) match{
+                  println(objectType)
+                  getClosestScopeAliasInfo(objectType, objectType) match{
                     case Some(aliasInfo) =>
-                      currentInstance.push(trackedElements(mainObjectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)).head)
-                      println("pushed current instance "+mainObjectType)
+                      currentInstance.push(trackedElements(objectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)).head)
+                      println("pushed current instance "+objectType)
                       println(currentInstance.head)
                     case None =>
                       println("couldnt find main object")
@@ -214,14 +214,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       returned
     }
 
-
-    def getObjectName(rawObjectName: String): String = {
-      if (rawObjectName.lastIndexOf(".") != -1) {
-        val objectName = rawObjectName.substring(rawObjectName.lastIndexOf(".") + 1)
-        return objectName
-      }
-      rawObjectName
-    }
 
     /** Checks a line and updates instances if needed.
      * Returns a set of instances if relevant.
@@ -333,21 +325,22 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         //All three next cases are to check for a solitary object name on a line
         case Ident(TermName(objectName)) =>
-          checkObject(line.symbol.typeSignature.toString, objectName)
+          val objectType = line.symbol.typeSignature.toString
+          checkObject(objectType)
           if (line.tpe == null) return (0, None)
-          getClosestScopeAliasInfo(objectName, line.symbol.typeSignature.toString) match {
+          getClosestScopeAliasInfo(objectType, objectType) match {
             case Some(aliasInfo) =>
-              val returned = trackedElements(line.symbol.typeSignature.toString).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              val returned = trackedElements(objectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               (0, Some(returned))
             case None =>
               (0, None)
           }
         case Select(location, expr) =>
           println("matched select")
-          val objectName = getObjectName(expr.toString())
-          checkObject(line.symbol.typeSignature.toString, objectName)
+          val objectType = line.symbol.typeSignature.toString
+          checkObject(objectType)
           val owner = line.symbol.owner.asInstanceOf[Symbol]
-          val fields = mutable.Stack((expr.toString, line.symbol.typeSignature.toString))
+          val fields = mutable.Stack((expr.toString, objectType))
           getRelevantInstancesAndType(owner, fields) match{
             case Some(instancesAndType) =>
               (0, Some(instancesAndType._1))
@@ -355,11 +348,11 @@ class MyComponent(val global: Global) extends PluginComponent {
               (0, None)
           }
         case Block(List(expr), Literal(Constant(()))) =>
-          val objectName = getObjectName(expr.toString())
-          checkObject(expr.tpe.toString(), objectName)
-          getClosestScopeAliasInfo(objectName.trim, expr.tpe.toString()) match {
+          val objectType = expr.tpe.toString()
+          checkObject(objectType)
+          getClosestScopeAliasInfo(objectType, objectType) match {
             case Some(aliasInfo) =>
-              val returned = trackedElements(expr.tpe.toString()).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+              val returned = trackedElements(objectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               (0, Some(returned))
             case None =>
               (0, None)
@@ -960,6 +953,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def assignParameters(parameters: ArrayBuffer[(String, String)], owner: Symbol, args: List[Tree], calledOn: Tree) = {
       //adding calledOn as current element to deal with this.method() calls inside its own function
       if (calledOn != null) {
+        val scopeToPush = currentScope.pop() //don't want to be scoped inside the function for this bit
         println(s"$calledOn is not null")
         getOwnerAndFields(calledOn) match{
           case Some(ownerAndFields) =>
@@ -971,7 +965,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                 println(s"PUSHED $calledOn")
               case None =>
                 //in main function where owners don't work like in App case, so need to improvise..
-                var fields = getFields(calledOn)
+                val fields = getFields(calledOn)
                 println("main fields are "+fields)
                 println("instance to look for is "+currentInstance.head.alias.name)
                 getClosestScopeAliasInfo(currentInstance.head.alias.name, currentInstance.head.alias.name) match{
@@ -982,6 +976,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                         println("got some instances and type in main thing")
                         currentInstance.push(instancesAndType._1.head)
                         println(s"PUSHED $calledOn in main thing")
+                        println("curent instance is "+currentInstance.head)
                       case None =>
                         println("didnt got some instances and type in main thing")
                     }
@@ -995,6 +990,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         //todo (check) can delete this since we don't want to create a new instance anymore, just want to get correct current object and use that
         //val calledOnType = calledOn.symbol.tpe.toString()
         //processNovelAssignment(getSimpleClassName(calledOnType), calledOnType, calledOn)
+        currentScope.push(scopeToPush)
       }
       println("processing normal arguments")
       var i = 0
@@ -1269,14 +1265,14 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     /** Checks if the object given has been seen before. If not, executes the code inside it.
      *
-     * @param objectName object to check
+     * @param objectType type of object to check (only need this since there will always only be one instance of an object
      */
-    def checkObject(objectType: String, objectName: String) = {
+    def checkObject(objectType: String) = {
       getClosestScopeObject(objectType) match {
         case Some(obj) =>
           if (!obj.initialised) {
             obj.initialised = true
-            currentScope.push(objectName)
+            currentScope.push(objectType)
             println("before assigning current instance in check object")
             println("object type is "+objectType)
             getClosestScopeAliasInfo(objectType, objectType) match{
@@ -1525,41 +1521,32 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     def getRelevantInstancesAndFieldName(owner:global.Symbol, fields: mutable.Stack[(String, String)]):
                                                                     Option[(Set[Instance], String)] ={
-      breakable {
-        if (trackedElements.contains(owner.tpe.toString())) {
-          println("found owner in elements")
-          val ownerType = owner.tpe.toString()
-          getClosestScopeAliasInfo(ownerType, ownerType) match {
-            case Some(aliasInfo) =>
-              return getRelevantInstancesAndFieldNameFromAliasInfo(ownerType, aliasInfo, fields)
-            case None =>
-              println("did not find alias from name " + ownerType)
-              getClosestScopeAliasInfo(owner.name.toString, ownerType) match {
-                case Some(aliasInfo) =>
-                  return getRelevantInstancesAndFieldNameFromAliasInfo(ownerType, aliasInfo, fields)
-                case None =>
-              }
-          }
-        }
-        else {
-          if (fields.isEmpty) break()
-          println("owner is not in elements")
-          var nameAndElementType = fields.pop()
-          while (fields.nonEmpty && !trackedElements.contains(nameAndElementType._2)) {
-            nameAndElementType = fields.pop()
-          }
-          println("name and element type is " + nameAndElementType)
-          if (!trackedElements.contains(nameAndElementType._2)) break()
-          getClosestScopeAliasInfo(nameAndElementType._1, nameAndElementType._2) match {
-            case Some(aliasInfo) =>
-              return getRelevantInstancesAndFieldNameFromAliasInfo(nameAndElementType._2, aliasInfo, fields)
-            case None =>
-          }
+      if (trackedElements.contains(owner.tpe.toString())) {
+        println("found owner in elements")
+        val ownerType = owner.tpe.toString()
+        getClosestScopeAliasInfo(ownerType, ownerType) match {
+          case Some(aliasInfo) =>
+            return getRelevantInstancesAndFieldNameFromAliasInfo(ownerType, aliasInfo, fields)
+          case None =>
+            println("did not find alias from name " + ownerType)
+            getClosestScopeAliasInfo(owner.name.toString, ownerType) match {
+              case Some(aliasInfo) =>
+                return getRelevantInstancesAndFieldNameFromAliasInfo(ownerType, aliasInfo, fields)
+              case None =>
+            }
         }
       }
       None
     }
 
+    /** Given an instance to look through and the name of a field,
+     *  goes through the instance looking for the field with the given name
+     *  which has scope closest to the current scope.
+     *
+     * @param instance
+     * @param fieldName
+     * @return
+     */
     def getClosestScopeField(instance: Instance, fieldName: String): Option[Alias] = {
       val curScope = currentScope.clone()
       while (curScope.nonEmpty) {
@@ -1578,10 +1565,12 @@ class MyComponent(val global: Global) extends PluginComponent {
       if(fields.isEmpty) return None
       var relevantInstances = trackedElements(ownerType).instances.filter(instance =>
         instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+      var instancesType:String = ownerType
       println("relevant instances "+relevantInstances)
       while(fields.size > 1){
-        var (fieldName, fieldType) = fields.pop()
+        val (fieldName, fieldType) = fields.pop()
         var curRelevantInstances:Set[Instance] = Set()
+        currentScope.push(instancesType)
         for(instance <- relevantInstances){
           getClosestScopeField(instance, fieldName) match{
             case Some(field) =>
@@ -1589,44 +1578,28 @@ class MyComponent(val global: Global) extends PluginComponent {
             case None =>
           }
         }
+        currentScope.pop()
         relevantInstances = curRelevantInstances
-        fieldName = fieldType
+        instancesType = fieldType
       }
       val fieldName = fields.pop()._1
       Some(relevantInstances, fieldName)
     }
 
     def getRelevantInstancesAndType(owner:global.Symbol, fields: mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
-      breakable {
-        if (trackedElements.contains(owner.tpe.toString())) {
-          println("found owner in elements in relevant")
-          val ownerType = owner.tpe.toString()
-          getClosestScopeAliasInfo(ownerType, ownerType) match {
-            case Some(aliasInfo) =>
-              return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
-            case None =>
-              println("did not find alias from name " + ownerType)
-              getClosestScopeAliasInfo(owner.name.toString, ownerType) match {
-                case Some(aliasInfo) =>
-                  return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
-                case None =>
-              }
-          }
-        }
-        else {
-          if (fields.isEmpty) break()
-          println("owner is not in elements")
-          var nameAndElementType = fields.pop()
-          while (fields.nonEmpty && !trackedElements.contains(nameAndElementType._2)) {
-            nameAndElementType = fields.pop()
-          }
-          println("name and element type is " + nameAndElementType)
-          if (!trackedElements.contains(nameAndElementType._2)) break()
-          getClosestScopeAliasInfo(nameAndElementType._1, nameAndElementType._2) match {
-            case Some(aliasInfo) =>
-              return getRelevantInstancesFromAliasInfo(nameAndElementType._2, aliasInfo, fields)
-            case None =>
-          }
+      if (trackedElements.contains(owner.tpe.toString())) {
+        println("found owner in elements in relevant")
+        val ownerType = owner.tpe.toString()
+        getClosestScopeAliasInfo(ownerType, ownerType) match {
+          case Some(aliasInfo) =>
+            return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
+          case None =>
+            println("did not find alias from name " + ownerType)
+            getClosestScopeAliasInfo(owner.name.toString, ownerType) match {
+              case Some(aliasInfo) =>
+                return getRelevantInstancesFromAliasInfo(ownerType, aliasInfo, fields)
+              case None =>
+            }
         }
       }
       None
@@ -1636,10 +1609,14 @@ class MyComponent(val global: Global) extends PluginComponent {
                                           fields:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
       var relevantInstances = trackedElements(ownerType).instances.filter(instance =>
         instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
+      println("initial relevant instances are "+relevantInstances)
+      println("owner type is "+ownerType)
+      println("current scope is "+currentScope)
       var instancesType:String = ownerType
       while(fields.nonEmpty){
-        var (fieldName, fieldType) = fields.pop()
+        val (fieldName, fieldType) = fields.pop()
         var curRelevantInstances:Set[Instance] = Set()
+        currentScope.push(instancesType)
         for(instance <- relevantInstances){
           getClosestScopeField(instance, fieldName) match{
             case Some(field) =>
@@ -1649,6 +1626,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             case None =>
           }
         }
+        currentScope.pop()
         relevantInstances = curRelevantInstances
         instancesType = fieldType
       }
@@ -1780,16 +1758,23 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return the owner as a symbol, and the fields as a Stack of string tuples
      */
     def getOwnerAndFields(qualifier:Tree): Option[(Symbol, mutable.Stack[(String, String)])]={
-        println("inside get owner and fields, qualifier is "+qualifier)
-        var qualifierTree = qualifier
-        println("qualifier tree is "+qualifierTree)
-        val fields = mutable.Stack[(String, String)]() //name and type of each field
-        while(qualifierTree.children.nonEmpty){
+      println("inside get owner and fields, qualifier is "+qualifier)
+      var qualifierTree = qualifier
+      println("qualifier tree is "+qualifierTree)
+      val fields = mutable.Stack[(String, String)]() //name and type of each field
+      while(qualifierTree.children.nonEmpty){
+        fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+        qualifierTree = qualifierTree.children.last
+      }
+      val owner = qualifierTree.symbol
+      getClosestScopeObject(owner.tpe.toString()) match{
+        case Some(obj) =>
+        case None =>
           fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
-          qualifierTree = qualifierTree.children.last
-        }
-        val owner = qualifierTree.symbol
-        Some(owner, fields)
+
+      }
+
+      Some(owner, fields)
     }
 
     /** Traverses a tree and collects (methodName, aliasName) from method application statements
