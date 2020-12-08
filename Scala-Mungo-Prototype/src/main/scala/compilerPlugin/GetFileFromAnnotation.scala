@@ -1145,14 +1145,14 @@ class MyComponent(val global: Global) extends PluginComponent {
         returned match {
           case Some(setOfInstances) =>
             val scopeClone = currentScope.clone()
-            var instancesReturned = setOfInstances ++ Set(Instance(Alias("scope+", scopeClone.clone()), Set(), mutable.Map())) //delete internal variables
+            var instancesReturned = setOfInstances//delete internal variables
             scopeClone.pop()
-            instancesReturned = instancesReturned ++ Set(Instance(Alias("scope+", scopeClone), Set(), mutable.Map())) //need to delete the parameters too
+            instancesReturned = instancesReturned//need to delete the parameters too
             function.returned = Some(copyInstances(instancesReturned))
           case null =>
             function.returned = null
           case None =>
-            function.returned = Some(Set(Instance(Alias("scope+", currentScope.clone()), Set(), mutable.Map())))
+            function.returned = None
         }
         //remove aliases inside the body of the function since they can't be used anymore
         removeTopLevelAliasesInScope(currentScope)

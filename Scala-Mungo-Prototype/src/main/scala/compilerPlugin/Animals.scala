@@ -28,10 +28,8 @@ class CatContainer(){
 object Main{
   def main(args: Array[String]): Unit = {
     val cat = new Cat()
-    def walkCat(cat:Cat): Unit ={
-      val cat = new Cat()
-    }
-    walkCat(cat)
+    cat.walk()
+    cat.walk()
   }
 }
 
