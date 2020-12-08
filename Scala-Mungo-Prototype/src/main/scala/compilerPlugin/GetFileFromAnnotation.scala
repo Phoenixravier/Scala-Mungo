@@ -278,7 +278,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           println("before process assignment for line "+line)
-          getFields(assignee) match{
+          /*_*/ getFields(assignee) /*_*/ match{
             case Some(fields) =>
               processAssignment(fields, newValue)
             case None =>
@@ -481,11 +481,14 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("returned is " + returnedAssigned)
       println("current instance is "+currentInstance.head)
       if(currentInstance.nonEmpty){
+        val fieldToAssign = Alias(assignee, currentScope.clone())
+        if(currentInstance.head.fields.contains(fieldToAssign)) //check if there is already a field with this exact alias (e.g. from a for loop) and remove it
+          currentInstance.head.fields.remove(fieldToAssign)
         returnedAssigned match {
           case Some(instances) =>
-            currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> removeScopeInstances(instances))
+            currentInstance.head.fields += (fieldToAssign -> removeScopeInstances(instances))
           case null =>
-            currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
+            currentInstance.head.fields += (fieldToAssign -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
           case None =>
             println("didn't match anything for returned")
         }
