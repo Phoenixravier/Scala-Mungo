@@ -19,7 +19,7 @@ class Cat{
 }
 class CatContainer(){
   var cat:Cat=null
-  def dash(cat:Cat): Unit ={
+  def createCat(cat:Cat): Unit ={
     var cat = new Cat()
   }
 }
@@ -28,8 +28,10 @@ class CatContainer(){
 object Main{
   def main(args: Array[String]): Unit = {
     val cat = new Cat()
-    cat.friend = new Cat()
-    cat.friend.walk()
+    def walkCat(cat:Cat): Unit ={
+      val cat = new Cat()
+    }
+    walkCat(cat)
   }
 }
 

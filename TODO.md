@@ -13,6 +13,8 @@ Match statements can also return things and this is not dealt with
 
 Does it handle default parameters?
 
+What happens when a user randomly uses a method without calling it?
+
 TESTS
 Test that the constructor of a class like Cat without parameters is gone through (one which matches List(Ident(name)) rather than List(Apply(elementName, arg2)) (which is tested)
 Test that only the relevant instances exist in the set of instances (as opposed to null scope for example or instances which should have been deleted upon leaving a function)

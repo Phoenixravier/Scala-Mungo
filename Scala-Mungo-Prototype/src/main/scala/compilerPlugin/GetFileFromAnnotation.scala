@@ -277,7 +277,13 @@ class MyComponent(val global: Global) extends PluginComponent {
           /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
-          processAssignment(mutable.Stack((assignee.toString, newValue.tpe.toString)), newValue)
+          println("before process assignment for line "+line)
+          getFields(assignee) match{
+            case Some(fields) =>
+              processAssignment(fields, newValue)
+            case None =>
+              processAssignment(mutable.Stack((assignee.toString, newValue.tpe.toString)), newValue)
+          }
           (getLengthOfTree(line) - 1, None)
         //for loops
         case q"for (..$generator) $loopBody" =>
@@ -323,7 +329,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           /*_*/ processMatchStatement(expr, cases) /*_*/
           (getLengthOfTree(line) - 1, None)
         //All three next cases are to check for a solitary object name on a line
-        case Ident(TermName(objectName)) =>
+        case Ident(TermName(elementName)) =>
           val objectType = line.symbol.typeSignature.toString
           checkObject(objectType)
           if (line.tpe == null) return (0, None)
@@ -332,7 +338,13 @@ class MyComponent(val global: Global) extends PluginComponent {
               val returned = trackedElements(objectType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
               (0, Some(returned))
             case None =>
-              (0, None)
+              getClosestScopeField(currentInstance.head, elementName) match{
+                case Some(field) =>
+                  val returned = currentInstance.head.fields(field)
+                  (0, Some(returned))
+                case None =>
+                  (0, None)
+              }
           }
         case Select(location, expr) =>
           println("matched select")
@@ -409,33 +421,35 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assigned     in x = y, y
      */
     def processAssignment(fields:mutable.Stack[(String, String)], assigned: Trees#Tree) = {
-      println("assignee is " + fields)
-      println("assigned is " + assigned)
-      println("raw assigned is "+showRaw(assigned))
+      println("in processAssignment")
       val returnedAssigned = checkInsideFunctionBody(assigned)
       println("returnedAssigned is " + returnedAssigned)
-      var scopesToRemove: ArrayBuffer[mutable.Stack[String]] = ArrayBuffer()
-      getRelevantInstancesAndFieldName(fields) match{
-        case Some((instancesToUpdate, field)) =>
+      println("assignee is " + fields)
+      println("assigned is " + assigned)
+      getRelevantInstancesAndFieldName(fields) match {
+        case Some((instancesToUpdate, fieldName)) =>
           println("instances to update are " + instancesToUpdate)
-          resetField(instancesToUpdate, field)
+          currentScope.push(instancesToUpdate.last.alias.name)
+          resetClosestScopeField(instancesToUpdate, fieldName)
           for (instance <- instancesToUpdate) {
-            breakable {
-              if (instance.containsScopeAlias()) {
-                scopesToRemove += instance.alias.scope
-                break()
-              }
-              returnedAssigned match {
-                case Some(instances) =>
-                  instance.fields += (Alias(field, currentScope.clone()) -> removeScopeInstances(instances))
-                case null =>
-                  instance.fields += (Alias(field, currentScope.clone()) -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
-                case None =>
-                  println("didn't match anything for returned")
-              }
+            returnedAssigned match {
+              case Some(instances) =>
+                getClosestScopeField(instance, fieldName) match{
+                  case Some(field) =>
+                    instance.fields(field) = removeScopeInstances(instances)
+                  case None =>
+                }
+              case null =>
+                getClosestScopeField(instance, fieldName) match{
+                  case Some(field) =>
+                    instance.fields(field) = Set(Instance(null, Set(State(Undefined, -1)), mutable.Map()))
+                  case None =>
+                }
+              case None =>
+                println("didn't match anything for returned")
             }
           }
-          for (scopeToRemove <- scopesToRemove) removeAllFieldsInScope(scopeToRemove)
+          currentScope.pop()
         case None =>
       }
     }
@@ -467,18 +481,14 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("returned is " + returnedAssigned)
       println("current instance is "+currentInstance.head)
       if(currentInstance.nonEmpty){
-        var scopesToRemove: ArrayBuffer[mutable.Stack[String]] = ArrayBuffer() //todo is this needed?
-        breakable {
-          returnedAssigned match {
-            case Some(instances) =>
-              currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> removeScopeInstances(instances))
-            case null =>
-              currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
-            case None =>
-              println("didn't match anything for returned")
-          }
+        returnedAssigned match {
+          case Some(instances) =>
+            currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> removeScopeInstances(instances))
+          case null =>
+            currentInstance.head.fields += (Alias(assignee, currentScope.clone()) -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
+          case None =>
+            println("didn't match anything for returned")
         }
-        for (scopeToRemove <- scopesToRemove) removeAllFieldsInScope(scopeToRemove) //todo is this needed?
       }
       println("after novel assignment, instances are " + trackedElements)
     }
@@ -844,6 +854,19 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
+    def addToBottomOfStack(value: (String, String), fields: mutable.Stack[(String, String)]) =
+      {
+        val newStack = mutable.Stack(value)
+        val tempStack = mutable.Stack[(String, String)]()
+        while(fields.nonEmpty){
+          tempStack.push(fields.pop())
+        }
+        while(tempStack.nonEmpty){
+          newStack.push(tempStack.pop())
+        }
+        newStack
+      }
+
     /** Checks if the function given is an assignment function.
      * If it is, checks the assignment and returns true.
      * If not, returns false
@@ -859,7 +882,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       methodTraverser.methodCallInfos = ListBuffer[MethodCallInfo]()
       println("method call infos are "+methodCallInfos)
 
-
       for(methodCallInfo <- methodCallInfos){
         val regex = ".*_\\$eq".r
         regex.findPrefixMatchOf(methodCallInfo.name) match {
@@ -867,8 +889,11 @@ class MyComponent(val global: Global) extends PluginComponent {
             val value = mat.toString
             val strippedValue = value.substring(0, value.indexOf("_$eq"))
             println("stripped value is "+strippedValue)
+            println(methodCallInfo.params(0)(0).symbol.tpe.resultType)
+            var fields = methodCallInfo.fields
+            fields = addToBottomOfStack((strippedValue, methodCallInfo.params(0)(0).symbol.tpe.resultType.toString), fields)
             //if(arg1.symbol == null) return false
-            processAssignment(methodCallInfo.fields, methodCallInfo.params(0)(0))
+            processAssignment(fields, methodCallInfo.params(0)(0))
             return true
           case None =>
         }
@@ -877,35 +902,13 @@ class MyComponent(val global: Global) extends PluginComponent {
       false
     }
 
-    def resetField(instancesToUpdate: Set[Instance], field: String) = {
+    def resetClosestScopeField(instancesToUpdate: Set[Instance], field: String) = {
       for(instance <- instancesToUpdate){
         getClosestScopeField(instance, field) match{
           case Some(field) =>
             instance.fields(field) = Set()
           case None =>
         }
-      }
-    }
-
-    def updateField(aliasInfo: Tuple2[String, mutable.Stack[String]], fieldName: String, aliasType: String, assigned: Tree): Unit = {
-      println(s"updating field $fieldName of alias $aliasInfo with $assigned")
-      val returnedAssigned = checkInsideFunctionBody(assigned)
-      val instancesToUpdate =
-        trackedElements(aliasType).instances.filter(instance => instance.containsAliasInfo(aliasInfo._1, aliasInfo._2))
-      resetField(instancesToUpdate, fieldName)
-      returnedAssigned match {
-        case Some(returned) =>
-          for (returnedInstance <- returned) {
-            if (!returnedInstance.containsScopeAlias()) {
-              for (instance <- instancesToUpdate) {
-                getClosestScopeField(instance, fieldName) match{
-                  case Some(field) => instance.fields(field) += returnedInstance
-                  case None =>
-                }
-              }
-            }
-          }
-        case None =>
       }
     }
 
@@ -935,9 +938,6 @@ class MyComponent(val global: Global) extends PluginComponent {
             }
           case None =>
         }
-        //todo (check) can delete this since we don't want to create a new instance anymore, just want to get correct current object and use that
-        //val calledOnType = calledOn.symbol.tpe.toString()
-        //processNovelAssignment(getSimpleClassName(calledOnType), calledOnType, calledOn)
         currentScope.push(scopeToPush)
       }
       println("processing normal arguments")
@@ -1211,6 +1211,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     /** Checks if the object given has been seen before. If not, executes the code inside it.
+     *  If the string passed is not an object type, does nothing
      *
      * @param objectType type of object to check (only need this since there will always only be one instance of an object
      */
@@ -1450,6 +1451,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     def getRelevantInstancesAndFieldName(fields:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
       println("in get relevant instances and field name from alias info")
+      println("fields are "+fields)
       if(fields.isEmpty) return None
       var relevantInstances = Set(currentInstance.head)
       var instancesType = currentInstance.head.alias.name

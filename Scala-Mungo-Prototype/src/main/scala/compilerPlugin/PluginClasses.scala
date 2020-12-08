@@ -47,9 +47,9 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
     var fieldsString = ""
     for((name, instances) <- fields){
       if(instances != null && instances.nonEmpty)
-        fieldsString += s" $name -> $instances\n"
+        fieldsString += s"  $name -> $instances\n"
       else
-        fieldsString += s" $name -> null\n"
+        fieldsString += s"  $name -> null\n"
     }
     if(alias != null)
       s"${alias.name+"@"+id} ${alias.scope} $currentStates \n Fields:\n $fieldsString"
