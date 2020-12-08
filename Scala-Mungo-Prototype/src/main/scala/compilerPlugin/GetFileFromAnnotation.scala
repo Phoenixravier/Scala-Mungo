@@ -259,22 +259,22 @@ class MyComponent(val global: Global) extends PluginComponent {
         case ValDef(mods, TermName(assignee), assigneeType, Literal(Constant(null))) =>
           println("recognised null in assignment")
           println("type is " + assigneeType)
-          processNovelAssignment(assignee, assigneeType.toString, Literal(Constant(null)).asInstanceOf[Tree])
+          processNovelAssignment(assignee, Literal(Constant(null)).asInstanceOf[Tree])
           (getLengthOfTree(line) - 1, None)
         case ValDef(mods, TermName(assignee), assigneeType, EmptyTree) =>
           println("recognised _ in assignment")
           println("type is " + assigneeType)
-          processNovelAssignment(assignee, assigneeType.toString, EmptyTree.asInstanceOf[Tree])
+          processNovelAssignment(assignee, EmptyTree.asInstanceOf[Tree])
           (getLengthOfTree(line) - 1, None)
         case ValDef(mods, TermName(assignee), assigneeType, assigned) =>
-          /*_*/ processNovelAssignment(assignee, assigneeType.toString, assigned) /*_*/
+          /*_*/ processNovelAssignment(assignee, assigned) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"val $assignee = $newValue" =>
           println("recognised assignment from match")
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
+          /*_*/ processNovelAssignment(assignee.toString, newValue) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"var $assignee = $newValue" =>
-          /*_*/ processNovelAssignment(assignee.toString, newValue.tpe.toString, newValue) /*_*/
+          /*_*/ processNovelAssignment(assignee.toString, newValue) /*_*/
           (getLengthOfTree(line) - 1, None)
         case q"$assignee = $newValue" =>
           println("before process assignment for line "+line)
@@ -472,7 +472,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assignee In val/var x = y, this is x. Always comes as a new val or var.
      * @param assigned In val/var x = y, this is y.
      */
-    def processNovelAssignment(assignee: String, assigneeType: String, assigned: Trees#Tree) = {
+    def processNovelAssignment(assignee: String, assigned: Trees#Tree) = {
       println("in process novel")
       println(s"assignee is $assignee and assigned is $assigned")
       println("raw assigned is " + showRaw(assigned))
@@ -926,10 +926,10 @@ class MyComponent(val global: Global) extends PluginComponent {
       if (calledOn != null) {
         val scopeToPush = currentScope.pop() //don't want to be scoped inside the function for this bit
         println(s"$calledOn is not null")
-        getFields(calledOn) match{
+        getFields(calledOn) match {
           case Some(fields) =>
             println("got some fields "+fields)
-            getRelevantInstancesAndTheirType(fields) match{
+            getRelevantInstancesAndTheirType(fields) match {
               case Some(instancesAndType) =>
                 println("got some instances and type")
                 currentInstance.push(instancesAndType._1.head)
@@ -945,11 +945,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       for (param <- parameters) {
         if (trackedElements.contains(param._2)) {
           println(s"Assigning ${param._1} = ${args(i)}")
-          println("before process assignment with null")
-          processAssignment(mutable.Stack((param._1, param._2)), EmptyTree.asInstanceOf[Tree])
-          println("after process assignment with null")
-          printInstances()
-          processAssignment(mutable.Stack((param._1, param._2)), args(i))
+          processNovelAssignment(param._1, args(i))
         }
         i += 1
       }
