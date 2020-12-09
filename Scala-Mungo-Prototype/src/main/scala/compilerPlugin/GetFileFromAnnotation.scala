@@ -436,7 +436,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               case Some(instances) =>
                 getClosestScopeField(instance, fieldName) match{
                   case Some(field) =>
-                    instance.fields(field) = removeScopeInstances(instances)
+                    instance.fields(field) = instances
                   case None =>
                 }
               case null =>
@@ -454,15 +454,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-
-    def removeScopeInstances(instances: Set[Instance]): Set[Instance] = {
-      var strippedInstances = Set[Instance]()
-      for(instance <- instances){
-        if(!instance.containsScopeAlias())
-          strippedInstances += instance
-      }
-      strippedInstances
-    }
 
     /** Processes a val/var assignee = assigned statement
      * First, gets what is returned from the rhs of the assignment operation.
@@ -486,7 +477,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           currentInstance.head.fields.remove(fieldToAssign)
         returnedAssigned match {
           case Some(instances) =>
-            currentInstance.head.fields += (fieldToAssign -> removeScopeInstances(instances))
+            currentInstance.head.fields += (fieldToAssign -> instances)
           case null =>
             currentInstance.head.fields += (fieldToAssign -> Set(Instance(null, Set(State(Undefined, -1)), mutable.Map())))
           case None =>
@@ -1389,11 +1380,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("CALLED UPDATE")
       println("tracked elements are " + trackedElements)
       println("line is " + line)
-      line match {
-        case app@Apply(fun, args) =>
-          methodTraverser.traverse(app)
-        case _ =>
-      }
+      /*_*/ methodTraverser.traverse(line.asInstanceOf[Tree]) /*_*/
       val methodCallInfos = methodTraverser.methodCallInfos
       methodTraverser.methodCallInfos = ListBuffer[MethodCallInfo]()
       for (methodCallInfo <- methodCallInfos) {
@@ -1501,6 +1488,16 @@ class MyComponent(val global: Global) extends PluginComponent {
       Some(relevantInstances, instancesType)
     }
 
+    def getFieldNamesPointingAtInstance(instanceToFind:Instance): Set[String] ={
+      var fieldNames = Set[String]()
+      for((elementType, elementInfo) <- trackedElements)
+        for(instance <- elementInfo.instances)
+          for((field, instances) <- instance.fields)
+            if(instances.last.alias != null && instances.contains(instanceToFind))
+              fieldNames += field.name
+      fieldNames
+    }
+
     def getPossibleMethods(elementType: String, states: Set[State]): Set[ReturnValue] = {
       if(trackedElements(elementType).stateToAvailableMethods ==null) return Set()
       var possibleMethods = trackedElements(elementType).stateToAvailableMethods.values.last
@@ -1534,7 +1531,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         println("new states are " + newStates)
         for (state <- newStates if state.name == Undefined) {
           val possibleNextMethods = getPossibleMethods(elementType, instance.currentStates)
-          throw new protocolViolatedException(sortSet(Set(instance.getAliasName())), elementType,
+          throw new protocolViolatedException(sortSet(getFieldNamesPointingAtInstance(instance)), elementType,
             sortSet(instance.currentStates), methodName, line.pos.source.toString(), line.pos.line,
             formatMethods(sortSet(possibleNextMethods)))
         }
@@ -1555,9 +1552,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       formattedMethods
     }
 
-
     //region<Traversers>
-
 
     def getSimpleFields(qualifier: Tree): mutable.Stack[(String, String)]={
       println(s"getting fields from "+qualifier)
@@ -1591,14 +1586,17 @@ class MyComponent(val global: Global) extends PluginComponent {
       val owner = qualifierTree.symbol
       getClosestScopeObject(owner.tpe.toString()) match{
         case Some(obj) =>
+          //case where we have a single object name to deal with
+          if(fields.isEmpty)
+            fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+          //case where the qualifier did not include the owner name (as happens when we are in the main() method and not in an object
         case None =>
           fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
       }
       Some(fields)
     }
 
-    case class MethodCallInfo(name: String, fields: mutable.Stack[(String,String)],
-                              params:List[List[Tree]]){
+    case class MethodCallInfo(name: String, fields: mutable.Stack[(String,String)], params:List[List[Tree]]){
       def simpleName(): String ={
         name.substring(0,name.indexOf("("))
       }
@@ -1622,8 +1620,7 @@ class MyComponent(val global: Global) extends PluginComponent {
                     getFields(qualifier) match {
                       case Some(fields) =>
                         /*_*/
-                        methodCallInfos += MethodCallInfo(name + getParameterTypesFromTree(exprss),
-                          fields, exprss)
+                        methodCallInfos += MethodCallInfo(name + getParameterTypesFromTree(exprss), fields, exprss)
                         /*_*/
                         println("added entry " + methodCallInfos)
                       case None =>

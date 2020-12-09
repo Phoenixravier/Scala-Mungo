@@ -259,6 +259,24 @@ class ProtocolLang {
     }
   }
 
+  def checkInitReachesAllOtherStates() = {
+    val reachableFromInit = reachableStates(State("init", 0))
+    val unreachable = states.diff(reachableFromInit) - State("init", 0)
+    if(unreachable.nonEmpty) {
+      throw new Exception(s"States $unreachable are not reachable by init. Make sure that init connects to all other states.")
+    }
+  }
+
+  def checkEndHasNoOutgoingEdges() = {
+    states.find(state => state.name == "end") match{
+      case Some(endState) =>
+        for(state <- stateMachine(endState.index) if state.name != Undefined)
+          throw new Exception(s"The end state has a transition to the state $state. The end state should not have any transitions to any states.")
+      case None =>
+    }
+
+  }
+
   /** End keyword which must be placed at the end of the protocol or nothing will happen when this is executed.
    *
    */
@@ -269,11 +287,56 @@ class ProtocolLang {
     ended = true
     //create the array, print it and encode it into objectName.ser
     val arrayOfStates = createStateMachine()
+    checkEndHasNoOutgoingEdges()
+    checkAllStatesLeadToEnd()
+    checkInitReachesAllOtherStates()
     println("return values array is: "+returnValues.toArray.mkString("Array(", ", ", ")"))
     printNicely(arrayOfStates)
     val objectName = getClass.getSimpleName.stripSuffix("$")
     println("raw is "+objectName)
     Util.sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), objectName+".ser")
+  }
+
+  def checkEndStateExistsOnce() = {
+    var met = false
+    var valid = false
+    for(state <- states){
+      if(state.name == "end" && !met) {
+        met = true
+        valid = true
+      } else
+        if(state.name == "end" && met)
+          valid = false
+    }
+    if(!valid && met) throw new Exception("Too many end states defined. Only define one end state in your protocol.")
+    if(!valid && !met) throw new Exception("No end state defined. Add an end state to your protocol which can be reached from all other states." +
+      "This defines the state you want your element to reach.")
+  }
+
+  def reachableStates(state: State, foundReachableStates: mutable.Set[State] = mutable.Set()):mutable.Set[State] = {
+    printNicely(stateMachine)
+    val immediatelyReachable = stateMachine(state.index)
+    for(neighbour <- immediatelyReachable){
+      if(neighbour.name != Undefined && !foundReachableStates.contains(neighbour)) {
+        foundReachableStates += neighbour
+        foundReachableStates ++= reachableStates(neighbour, foundReachableStates)
+      }
+    }
+    foundReachableStates
+  }
+
+
+  def checkAllStatesLeadToEnd() = {
+    var valid = true
+    var statesWhichDontEnd = Set[State]()
+    for(state <- states){
+      if(state.name != "end")
+        if(!reachableStates(state).exists(state => state.name == "end")) {
+          valid = false
+          statesWhichDontEnd += state
+        }
+    }
+    if(!valid) throw new Exception(s"The states $statesWhichDontEnd do not have a path which leads them to the end state.")
   }
 
   /** Checks that all return values have been written. AKA that there is no or statement without an at statement.
@@ -297,7 +360,10 @@ class ProtocolLang {
         throw new Exception(s"State ${transition.nextState}, " +
           s"used in state ${transition.startState} with method ${transition.method.name}, isn't defined")
     }
-    if(ended) throw new Exception("You used end multiple times in the protocol, only use end once!")
+
+    checkEndStateExistsOnce()
+
+    if(ended) throw new Exception("You used the end() function multiple times in the protocol, only use end() once!")
   }
 
   /** Creates the state machine from the datastructures created while executing the protocol.

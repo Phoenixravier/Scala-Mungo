@@ -26,15 +26,21 @@ class CatContainer(){
 
 
 object Main{
+  val fox = Cat
   def main(args: Array[String]): Unit = {
-    val cat = new Cat()
-    cat.walk()
-    cat.walk()
+    Cat.walk()
+    Cat.walk()
   }
 }
 
-object Dog{
-
+@Typestate("CatProtocol")
+object Cat{
+  def walk(): Boolean = true
+  def walkFriend(): Unit ={
+    walk()
+  }
+  def setFriend(f:Cat): Unit ={
+  }
 }
 
 

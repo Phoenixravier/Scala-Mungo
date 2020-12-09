@@ -1,6 +1,7 @@
 package compilerPlugin
 import ProtocolDSL.{ReturnValue, State}
 
+import javax.security.auth.Subject
 import scala.collection.{SortedSet, mutable}
 
 /** Holds an alias' name and scope */
@@ -30,6 +31,15 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
     alias.name
   }
 
+  override def equals(that: Any): Boolean = {
+    that match {
+      case that: Instance => that.canEqual(this) &&
+        this.hashCode == that.hashCode
+      case _ => false
+    }
+
+  }
+
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
     currentStates -= stateToRemove
     currentStates += stateToAdd
@@ -37,10 +47,6 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
 
   def containsAliasInfo(aliasName:String, aliasScope:mutable.Stack[String]): Boolean ={
     alias == Alias(aliasName, aliasScope)
-  }
-
-  def containsScopeAlias(): Boolean ={
-    alias != null && alias.name == "scope+"
   }
 
   override def toString(): String={
@@ -58,7 +64,7 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
   }
 
   override def hashCode():Int={
-    alias.hashCode
+    (alias.name.hashCode + id.hashCode()).hashCode()
   }
 }
 
