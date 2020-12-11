@@ -92,6 +92,7 @@ object Demonstration extends App {
 
   manager.addSalary(5000)
   storage.store()
+
 }
 
 

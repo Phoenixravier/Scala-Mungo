@@ -1062,8 +1062,10 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def typesMatch(firstParameters: ArrayBuffer[(String, String)], secondParameters: List[global.Tree]): Boolean = {
       if (!firstParameters.exists(param => param._1.length > 0) && secondParameters.isEmpty) return true //both lists are empty
+      println("both lists are not empty")
       for ((param, i) <- firstParameters.zipWithIndex) {
-        if (param._2 != secondParameters(i).tpe.toString())
+        println(s"for param $i, type is ${param._2} and type of arg is ${secondParameters(i).tpe}")
+        if (param._2 != secondParameters(i).tpe.toString() && param._2 != secondParameters(i).tpe.lowerBound.toString)
           return false
       }
       true
@@ -1138,10 +1140,12 @@ class MyComponent(val global: Global) extends PluginComponent {
       checkObjectFunctionCall(calledOn)
       //endregion
       //finding function definition
+      println("trying to find function "+func)
       for (function <- functionTraverser.functions
            if (function.name == functionName.toString()
              && function.scope == getScope(func, dontCheckSymbolField = true)
              && typesMatch(function.params, args))) {
+        println("found the function")
         val shouldPopCurrentInstanceAndScope = isFunctionOnInstance(calledOn)
         //adding calledOn as current element to deal with this.method() calls inside its own function
 
