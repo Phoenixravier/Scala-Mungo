@@ -18,8 +18,13 @@ object enumProtocol extends ProtocolLang with App {
   in("S5")
   when("jump()") goto "S9"
   in("S6")
+  when("jump()") goto "end"
   in("S7")
+  when("jump()") goto "end"
   in("S8")
+  when("jump()") goto "end"
   in("S9")
+  when("jump()") goto "end"
+  in("end")
   end()
 }

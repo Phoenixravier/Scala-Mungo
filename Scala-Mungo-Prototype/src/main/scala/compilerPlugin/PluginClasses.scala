@@ -27,6 +27,14 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 
 /** Holds an instance classname, its aliases and its current possible states */
 case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]], var id:Int = 0){
+  def containsFieldName(fieldName: String):Boolean = {
+    for(field <- fields.keys){
+      if(field.name == fieldName)
+        return true
+    }
+    false
+  }
+
   def getAliasName(): String ={
     alias.name
   }

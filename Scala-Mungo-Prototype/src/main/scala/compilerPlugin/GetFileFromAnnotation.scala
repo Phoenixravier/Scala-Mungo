@@ -349,12 +349,29 @@ class MyComponent(val global: Global) extends PluginComponent {
         case Select(location, expr) =>
           println("matched select")
           val objectType = line.symbol.typeSignature.toString
+          val locationType = location.tpe.toString()
           checkObject(objectType)
+          //added this to manage case where we have one type element calling a method inside another element but we need to
+          //have the current instance be the older element to be able to find the parameters
+          var mustPopCurrentInstance = false
+          getClosestScopeAliasInfo(locationType, locationType) match {
+            case Some(aliasInfo) =>
+              if(currentInstance.head.alias.name != locationType) {
+                currentInstance.push(trackedElements(locationType).instances.filter(instance =>
+                  instance.containsAliasInfo(aliasInfo._1, aliasInfo._2)).last)
+                mustPopCurrentInstance = true
+                println("current instance is now "+currentInstance)
+              }
+            case None =>
+          }
           val fields = mutable.Stack((expr.toString, objectType))
-          getRelevantInstancesAndTheirType(fields) match{
+          println("fields are "+fields)
+          getRelevantInstancesAndTheirType(fields) match {
             case Some(instancesAndType) =>
+              if(mustPopCurrentInstance) currentInstance.pop()
               (0, Some(instancesAndType._1))
             case None =>
+              if(mustPopCurrentInstance) currentInstance.pop()
               (0, None)
           }
         case Block(List(expr), Literal(Constant(()))) =>
@@ -541,6 +558,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def processMatchStatement(expr: Trees#Tree, cases: List[CaseDef]) = {
       if (isAliasCallingProtocolMethod(expr)) {
+        println("match statement is taking an alias calling a protocolled method")
         expr match {
           case func@Apply(Ident(functionName), args) =>
             val mapBeforeFunction = copyMap(trackedElements)
@@ -553,6 +571,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
       }
       else {
+        println("match statement is not taking an alias calling a protocolled method")
         checkInsideFunctionBody(expr)
         processCaseStatements(cases)
       }
@@ -574,10 +593,13 @@ class MyComponent(val global: Global) extends PluginComponent {
     def processCaseStatements(cases: List[global.CaseDef], mapBeforeFunction: mutable.Map[String, ElementInfo] = null,
                               expr: Trees#Tree = null) = {
       val beforeCases = copyMap(trackedElements)
+      println("map before cases is "+beforeCases)
       var mapsToMerge = ArrayBuffer[mutable.Map[String, ElementInfo]]()
       for (singleCase <- cases) {
         trackedElements = copyMap(beforeCases)
-        if (expr != null) {
+        println(s"dealing with case ${singleCase.pat}, map is reset to $trackedElements")
+        if (expr != null) { //this is the case where we are dealing with an alias calling a protocolled function being matched
+          println("expr is not null")
           var returnValue = singleCase.pat.toString()
           if (returnValue.contains(".")) returnValue = returnValue.substring(returnValue.lastIndexOf('.') + 1)
           updateStateIfNeeded(mapBeforeFunction, expr, ":" + returnValue)
@@ -585,6 +607,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         checkInsideFunctionBody(singleCase.body)
         mapsToMerge += trackedElements
       }
+      println("after going through cases, maps to merge are "+mapsToMerge)
       while (mapsToMerge.nonEmpty) {
         trackedElements = mergeMaps(trackedElements, mapsToMerge.last)
         mapsToMerge.remove(mapsToMerge.length - 1)
@@ -627,25 +650,25 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     def initialiseInstanceToInterimStates(loopType: LoopType.Value):
-                                    mutable.HashMap[String, mutable.HashMap[Set[Alias], ListBuffer[Set[State]]]] = {
-      var instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Set[Alias], ListBuffer[Set[State]]]] = mutable.HashMap()
+                                    mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]] = {
+      var instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]] = mutable.HashMap()
       for ((elementType, elementInfo) <- trackedElements) {
         instanceToInterimStates += (elementType -> mutable.HashMap())
         if (loopType == LoopType.dowhileLoop || loopType == LoopType.trueLoop) {
           //initialise the list to empty since these loops will always execute at least once so we don't want to keep the initial state
-          for (instance <- elementInfo.instances) instanceToInterimStates(elementType) += Set(instance.alias) -> ListBuffer()
+          for (instance <- elementInfo.instances) instanceToInterimStates(elementType) += instance.alias -> ListBuffer()
           for(field <- getAllFieldsOfType(elementType)){
             //check the field does not already exist in the map, then add it
-            if(!instanceToInterimStates(elementType).contains(Set(field.alias)))
-              instanceToInterimStates(elementType) += Set(field.alias) -> ListBuffer()
+            if(!instanceToInterimStates(elementType).contains(field.alias))
+              instanceToInterimStates(elementType) += field.alias -> ListBuffer()
           }
         } else {
           for (instance <- elementInfo.instances)
-            instanceToInterimStates(elementType) += Set(instance.alias) -> ListBuffer(instance.currentStates)
+            instanceToInterimStates(elementType) += instance.alias -> ListBuffer(instance.currentStates)
           for(field <- getAllFieldsOfType(elementType)){
             //check the field does not already exist in the map, then add it
-            if(!instanceToInterimStates(elementType).contains(Set(field.alias)))
-              instanceToInterimStates(elementType) += Set(field.alias) -> ListBuffer(field.currentStates)
+            if(!instanceToInterimStates(elementType).contains(field.alias))
+              instanceToInterimStates(elementType) += field.alias -> ListBuffer(field.currentStates)
           }
         }
       }
@@ -689,15 +712,17 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      * @param instanceToInterimStates map with interim states in a loop
      */
-    def updateMap(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Set[Alias], ListBuffer[Set[State]]]]) = {
+    def updateMap(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]) = {
       for ((elementType, elementInfo) <- trackedElements) {
         if (instanceToInterimStates.contains(elementType)) {
-          for (instance <- elementInfo.instances if instanceToInterimStates(elementType).contains(Set(instance.alias)))
-            instanceToInterimStates(elementType)(Set(instance.alias)) += instance.currentStates
+          for (instance <- elementInfo.instances if instanceToInterimStates(elementType).contains(instance.alias))
+            instanceToInterimStates(elementType)(instance.alias) += instance.currentStates
           //update fields
           println(s"for type $elementType , fields are: "+getAllFieldsOfType(elementType))
-          for(field <- getAllFieldsOfType(elementType)){
-            instanceToInterimStates(elementType)(Set(field.alias)) += field.currentStates
+          println("-------------------------")
+          for(field <- getAllFieldsOfType(elementType) if(instanceToInterimStates(elementType).contains(field.alias))){
+            println("field is "+field)
+            instanceToInterimStates(elementType)(field.alias) += field.currentStates
           }
         }
       }
@@ -708,11 +733,12 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      * @param instanceToInterimStates map with interim states in a loop
      */
-    def assignInstancesWithLoopStates(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Set[Alias], ListBuffer[Set[State]]]]) = {
+    def assignInstancesWithLoopStates(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]) = {
+      println("instance to interim states "+instanceToInterimStates)
       for (elementType <- instanceToInterimStates.keys)
         for ((savedAliases, listOfSetOfStates) <- instanceToInterimStates(elementType))
           for (instance <- (trackedElements(elementType).instances ++ getAllFieldsOfType(elementType))
-               if (Set(instance.alias) == savedAliases && instance.currentStates != null)) {
+               if (instance.alias == savedAliases && instance.currentStates != null)) {
             for (setOfStates <- listOfSetOfStates) {
               instance.currentStates = setOfStates ++ instance.currentStates
             }
@@ -885,7 +911,9 @@ class MyComponent(val global: Global) extends PluginComponent {
             println("stripped value is "+strippedValue)
             println(methodCallInfo.params(0)(0).symbol.tpe.resultType)
             var fields = methodCallInfo.fields
+            println("fields before adding field are "+fields)
             fields = addToBottomOfStack((strippedValue, methodCallInfo.params(0)(0).symbol.tpe.resultType.toString), fields)
+            println(s"fields are now $fields, and assigning $fields = ${methodCallInfo.params(0)(0)}")
             //if(arg1.symbol == null) return false
             processAssignment(fields, methodCallInfo.params(0)(0))
             return true
@@ -916,24 +944,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param calledOn   what the function is called on (in x.y(), x)
      */
     def assignParameters(parameters: ArrayBuffer[(String, String)], args: List[Tree], calledOn: Tree) = {
-      //adding calledOn as current element to deal with this.method() calls inside its own function
-      if (calledOn != null) {
-        val scopeToPush = currentScope.pop() //don't want to be scoped inside the function for this bit
-        println(s"$calledOn is not null")
-        getFields(calledOn) match {
-          case Some(fields) =>
-            println("got some fields "+fields)
-            getRelevantInstancesAndTheirType(fields) match {
-              case Some(instancesAndType) =>
-                println("got some instances and type")
-                currentInstance.push(instancesAndType._1.head)
-                println(s"PUSHED $calledOn")
-              case None =>
-            }
-          case None =>
-        }
-        currentScope.push(scopeToPush)
-      }
       println("processing normal arguments")
       var i = 0
       for (param <- parameters) {
@@ -1075,6 +1085,25 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
+    def isFunctionOnInstance(calledOn: global.Tree): Boolean = {
+      if (calledOn != null) {
+        getFields(calledOn) match {
+          case Some(fields) =>
+            getRelevantInstancesAndTheirType(fields) match {
+              case Some(instancesAndType) =>
+                println("got some instances and type")
+                currentInstance.push(instancesAndType._1.head)
+                currentScope.push(instancesAndType._2)
+                println(s"PUSHED $calledOn")
+                return true
+              case None =>
+            }
+          case None =>
+        }
+      }
+      false
+    }
+
     /** Checks function calls.
      * First it checks if the function is an assignment in which case it just returns to let the assignment
      * be dealt with in the assignment function
@@ -1113,15 +1142,20 @@ class MyComponent(val global: Global) extends PluginComponent {
            if (function.name == functionName.toString()
              && function.scope == getScope(func, dontCheckSymbolField = true)
              && typesMatch(function.params, args))) {
+        val shouldPopCurrentInstanceAndScope = isFunctionOnInstance(calledOn)
+        //adding calledOn as current element to deal with this.method() calls inside its own function
+
         currentScope.push(function.name) //push scope so parameters will be scoped inside the function
         println(s"before assigning parameters to method ${function.name}, instances are " + trackedElements)
         assignParameters(function.params, args, calledOn)
         println(s"after assigning parameters to method ${function.name}, instances are " + trackedElements)
         val cacheEntry = dealWithCache(function)
+        println("cache entry is "+cacheEntry)
         if (cacheEntry == null) {
           println("returning " + function.returned)
-          if(calledOn != null) {
+          if(shouldPopCurrentInstanceAndScope) {
             currentInstance.pop()
+            currentScope.pop()
             println("POP1")
           }
           return getReturnedFromFunction(function.returned)
@@ -1150,16 +1184,50 @@ class MyComponent(val global: Global) extends PluginComponent {
         currentScope.pop()
         //update cache
         function.stateCache += cacheEntry -> findNextStates(cacheEntry)
+        println("after being updated, cache is "+function.stateCache)
         //delete aliases defined in the function
         removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
-        if(calledOn != null) {
+        if(shouldPopCurrentInstanceAndScope) {
           currentInstance.pop()
+          currentScope.pop()
           println("POP2")
         }
         return getReturnedFromFunction(function.returned)
       }
       None
+    }
+
+    def parameterNamesPointingAtInstances(parameters: ArrayBuffer[(String, String)], instancesPointedAt: Set[Instance]):Set[String] = {
+      var names = Set[String]()
+      for(parameter <- parameters){
+        getClosestScopeField(currentInstance.head, parameter._1) match{
+          case Some(field) =>
+            if(currentInstance.head.fields(field) == instancesPointedAt)
+              names += field.name
+          case None =>
+        }
+      }
+      names
+    }
+
+    def createCacheEntry(parameters:ArrayBuffer[(String, String)]):ArrayBuffer[(String, Set[String], Set[State])]={
+      var cacheEntry = ArrayBuffer[(String, Set[String], Set[State])]()
+      for(parameter <- parameters){
+        getClosestScopeField(currentInstance.head, parameter._1) match{
+          case Some(field) =>
+            val instancesPointedAt = currentInstance.head.fields(field)
+            val instanceType = instancesPointedAt.last.alias.name
+            val parameterNames = parameterNamesPointingAtInstances(parameters, instancesPointedAt)
+            var currentStates = Set[State]()
+            for(instance <- instancesPointedAt) {
+              currentStates ++= instance.currentStates
+            }
+            cacheEntry.append((instanceType, parameterNames, currentStates))
+          case None =>
+        }
+      }
+      cacheEntry
     }
 
     /** Check cache for hit with the current instances.
@@ -1175,9 +1243,13 @@ class MyComponent(val global: Global) extends PluginComponent {
     def dealWithCache(function: Function): (ArrayBuffer[(String, Set[String], Set[State])]) = {
       //create map
       val givenToFunctionParams = createMap(function.params)
+      println("given to function params is "+givenToFunctionParams)
       //make possible cache entry
-      val cacheEntry = createCacheEntry(givenToFunctionParams)
+      createCacheEntry(givenToFunctionParams)
+
+      val cacheEntry = createCacheEntry(function.params)
       //check if it hits
+      println("cache is "+function.stateCache)
       val cacheHitAndParams = cacheContainsEntry(function.stateCache, cacheEntry)
       val cacheHit = cacheHitAndParams._1
       val parameters = cacheHitAndParams._2
@@ -1327,22 +1399,23 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def createMap(parameters: ArrayBuffer[(String, String)]):
     mutable.HashMap[String, mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]] = {
+      println("in map making, parameters are "+parameters)
       val givenToFunctionParam = new mutable.HashMap[String, mutable.HashMap[(String, mutable.Stack[String]), Set[(String, mutable.Stack[String])]]]()
       for (elementType <- trackedElements.keys)
         givenToFunctionParam += (elementType -> mutable.HashMap())
       var argCounter = 0
       val paramScope = currentScope.clone()
-      for (arg <- parameters) {
-        val argName = arg._1
-        getClosestScopeAliasInfo(argName, arg._2) match {
+      for (param <- parameters) {
+        val argName = param._1
+        getClosestScopeAliasInfo(argName, param._2) match {
           case Some(aliasInfo) =>
             val paramName = parameters(argCounter)._1
-            givenToFunctionParam(arg._2).get(aliasInfo._1, aliasInfo._2) match {
+            givenToFunctionParam(param._2).get(aliasInfo._1, aliasInfo._2) match {
               case Some(setOfParams) =>
                 val updatedSet = setOfParams ++ Set((paramName, paramScope))
-                givenToFunctionParam(arg._2) += (aliasInfo._1, aliasInfo._2) -> updatedSet
+                givenToFunctionParam(param._2) += (aliasInfo._1, aliasInfo._2) -> updatedSet
               case None =>
-                givenToFunctionParam(arg._2) += (aliasInfo._1, aliasInfo._2) -> Set((paramName, paramScope))
+                givenToFunctionParam(param._2) += (aliasInfo._1, aliasInfo._2) -> Set((paramName, paramScope))
             }
           case None =>
         }
@@ -1398,7 +1471,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               println(instancesType)
               println(trackedElements)
               if(!trackedElements.contains(instancesType) || trackedElements(instancesType).states == null) break()
-              println("did not break here")
+              println(s"element $instancesType is protocolled")
               val currentElementInfo = trackedElements(instancesType)
               if (!currentElementInfo.methodToIndices.contains(methodName) && !currentElementInfo.returnValueToIndice.contains(methodName)) {
                 if (!methodName.contains(":") || !currentElementInfo.methodToIndices.contains(methodName.substring(0, methodName.indexOf(":")))) {
@@ -1436,7 +1509,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     def getRelevantInstancesAndFieldName(fields:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
-      println("in get relevant instances and field name from alias info")
+      println("in get relevant instances and field name from alias infooooooooooo")
       println("fields are "+fields)
       if(fields.isEmpty) return None
       var relevantInstances = Set(currentInstance.head)
@@ -1451,17 +1524,27 @@ class MyComponent(val global: Global) extends PluginComponent {
             case Some(field) =>
               curRelevantInstances ++= instance.fields(field)
             case None =>
+              println("not finding a field")
           }
         }
         currentScope.pop()
-        relevantInstances = curRelevantInstances
-        instancesType = fieldType
+        if(curRelevantInstances.nonEmpty) {
+          relevantInstances = curRelevantInstances
+          instancesType = fieldType
+        }
       }
       val fieldName = fields.pop()._1
+      for(instance <- relevantInstances){
+        println(s"checking $instance for field $fieldName")
+        if (!instance.containsFieldName(fieldName))
+          return None
+      }
       Some(relevantInstances, fieldName)
     }
 
     def getRelevantInstancesAndTheirType(fields:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
+      println("in get relevant, currentScope is "+currentScope)
+      println(currentInstance)
       var relevantInstances = Set(currentInstance.head)
       println("initial relevant instances are "+relevantInstances)
       println("current scope is "+currentScope)
@@ -1481,7 +1564,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         }
         currentScope.pop()
-        relevantInstances = curRelevantInstances
+        if(curRelevantInstances.nonEmpty)
+          relevantInstances = curRelevantInstances
         instancesType = fieldType
       }
       if(relevantInstances.isEmpty) return None
@@ -1513,7 +1597,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       var newSetOfStates: Set[State] = Set()
       for (state <- instance.currentStates) {
         if (state.name == Undefined)
-          throw new usedUninitialisedException(methodName, sortSet(Set(instance.getAliasName())), elementType, line.pos.line)
+          throw new usedUninitialisedException(methodName, sortSet(getFieldNamesPointingAtInstance(instance)), elementType, line.pos.line)
         println("found method name " + methodName)
         var indexSet: Set[Int] = Set()
         if (currentElementInfo.methodToIndices.contains(methodName))
@@ -1525,6 +1609,8 @@ class MyComponent(val global: Global) extends PluginComponent {
           indexSet = Set(currentElementInfo.methodToIndices(rawMethodName).min)
         }
         var newStates: Set[State] = Set[State]()
+        println(state.index)
+        println(indexSet)
         newStates += currentElementInfo.transitions(state.index)(indexSet.min)
         if (indexSet.size > 1 && currentElementInfo.transitions(state.index)(indexSet.min).name == Undefined)
           newStates = for (x <- indexSet - indexSet.min) yield currentElementInfo.transitions(state.index)(x)
@@ -1583,16 +1669,27 @@ class MyComponent(val global: Global) extends PluginComponent {
         fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
         qualifierTree = qualifierTree.children.last
       }
+      println("after going through children, fields are "+fields)
       val owner = qualifierTree.symbol
-      getClosestScopeObject(owner.tpe.toString()) match{
-        case Some(obj) =>
-          //case where we have a single object name to deal with
-          if(fields.isEmpty)
-            fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
-          //case where the qualifier did not include the owner name (as happens when we are in the main() method and not in an object
-        case None =>
-          fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+      //case where the qualifier did not include the owner name (as happens when we are in the main() method and not in an object
+      if(owner == null) {
+        return Some(fields)
       }
+      println("owner type is "+owner.tpe)
+      getClosestScopeAliasInfo(owner.tpe.toString(), owner.tpe.toString()) match{
+        case Some(aliasInfo) =>
+          //case where we have a single object name to deal with
+          if(fields.isEmpty && currentInstance.head.alias.name != owner.tpe.toString()) {
+            println("single object name to deal with")
+            fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+          }
+        case None =>
+          println("owner name not included")
+          //case where the qualifier did not include the owner name (as happens when we are in the main() method and not in an object
+          if(currentInstance.head.alias.name != owner.tpe.toString())
+            fields.push((qualifierTree.symbol.name.toString(), qualifierTree.symbol.tpe.toString()))
+      }
+      println("current instance is "+currentInstance)
       Some(fields)
     }
 
@@ -1900,7 +1997,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
     /** Checks to see if there are duplicates in all the lists of a map(Instance -> list) */
-    def duplicatesInAllListsOfMap(maps: mutable.HashMap[String, mutable.HashMap[Set[Alias], ListBuffer[Set[State]]]]): Boolean = {
+    def duplicatesInAllListsOfMap(maps: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]): Boolean = {
       for (map <- maps.values)
         for ((instance, list) <- map) for ((instance, list) <- map if list.diff(list.distinct).isEmpty) return false
       true

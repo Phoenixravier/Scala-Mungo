@@ -287,7 +287,7 @@ class ProtocolLang {
     ended = true
     //create the array, print it and encode it into objectName.ser
     val arrayOfStates = createStateMachine()
-    checkEndHasNoOutgoingEdges()
+    //checkEndHasNoOutgoingEdges()
     checkAllStatesLeadToEnd()
     checkInitReachesAllOtherStates()
     println("return values array is: "+returnValues.toArray.mkString("Array(", ", ", ")"))
