@@ -1,0 +1,63 @@
+Problems:
+
+Match statements:
+	PROTOCOL: cat can walk only once
+	CODE which fails (throws an exception even though it should not):
+
+	object Main extends App{
+	  val cat = new Cat()
+	  cat match{
+	   case _:Cat =>
+		 cat.walk()
+	   case `cat` =>
+		 cat.walk()
+	   case _ =>
+	  }
+	}
+
+	REASON: code transitions through both walk() methods on cat. This happens because the state of instances copied at the top of the cse statements is actually being mutated while
+	processing the body of the first case statement. -> "trackedElements = copyMap(beforeCases)" line is failing at mking a deep copy.
+
+
+Constructors:
+	CODE which fails (does not throw an exception even though it should):
+	class Cat{
+	  walk()
+	  def comeAlive(): Unit = println("The cat is alive")
+	  def walk(): Boolean = true
+	}
+
+	object Main extends App{
+		val kat = new Cat()
+		kat.walk()
+	}
+	
+	REASON: Not finding the instance cat when trying to update the cat instance with the walk() method inside the constructor. 
+	This is happening because getting the correct instance a line is referring to is difficult.
+	There are several possible formats the line can be in:
+		CurrentInstance.this.method()
+		CurrentInstance.this.fields.method()
+		fields.method()
+		CurrentInstance.method()
+		fields
+		CurrentInstance.fields
+		CurrentInstance
+		DifferentInstance
+		DifferentInstance.fields
+		DifferentInstance.fields.method()
+		+ the cases where there is method().method() but I am just not dealing with that at the moment
+	I use the function getFields to get the fields from a line and assume that curreentInstance contains the starting point for the fields and use both these pieces of information 
+	with getRelevantInstances to get the relevnt instances for that line.
+	
+	if element1 is currentInstance AND there is more than one thing present
+	 ignore element1
+	
+	
+	
+	cat1.setFriend(cat)
+	
+	def setFriend(f:Cat){
+	
+	}
+	val Cat.this.f = Main.this.cat
+	

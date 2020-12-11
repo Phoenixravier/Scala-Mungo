@@ -26,191 +26,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
   var loopProtocol = ""
   var enumProtocol = ""
   //endregion
-  /*
-    /** Create protocol files before testing */
-    override def beforeAll(): Unit = {
-      protocolWalkTwiceIllegal =
-        """
-          |package ProtocolDSL
-          |
-          |object walkTwiceIllegalProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    in ("State1")
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("walkTwiceIllegalProtocol.scala", Seq(protocolWalkTwiceIllegal))
-      protocolWithNotAMethod =
-        """
-          |package ProtocolDSL
-          |
-          |object withNotAMethodProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    in ("State1")
-          |    when ("notAMethod()") goto "State1"
-          |    end
-          |}
-          |""".stripMargin
-      writeFile("withNotAMethodProtocol.scala", Seq(protocolWithNotAMethod))
-      protocolWithoutEnd =
-        """
-          |package ProtocolDSL
-          |
-          |object withoutEndProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    in ("State1")
-          |}
-          |""".stripMargin
-      writeFile("withoutEndProtocol.scala", Seq(protocolWithoutEnd))
-      walkLoop3comeAliveLoop1 =
-        """
-          |package ProtocolDSL
-          |
-          |object walkLoop3comeAliveLoop1Protocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    when ("comeAlive()") goto "init"
-          |    in ("State1")
-          |    when("walk()") goto "State2"
-          |    in ("State2")
-          |    when("walk()") goto "init"
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("walkLoop3comeAliveLoop1Protocol.scala", Seq(walkLoop3comeAliveLoop1))
-      cannotWalkProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object cannotWalkProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("comeAlive()") goto "init"
-          |    in ("State3")
-          |    when("walk()") goto "init"
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("cannotWalkProtocol.scala", Seq(cannotWalkProtocol))
-      walkComeAliveWalkLoopProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object walkComeAliveWalkLoopProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    when("comeAlive()") goto "init"
-          |    in ("State1")
-          |    when ("comeAlive()") goto "State2"
-          |    in ("State2")
-          |    when("walk()") goto "init"
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("walkComeAliveWalkLoopProtocol.scala", Seq(walkComeAliveWalkLoopProtocol))
-      decisionWalkProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object decisionWalkProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto
-          |      "State1" at "true" or
-          |      "init" at "false"
-          |    in ("State1")
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("decisionWalkProtocol.scala", Seq(decisionWalkProtocol))
-      pairsProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object pairsProtocol extends ProtocolLang with App{
-          | in("init")
-          | when ("setLeft(Int)") goto "leftInitialised"
-          |
-          | in("leftInitialised")
-          | when("setRight(Int)") goto "allInitialised"
-          |
-          | in("allInitialised")
-          | when("sum()") goto "allInitialised"
-          |
-          | end()
-          |}
-          |""".stripMargin
-      writeFile("pairsProtocol.scala", Seq(pairsProtocol))
-      walkComeAliveDifferentProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object walkComeAliveDifferentProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("walk()") goto "State1"
-          |    when("comeAlive()") goto "State2"
-          |    in ("State1")
-          |    in ("State2")
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("walkComeAliveDifferentProtocol.scala", Seq(walkComeAliveDifferentProtocol))
-      loopProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object loopProtocol extends ProtocolLang with App {
-          |  in("init")
-          |  when("finished()") goto "init" at "false" or "end" at "true"
-          |  in("end")
-          |  end()
-          |}
-          |""".stripMargin
-      writeFile("loopProtocol.scala", Seq(loopProtocol))
-      enumProtocol =
-        """
-          |package ProtocolDSL
-          |
-          |object enumProtocol extends ProtocolLang with App{
-          |    in ("init")
-          |    when ("m()") goto
-          |        "S2" at "letters.A" or
-          |        "S3" at "letters.B" or
-          |        "S4" at "letters.C" or
-          |        "S5" at "letters.D"
-          |    in("S2")
-          |    when("go()") goto "S6"
-          |    in("S3")
-          |    when("grab()") goto "S8"
-          |    in("S4")
-          |    when("stop()") goto "S7"
-          |    in("S5")
-          |    when("jump()") goto "S9"
-          |    in("S6")
-          |    in("S7")
-          |    in("S8")
-          |    in("S9")
-          |    end()
-          |}
-          |""".stripMargin
-      writeFile("enumProtocol.scala", Seq(enumProtocol))
-    }
-    /** Delete protocol files after testing */
-    override def afterAll(): Unit = {
-      deleteFile("walkTwiceIllegalProtocol.scala")
-      deleteFile("withNotAMethodProtocol.scala")
-      deleteFile("withoutEndProtocol.scala")
-      deleteFile("walkLoop3comeAliveLoop1Protocol.scala")
-      deleteFile("cannotWalkProtocol.scala")
-      deleteFile("walkComeAliveWalkLoopProtocol.scala")
-      deleteFile("decisionWalkProtocol.scala")
-      deleteFile("pairsProtocol.scala")
-      deleteFile("walkComeAliveDifferentProtocol.scala")
-      deleteFile("loopProtocol.scala")
-      deleteFile("enumProtocol.scala")
-    }
-    */
 
   //region <Tests>
 
@@ -629,7 +444,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 21, "walk() ")
+      sortSet(Set(State("State1", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 21, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -709,7 +524,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1306,7 +1121,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("State2", 2), State("init",0))), "comeAlive()", "<test>", 25, "walk() ")
+      sortSet(Set(State("State1", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 25, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1343,7 +1158,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0), State("State1", 1), State("State2", 2))), "comeAlive()", "<test>", 22, "walk() ")
+      sortSet(Set(State("init", 0), State("State1", 1), State("end", 2))), "comeAlive()", "<test>", 22, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1455,10 +1270,13 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |
         |""".stripMargin
-    noException should be thrownBy{
+    val actualException = intercept[protocolViolatedException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
+    val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
+      sortSet(Set(State("State1", 1))), "comeAlive()", "<test>", 20, "walk() ")
+    assert(actualException.getMessage === expectedException.getMessage)
   }
   //endregion
 
@@ -1535,7 +1353,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -2693,7 +2511,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -5133,7 +4951,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
-
+/*
   "plugin" should "throw an exception if an instance calls an illegal method after a labelled nested breakable/break block" in {
     val userCode =
       """
@@ -5172,6 +4990,8 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
+
+ */
   //endregion
 
   //region <null and _ initialisations>
@@ -5426,7 +5246,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   "plugin" should "not throw an exception if an instance with the same name as a field walks once" in {

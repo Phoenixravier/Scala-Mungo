@@ -192,12 +192,14 @@ object Util {
   def mergeInstanceStates(firstInstances: Set[Instance], secondInstances: Set[Instance]): Set[Instance] = {
     println(s"merging $firstInstances with $secondInstances")
     var mergedInstances: Set[Instance] = Set()
-    for (firstInstance <- firstInstances) {
+    for (firstInstance <- firstInstances ) {
       val alias = firstInstance.alias
       secondInstances.find(instance => instance.alias == alias) match {
         case Some(instance) =>
-          mergedInstances += Instance(alias,
-            firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
+          if(firstInstance.currentStates != null)
+            mergedInstances += Instance(alias,
+              firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
+          else mergedInstances += Instance(alias, null, mergeFields(firstInstance, instance))
         case None => mergedInstances += firstInstance
       }
     }

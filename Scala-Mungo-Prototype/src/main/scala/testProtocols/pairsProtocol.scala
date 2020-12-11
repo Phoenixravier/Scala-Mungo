@@ -10,7 +10,8 @@ object pairsProtocol extends ProtocolLang with App {
   when("setRight(Int)") goto "allInitialised"
 
   in("allInitialised")
-  when("sum()") goto "allInitialised"
+  when("sum()") goto "end"
+  in("end")
 
   end()
 }

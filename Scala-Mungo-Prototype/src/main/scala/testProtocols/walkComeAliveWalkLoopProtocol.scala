@@ -7,8 +7,8 @@ object walkComeAliveWalkLoopProtocol extends ProtocolLang with App {
   when("walk()") goto "State1"
   when("comeAlive()") goto "init"
   in("State1")
-  when("comeAlive()") goto "State2"
-  in("State2")
+  when("comeAlive()") goto "end"
+  in("end")
   when("walk()") goto "init"
   end()
 }
