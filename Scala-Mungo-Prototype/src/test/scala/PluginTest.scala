@@ -1,7 +1,6 @@
 import java.io.{BufferedWriter, File, FileWriter}
-
 import ProtocolDSL.State
-import compilerPlugin.{GetFileFromAnnotation, inconsistentStateMutation, protocolViolatedException, usedUninitialisedException}
+import compilerPlugin.{GetFileFromAnnotation, inconsistentStateMutation, protocolViolatedException, unendedProtocolException, usedUninitialisedException}
 import org.scalatest._
 
 import scala.collection.SortedSet
@@ -476,10 +475,13 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |}
         |
         |""".stripMargin
-    noException should be thrownBy{
+    val actualException = intercept[unendedProtocolException] {
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
+    val expectedException = new unendedProtocolException("compilerPlugin.Cat", sortSet(Set("cat")),
+      sortSet(Set(State("init", 0))))
+    assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
 
@@ -522,7 +524,6 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       val (compiler, sources) = createCompiler(userCode)
       new compiler.Run() compileSources (sources)
     }
-
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
       sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)

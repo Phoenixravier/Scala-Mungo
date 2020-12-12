@@ -490,11 +490,15 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assignee In val/var x = y, this is x. Always comes as a new val or var.
      * @param assigned In val/var x = y, this is y.
      */
-    def processNovelAssignment(assignee: String, assigned: Trees#Tree) = {
+    def processNovelAssignment(assignee: String, assigned: Trees#Tree, instancesToAssign:Option[Set[Instance]] = null) = {
       println("in process novel")
       println(s"assignee is $assignee and assigned is $assigned")
       println("raw assigned is " + showRaw(assigned))
-      val returnedAssigned = checkInsideFunctionBody(assigned)
+      var returnedAssigned:Option[Set[Instance]] = None
+      if(instancesToAssign != null)
+        returnedAssigned = instancesToAssign
+      else
+        returnedAssigned = checkInsideFunctionBody(assigned)
       println(s"after returned, assignee is $assignee and assigned is $assigned")
       println("returned is " + returnedAssigned)
       println("current instance is "+currentInstance.head)
@@ -666,22 +670,13 @@ class MyComponent(val global: Global) extends PluginComponent {
         instanceToInterimStates += (elementType -> mutable.HashMap())
         if (loopType == LoopType.dowhileLoop || loopType == LoopType.trueLoop) {
           //initialise the list to empty since these loops will always execute at least once so we don't want to keep the initial state
-          for (instance <- elementInfo.instances) instanceToInterimStates(elementType) += instance.alias -> ListBuffer()
-          for(field <- getAllFieldsOfType(elementType)){
-            //check the field does not already exist in the map, then add it
-            if(!instanceToInterimStates(elementType).contains(field.alias))
-              instanceToInterimStates(elementType) += field.alias -> ListBuffer()
-          }
+          for (instance <- elementInfo.instances) instanceToInterimStates(elementType) += (instance.alias, instance.id) -> ListBuffer()
         } else {
           for (instance <- elementInfo.instances)
-            instanceToInterimStates(elementType) += instance.alias -> ListBuffer(instance.currentStates)
-          for(field <- getAllFieldsOfType(elementType)){
-            //check the field does not already exist in the map, then add it
-            if(!instanceToInterimStates(elementType).contains(field.alias))
-              instanceToInterimStates(elementType) += field.alias -> ListBuffer(field.currentStates)
-          }
+            instanceToInterimStates(elementType) += (instance.alias,instance.id) -> ListBuffer(instance.currentStates)
         }
       }
+      println("after init, map is "+instanceToInterimStates)
       instanceToInterimStates
     }
 
@@ -722,18 +717,11 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      * @param instanceToInterimStates map with interim states in a loop
      */
-    def updateMap(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]) = {
+    def updateMap(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[(Alias, Int), ListBuffer[Set[State]]]]) = {
       for ((elementType, elementInfo) <- trackedElements) {
         if (instanceToInterimStates.contains(elementType)) {
-          for (instance <- elementInfo.instances if instanceToInterimStates(elementType).contains(instance.alias))
-            instanceToInterimStates(elementType)(instance.alias) += instance.currentStates
-          //update fields
-          println(s"for type $elementType , fields are: "+getAllFieldsOfType(elementType))
-          println("-------------------------")
-          for(field <- getAllFieldsOfType(elementType) if(instanceToInterimStates(elementType).contains(field.alias))){
-            println("field is "+field)
-            instanceToInterimStates(elementType)(field.alias) += field.currentStates
-          }
+          for (instance <- elementInfo.instances if instanceToInterimStates(elementType).contains(instance.alias, instance.id))
+            instanceToInterimStates(elementType)(instance.alias, instance.id) += instance.currentStates
         }
       }
 
@@ -743,12 +731,13 @@ class MyComponent(val global: Global) extends PluginComponent {
      *
      * @param instanceToInterimStates map with interim states in a loop
      */
-    def assignInstancesWithLoopStates(instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]) = {
+    def assignInstancesWithLoopStates(instanceToInterimStates:
+                                      mutable.HashMap[String, mutable.HashMap[(Alias, Int), ListBuffer[Set[State]]]]) = {
       println("instance to interim states "+instanceToInterimStates)
       for (elementType <- instanceToInterimStates.keys)
-        for ((savedAliases, listOfSetOfStates) <- instanceToInterimStates(elementType))
-          for (instance <- (trackedElements(elementType).instances ++ getAllFieldsOfType(elementType))
-               if (instance.alias == savedAliases && instance.currentStates != null)) {
+        for ((savedAlias, listOfSetOfStates) <- instanceToInterimStates(elementType))
+          for (instance <- (trackedElements(elementType).instances)
+               if (instance.alias == savedAlias._1 && instance.id == savedAlias._2 && instance.currentStates != null)) {
             for (setOfStates <- listOfSetOfStates) {
               instance.currentStates = setOfStates ++ instance.currentStates
             }
@@ -959,13 +948,21 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param args       bits passed into the function
      * @param calledOn   what the function is called on (in x.y(), x)
      */
-    def assignParameters(parameters: ArrayBuffer[(String, String)], args: List[Tree], calledOn: Tree) = {
+    def assignParameters(parameters: ArrayBuffer[(String, String)], args: List[Tree], curInstanceWrongForArgs:Boolean = false) = {
       println("processing normal arguments")
       var i = 0
       for (param <- parameters) {
         if (trackedElements.contains(param._2)) {
-          println(s"Assigning ${param._1} = ${args(i)}")
-          processNovelAssignment(param._1, args(i))
+          if(curInstanceWrongForArgs){
+            val curInstToPush = currentInstance.pop()
+            val instancesToAssign = processLine(args(i))._2
+            currentInstance.push(curInstToPush)
+            processNovelAssignment(param._1, args(i), instancesToAssign)
+          }
+          else {
+            println(s"Assigning ${param._1} = ${args(i)}")
+            processNovelAssignment(param._1, args(i))
+          }
         }
         i += 1
       }
@@ -1167,7 +1164,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
         currentScope.push(function.name) //push scope so parameters will be scoped inside the function
         println(s"before assigning parameters to method ${function.name}, instances are " + trackedElements)
-        assignParameters(function.params, args, calledOn)
+        assignParameters(function.params, args)
         println(s"after assigning parameters to method ${function.name}, instances are " + trackedElements)
         val cacheEntry = dealWithCache(function)
         println("cache entry is "+cacheEntry)
@@ -1375,6 +1372,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       //find correct class to go through
       for (element <- ElementTraverser.elements
            if !element.isObject && element.elementType == elementType && element.scope == scope) {
+        //create new instance of this class and update scope and currentinstance
         val newInstanceName = elementType
         currentScope.push(elementType)
         if (trackedElements.contains(elementType)) {
@@ -1391,7 +1389,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             currentInstance.push(newClassInstance)
           }
         }
-        assignParameters(element.params, args, null)
+        assignParameters(element.params, args, true)
         println("after assigning parameters, instances are " + trackedElements)
         checkInsideObjectBody(element.body)
         if (trackedElements.contains(elementType)) {
@@ -1615,6 +1613,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     def updateInstance(instance: Instance, methodName: String, line: Trees#Tree, currentElementInfo: ElementInfo, elementType: String) = {
       println("updating instance "+instance)
       var newSetOfStates: Set[State] = Set()
+      println(instance)
+      println(instance.currentStates)
       for (state <- instance.currentStates) {
         if (state.name == Undefined)
           throw new usedUninitialisedException(methodName, sortSet(getFieldNamesPointingAtInstance(instance)), elementType, line.pos.line)
@@ -2017,7 +2017,7 @@ class MyComponent(val global: Global) extends PluginComponent {
 
 
     /** Checks to see if there are duplicates in all the lists of a map(Instance -> list) */
-    def duplicatesInAllListsOfMap(maps: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]]): Boolean = {
+    def duplicatesInAllListsOfMap(maps: mutable.HashMap[String, mutable.HashMap[(Alias, Int), ListBuffer[Set[State]]]]): Boolean = {
       for (map <- maps.values)
         for ((instance, list) <- map) for ((instance, list) <- map if list.diff(list.distinct).isEmpty) return false
       true
