@@ -166,6 +166,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         }
       }
+      trackedElements = mutable.Map[String,compilerPlugin.ElementInfo]()
     }
 
 
@@ -696,7 +697,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         if (loopType == LoopType.whileLoop) checkInsideFunctionBody(cond)
         assignScope(loopType)
         checkInsideFunctionBody(loopContent)
-        removeTopLevelAliasesInScope(currentScope)
+        removeAllFieldsInScope(currentScope)
         currentScope.pop()
         if (loopType == LoopType.dowhileLoop) checkInsideFunctionBody(cond)
         updateMap(instanceToInterimStates)
@@ -1184,13 +1185,13 @@ class MyComponent(val global: Global) extends PluginComponent {
             function.returned = None
         }
         //remove aliases inside the body of the function since they can't be used anymore
-        removeTopLevelAliasesInScope(currentScope)
+        removeAllFieldsInScope(currentScope)
         currentScope.pop()
         //update cache
         function.stateCache += cacheEntry -> findNextStates(cacheEntry)
         println("after being updated, cache is "+function.stateCache)
         //delete aliases defined in the function
-        removeTopLevelAliasesInScope(currentScope)
+        removeAllFieldsInScope(currentScope)
         currentScope.pop()
         if(shouldPopCurrentInstanceAndScope) {
           currentInstance.pop()

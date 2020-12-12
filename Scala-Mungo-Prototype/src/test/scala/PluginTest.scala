@@ -94,7 +94,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -124,7 +124,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -155,7 +155,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 15, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -188,7 +188,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat.type",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -374,7 +374,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -408,7 +408,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -444,7 +444,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 21, "walk() ")
+      sortSet(Set(State("end", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 21, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -570,7 +570,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -614,7 +614,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -660,7 +660,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -698,7 +698,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -740,7 +740,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -789,7 +789,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -839,7 +839,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 32, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 32, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -879,7 +879,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -920,7 +920,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -959,7 +959,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -999,7 +999,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1037,7 +1037,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
 
   }
@@ -1079,7 +1079,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 23, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 23, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
@@ -1121,7 +1121,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 25, "walk() ")
+      sortSet(Set(State("end", 1), State("end", 2), State("init",0))), "comeAlive()", "<test>", 25, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1158,7 +1158,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0), State("State1", 1), State("end", 2))), "comeAlive()", "<test>", 22, "walk() ")
+      sortSet(Set(State("init", 0), State("end", 1), State("end", 2))), "comeAlive()", "<test>", 22, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
@@ -1198,7 +1198,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("init", 0))), "walk()", "<test>", 23, "comeAlive() ")
+      sortSet(Set(State("State1", 0))), "walk()", "<test>", 23, "comeAlive() ")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1262,7 +1262,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
         |  val cat = new Cat()
         |  val kitty = new Cat()
         |  while(true){
-        |  cat.comeAlive()
+        |   cat.comeAlive()
         |  }
         |  kitty.walk()
         |  kitty.comeAlive()
@@ -1275,7 +1275,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "comeAlive()", "<test>", 20, "walk() ")
+      sortSet(Set(State("end", 1))), "comeAlive()", "<test>", 20, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   //endregion
@@ -1315,7 +1315,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State2", 1))), "comeAlive()", "<test>", 19, "walk() ")
+      sortSet(Set(State("end", 1))), "comeAlive()", "<test>", 19, "walk() ")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   //endregion
@@ -1392,7 +1392,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1431,7 +1431,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1473,7 +1473,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1515,7 +1515,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1558,7 +1558,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1606,7 +1606,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 30, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1642,7 +1642,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1680,7 +1680,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1813,7 +1813,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1854,7 +1854,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1892,7 +1892,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2","kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1930,7 +1930,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -1970,7 +1970,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2007,7 +2007,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2038,7 +2038,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
@@ -2078,7 +2078,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2115,7 +2115,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2154,7 +2154,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2195,7 +2195,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2238,7 +2238,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2272,7 +2272,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2306,7 +2306,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2340,7 +2340,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2374,7 +2374,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2406,7 +2406,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 16, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
@@ -2443,7 +2443,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2479,7 +2479,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat", "cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2544,7 +2544,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("kat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2576,7 +2576,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2609,7 +2609,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("Cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 10, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2658,7 +2658,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2707,7 +2707,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2754,7 +2754,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2803,7 +2803,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2840,7 +2840,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
     }
 
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1), State("init",0))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
@@ -2948,7 +2948,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -2983,7 +2983,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3020,7 +3020,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3059,7 +3059,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3096,7 +3096,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3135,7 +3135,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3171,7 +3171,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3209,7 +3209,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3244,7 +3244,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3280,7 +3280,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3312,7 +3312,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3346,7 +3346,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3379,7 +3379,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3415,7 +3415,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3451,7 +3451,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3489,7 +3489,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3523,7 +3523,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3560,7 +3560,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3594,7 +3594,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3631,7 +3631,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat1", "cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3810,7 +3810,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -3847,7 +3847,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4422,7 +4422,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4461,7 +4461,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4498,7 +4498,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4537,7 +4537,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 22, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4572,7 +4572,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4609,7 +4609,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2", "kat", "kitty")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 19, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   //endregion
@@ -4649,7 +4649,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4690,7 +4690,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 18, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4728,7 +4728,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4768,7 +4768,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4912,7 +4912,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 23, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -4948,7 +4948,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 21, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 /*
@@ -4987,7 +4987,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -5085,7 +5085,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 20, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
   "plugin" should "throw an exception if an instance calls an illegal method after being initialised after being _" in {
@@ -5115,7 +5115,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 17, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
@@ -5209,7 +5209,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat2")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
   "plugin" should "throw an exception if an instance calls an illegal method after being a field, set with dot" in {
@@ -5313,7 +5313,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("State1", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 24, "No methods are available in this state.")
     assert(actualException.getMessage === expectedException.getMessage)
   }
 
