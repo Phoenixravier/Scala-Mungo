@@ -91,7 +91,7 @@ object Demonstration extends App {
   storage.setMoney(salary)
 
   manager.addSalary(5000)
-  storage.store()
+  //storage.store()
 
 }
 

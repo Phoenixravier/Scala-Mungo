@@ -96,6 +96,7 @@ class protocolViolatedException(aliasNames:SortedSet[String], className:String, 
     s"from state(s) $states with method $methodName in file $file at line $line. Possible methods to use in this state " +
     s"are: $nextMethods")
 
+/** Error for when a field is used uninitialised */
 class usedUninitialisedException(method:String, aliases:SortedSet[String], instType:String, line:Int) extends
   Exception(s"Called method $method at line $line on instance with aliases $aliases of type $instType when it was uninitialised.")
 
@@ -107,3 +108,6 @@ class inconsistentStateMutation(methodName:String, aliasName:String, file:String
   extends Exception(s"In file $file, at line $line, method $methodName changed the state of $aliasName, and not " +
     s"as described in the protocol. Expected states $expectedStates, got states $actualStates")
 
+class unendedProtocolException(instanceType:String, aliases:SortedSet[String], states:SortedSet[State])
+  extends Exception(s"Instance of type $instanceType with aliases $aliases did not necessarily " +
+    s"reach its end state. At the end of the program it was in state(s) $states")

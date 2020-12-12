@@ -107,6 +107,14 @@ class MyComponent(val global: Global) extends PluginComponent {
       checkFile()
     }
 
+    def checkAllProtocolledInstancesAreInEndState() = {
+      for(elementInfo <- trackedElements.values if elementInfo.states != null){
+        for(instance <- elementInfo.instances if !(instance.currentStates.size == 1 && instance.currentStates.last.name == "end"))
+          throw new unendedProtocolException(instance.alias.name, sortSet(getFieldNamesPointingAtInstance(instance)),
+            sortSet(instance.currentStates))
+      }
+    }
+
     /** Checks that a class or object is following its protocol
      * Goes through the code to find either the object with App or the main function and thereby gets the entrypoint
      * of the code and can start analysing it from there.
@@ -166,6 +174,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           }
         }
       }
+      checkAllProtocolledInstancesAreInEndState()
       trackedElements = mutable.Map[String,compilerPlugin.ElementInfo]()
     }
 
@@ -651,8 +660,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     def initialiseInstanceToInterimStates(loopType: LoopType.Value):
-                                    mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]] = {
-      var instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[Alias, ListBuffer[Set[State]]]] = mutable.HashMap()
+                                    mutable.HashMap[String, mutable.HashMap[(Alias, Int), ListBuffer[Set[State]]]] = {
+      var instanceToInterimStates: mutable.HashMap[String, mutable.HashMap[(Alias, Int), ListBuffer[Set[State]]]] = mutable.HashMap()
       for ((elementType, elementInfo) <- trackedElements) {
         instanceToInterimStates += (elementType -> mutable.HashMap())
         if (loopType == LoopType.dowhileLoop || loopType == LoopType.trueLoop) {
@@ -910,10 +919,16 @@ class MyComponent(val global: Global) extends PluginComponent {
             val value = mat.toString
             val strippedValue = value.substring(0, value.indexOf("_$eq"))
             println("stripped value is "+strippedValue)
-            println(methodCallInfo.params(0)(0).symbol.tpe.resultType)
+            val fullName = methodCallInfo.name
+            var valueType = ""
+            if(methodCallInfo.params(0)(0).symbol == null)
+              valueType = fullName.substring(fullName.indexOf("_$eq(")+5, fullName.lastIndexOf(")"))
+            else
+              valueType = methodCallInfo.params(0)(0).symbol.tpe.resultType.toString()
+            println("type is "+valueType)
             var fields = methodCallInfo.fields
             println("fields before adding field are "+fields)
-            fields = addToBottomOfStack((strippedValue, methodCallInfo.params(0)(0).symbol.tpe.resultType.toString), fields)
+            fields = addToBottomOfStack((strippedValue, valueType), fields)
             println(s"fields are now $fields, and assigning $fields = ${methodCallInfo.params(0)(0)}")
             //if(arg1.symbol == null) return false
             processAssignment(fields, methodCallInfo.params(0)(0))
