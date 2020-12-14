@@ -149,7 +149,6 @@ object Util {
     if(instances == null) return null
     var newInstances:Set[Instance] = Set()
     for(instance <- instances){
-      println(instance)
       var states:Set[State] = Set()
       var fields:mutable.Map[Alias, Set[Instance]] = mutable.Map()
       if(instance.currentStates == null) states = null
@@ -159,15 +158,14 @@ object Util {
           else states += State(state.name.trim(), state.index)
         }
       }
-      for((fieldName, instance) <- instance.fields )
-        fields += fieldName -> instance
+      for((fieldName, fieldInstances) <- instance.fields )
+        fields += fieldName -> copyInstances(fieldInstances)
       newInstances += Instance(instance.alias, states, fields, instance.id)
     }
     newInstances
   }
 
 
-  //TODO implement this, should merge fields of instances and return merged map
   def mergeFields(firstInstance: Instance, secondInstance: Instance): mutable.Map[Alias, Set[Instance]] = {
     var newFields = mutable.Map[Alias, Set[Instance]]()
     for((fieldName, instances) <- firstInstance.fields){

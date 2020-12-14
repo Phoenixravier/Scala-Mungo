@@ -340,6 +340,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           (getLengthOfTree(line) - 1, None)
         //All three next cases are to check for a solitary object name on a line
         case Ident(TermName(elementName)) =>
+          println("found solitary object name")
           val objectType = line.symbol.typeSignature.toString
           checkObject(objectType)
           if (line.tpe == null) return (0, None)
@@ -359,6 +360,7 @@ class MyComponent(val global: Global) extends PluginComponent {
         case Select(location, expr) =>
           println("matched select")
           val objectType = line.symbol.typeSignature.toString
+          println("object type is " + objectType)
           val locationType = location.tpe.toString()
           checkObject(objectType)
           //added this to manage case where we have one type element calling a method inside another element but we need to
@@ -385,6 +387,7 @@ class MyComponent(val global: Global) extends PluginComponent {
               (0, None)
           }
         case Block(List(expr), Literal(Constant(()))) =>
+          println("found block statement")
           val objectType = expr.tpe.toString()
           checkObject(objectType)
           getClosestScopeAliasInfo(objectType, objectType) match {
@@ -591,6 +594,15 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
+
+    def getInstanceWithTypeId(instanceType: String, id: Id):Instance = {
+      if(trackedElements(instanceType).instances == null) return null
+      for(instance <- trackedElements(instanceType).instances){
+        if(instance.id == id) return instance
+      }
+      null
+    }
+
     /** Processes case statements
      * Starts by saving the state of the instances before going through any case statements.
      * It then uses those saved instances to go through all the case statements in turn, merging all the resulting
@@ -610,7 +622,12 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("map before cases is "+beforeCases)
       var mapsToMerge = ArrayBuffer[mutable.Map[String, ElementInfo]]()
       for (singleCase <- cases) {
+        println(s"before dealing with case ${singleCase.pat}, before cases map is "+beforeCases)
+        println("currentInstance is "+currentInstance)
         trackedElements = copyMap(beforeCases)
+        val previousCurInstance= currentInstance.pop()
+        currentInstance.push(getInstanceWithTypeId(previousCurInstance.alias.name, previousCurInstance.id))
+        println("after updating current instance, it is "+currentInstance)
         println(s"dealing with case ${singleCase.pat}, map is reset to $trackedElements")
         if (expr != null) { //this is the case where we are dealing with an alias calling a protocolled function being matched
           println("expr is not null")
@@ -625,7 +642,11 @@ class MyComponent(val global: Global) extends PluginComponent {
       while (mapsToMerge.nonEmpty) {
         trackedElements = mergeMaps(trackedElements, mapsToMerge.last)
         mapsToMerge.remove(mapsToMerge.length - 1)
+        println("maps to merge is now "+mapsToMerge)
       }
+      //update currentInstance
+      val previousCurInstance= currentInstance.pop()
+      currentInstance.push(getInstanceWithTypeId(previousCurInstance.alias.name, previousCurInstance.id))
     }
 
     def assignScope(loopType: LoopType.Value) = {
@@ -841,7 +862,9 @@ class MyComponent(val global: Global) extends PluginComponent {
      */
     def getClosestScopeObject(objectType: String): Option[Element] = {
       val classesAndObjects = ElementTraverser.elements
+      println("classes and objects is "+classesAndObjects)
       if (classesAndObjects.isEmpty) return None
+      println("current scope is "+currentScope)
       val curScope = currentScope.clone()
       while (curScope.nonEmpty) {
         for (element <- classesAndObjects) {
@@ -1333,12 +1356,14 @@ class MyComponent(val global: Global) extends PluginComponent {
         case q"new { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
           parents match {
             case List(item) =>
+              println("matched list item in check new function")
               //note here getScope is called on the symbol owner of the function since we want to skip the class name in the scope
               val IsCurrentTypeAndReturned =
                 checkInsideClass(getScope(function.symbol.owner), function.tpe.toString(), args)
               isCurrentType = IsCurrentTypeAndReturned._1
               returned = IsCurrentTypeAndReturned._2
             case List(Apply(className, arg2)) =>
+              println("matched list apply in check new function")
               val IsCurrentTypeAndReturned = checkInsideClass(getScope(className), className.tpe.toString(), args)
               isCurrentType = IsCurrentTypeAndReturned._1
               returned = IsCurrentTypeAndReturned._2
@@ -1369,6 +1394,8 @@ class MyComponent(val global: Global) extends PluginComponent {
     def checkInsideClass(scope: mutable.Stack[String], elementType: String, args: List[Tree]): (Boolean, Set[Instance]) = {
       println("in check inside class")
       var returned: Set[Instance] = Set()
+      println("Scope is "+scope)
+      println("elements are "+ElementTraverser.elements)
       //find correct class to go through
       for (element <- ElementTraverser.elements
            if !element.isObject && element.elementType == elementType && element.scope == scope) {
@@ -1593,10 +1620,15 @@ class MyComponent(val global: Global) extends PluginComponent {
     def getFieldNamesPointingAtInstance(instanceToFind:Instance): Set[String] ={
       var fieldNames = Set[String]()
       for((elementType, elementInfo) <- trackedElements)
-        for(instance <- elementInfo.instances)
-          for((field, instances) <- instance.fields)
-            if(instances.last.alias != null && instances.contains(instanceToFind))
-              fieldNames += field.name
+        for(instance <- elementInfo.instances) {
+          breakable {
+            for ((field, instances) <- instance.fields) {
+              if (instances.isEmpty) break()
+              if (instances.last.alias != null && instances.contains(instanceToFind))
+                fieldNames += field.name
+            }
+          }
+        }
       fieldNames
     }
 
@@ -1870,10 +1902,12 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return
      */
     def getScope(obj: Tree, dontCheckSymbolField: Boolean = false): mutable.Stack[String] = {
+      println("getting scope for "+obj)
       val objectScope = mutable.Stack[String]()
       if (obj.hasSymbolField || dontCheckSymbolField) {
-        for (symbol <- obj.symbol.owner.ownerChain.reverse)
-          objectScope.push(symbol.name.toString())
+        for (symbol <- obj.symbol.owner.ownerChain.reverse) {
+          objectScope.push(symbol.tpe.toString())
+        }
       }
       objectScope
     }
@@ -1886,7 +1920,7 @@ class MyComponent(val global: Global) extends PluginComponent {
     def getScope(symbol: Symbol): mutable.Stack[String] = {
       val objectScope = mutable.Stack[String]()
       for (symbol <- symbol.owner.ownerChain.reverse)
-        objectScope.push(symbol.name.toString())
+        objectScope.push(symbol.tpe.toString())
       objectScope
     }
 
