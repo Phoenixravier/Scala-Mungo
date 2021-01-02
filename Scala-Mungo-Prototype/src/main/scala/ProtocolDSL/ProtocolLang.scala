@@ -1,9 +1,5 @@
 package ProtocolDSL
 
-import java.io.{FileOutputStream, ObjectOutputStream}
-import java.nio.file.{Files, Paths}
-
-import com.sun.xml.internal.bind.v2.runtime.Location
 import compilerPlugin.Util
 
 import scala.collection.immutable.HashMap

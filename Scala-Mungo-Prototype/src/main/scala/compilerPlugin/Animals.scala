@@ -36,7 +36,7 @@ object Main extends App{
 }
 
  */
-
+/*
 @Typestate("MoneyStashProtocol")
 class MoneyStash() {
   var amountOfMoney : Float = 0
@@ -90,11 +90,38 @@ object Demonstration extends App {
   manager.setMoney(salary)
   storage.setMoney(salary)
 
+  storage.store()
   manager.addSalary(5000)
-  //storage.store()
 
 }
+*/
 
+@Typestate("CatProtocol")
+class Cat(var name:String) {
+  var friend: Cat = _
+  var number = 0
+
+  def walk(): Boolean = {
+    println(name + " is walking")
+    true
+  }
+
+  def walkWithFriend() = {
+  }
+
+  def setFriend(f : Cat) = {
+    friend = f
+  }
+}
+
+object oravaUsed extends App{
+  val cat = new Cat("Alice")
+  cat.walk() match{
+    case true =>
+    case false =>
+      cat.walkWithFriend()
+  }
+}
 
 
 

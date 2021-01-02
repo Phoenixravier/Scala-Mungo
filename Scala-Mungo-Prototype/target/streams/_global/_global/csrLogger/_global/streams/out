@@ -1,4 +1,2 @@
-[debug] downloaded https://repo1.maven.org/maven2/org/slf4j/slf4j-nop/1.7.28/slf4j-nop-1.7.28-sources.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.28/slf4j-api-1.7.28-sources.jar
-[debug] downloaded https://repo1.maven.org/maven2/org/foundweekends/bintry_2.12/0.5.2/bintry_2.12-0.5.2-sources.jar
-[debug] downloaded https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/org.foundweekends/sbt-bintray/scala_2.12/sbt_1.0/0.5.6/srcs/sbt-bintray-sources.jar
+[debug] downloaded https://repo1.maven.org/maven2/org/scala-sbt/compiler-bridge_2.13/1.4.3/compiler-bridge_2.13-1.4.3.pom
+[debug] downloaded https://repo1.maven.org/maven2/org/scala-sbt/compiler-bridge_2.13/1.4.3/compiler-bridge_2.13-1.4.3-sources.jar

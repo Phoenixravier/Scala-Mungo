@@ -1,7 +1,6 @@
 package compilerPlugin
 import ProtocolDSL.{ReturnValue, State}
 
-import javax.security.auth.Subject
 import scala.collection.{SortedSet, mutable}
 
 /** Holds an alias' name and scope */
@@ -9,7 +8,7 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
   override def clone(): Alias = super.clone().asInstanceOf[Alias]
 
   override def toString(): String={
-    val printableScope = if(scope != null) scope.reverse.mkString(".") else "null"
+    val printableScope = ""//if(scope != null) scope.reverse.mkString(".") else "null"
     s"$name $printableScope"
   }
 
@@ -58,28 +57,29 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
   }
 
   override def toString(): String={
+    if(alias == null)
+      return s"null $currentStates"
     var fieldsString = ""
     for((name, instances) <- fields){
-      if(instances != null && instances.nonEmpty)
-        fieldsString += s"  $name -> $instances\n"
-      else
+      if(instances != null && instances.nonEmpty) {
+        val instanceNames = for(instance <- instances if instance.alias != null) yield s"${instance.alias.name+"@"+instance.id}"
+        fieldsString += s"  $name -> $instanceNames\n"
+      } else
         fieldsString += s"  $name -> null\n"
     }
-    if(alias != null)
-      s"${alias.name+"@"+id} ${alias.scope} $currentStates \n Fields:\n $fieldsString"
-    else
-      s"null $currentStates"
+    s"${alias.name+"@"+id} ${alias.scope} $currentStates \n Fields:\n $fieldsString"
   }
 
   override def hashCode():Int={
+    if(alias == null) return id.hashCode()
     (alias.name.hashCode + id.hashCode()).hashCode()
   }
 }
 
 /** Holds information about a class or an object with protocol*/
-case class ElementInfo(transitions:Array[Array[State]], states:Array[State], methodToIndices:mutable.HashMap[String, Set[Int]],
-                       returnValueToIndice:mutable.HashMap[String, Int], stateToAvailableMethods: mutable.HashMap[State, Set[ReturnValue]],
-                       var instances:Set[Instance], var objectName:String=null){
+case class ElementInfo(transitions: Array[Array[State]], states: Array[State], methodToIndices: mutable.HashMap[String, Set[Int]],
+                       returnValueToIndice: mutable.HashMap[String, Int], stateToAvailableMethods: mutable.HashMap[State, Set[ReturnValue]],
+                       var instances: Set[Instance], var objectName: String=null){
   override def toString(): String={
     if(transitions != null)
       s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances $objectName"

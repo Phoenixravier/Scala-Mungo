@@ -1,8 +1,7 @@
 package compilerPlugin
 
-import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.io.{File, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.nio.file.{Files, Paths}
-
 import ProtocolDSL.{ReturnValue, State}
 
 import scala.collection.{SortedSet, mutable}
@@ -10,13 +9,12 @@ import scala.reflect.api.Trees
 
 object Util {
 
-
   val Undefined = "_Undefined_"
   val Any = "_Any_"
   var currentScope:mutable.Stack[String] = mutable.Stack()
   var currentInstance:mutable.Stack[Instance] = mutable.Stack()
   var trackedElements: mutable.Map[String, ElementInfo] = mutable.Map[String, ElementInfo]()
-
+  var userDirectory: String = ""
 
   /** Removes all instances with an empty set of aliases */
   def cleanInstances(instances:Set[Instance]): Set[Instance]={
@@ -196,16 +194,81 @@ object Util {
         case Some(instance) =>
           if(firstInstance.currentStates != null)
             mergedInstances += Instance(alias,
-              firstInstance.currentStates ++ instance.currentStates, mergeFields(firstInstance, instance))
-          else mergedInstances += Instance(alias, null, mergeFields(firstInstance, instance))
+              firstInstance.currentStates ++ instance.currentStates, mutable.Map[Alias, Set[Instance]]())
+          else mergedInstances += Instance(alias, null, mutable.Map[Alias, Set[Instance]]())
         case None => mergedInstances += firstInstance
       }
     }
     for (secondInstance <- secondInstances) if(!firstInstances.exists(instance => instance.alias == secondInstance.alias)) {
-      mergedInstances += secondInstance
+      mergedInstances += Instance(secondInstance.alias, secondInstance.currentStates, mutable.Map[Alias, Set[Instance]]())
     }
     println("merged instances are "+mergedInstances)
     mergedInstances
+  }
+
+  /** Merges two instance maps together into one map with instances present in both maps having merges states
+   *
+   * @param firstMap  first map to merge, order is not important
+   * @param secondMap second map to merge, order is not important
+   */
+  def mergeMaps(firstMap: mutable.Map[String, ElementInfo], secondMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] = {
+    println(s"at the top of merge maps, first map is $firstMap and second map is $secondMap")
+    var newMap = mutable.Map[String, ElementInfo]()
+    for ((elementType, elementInfo) <- firstMap) {
+      newMap += (elementType -> copy(elementInfo))
+      newMap(elementType).instances = mergeInstanceStates(copyInstances(elementInfo.instances), copyInstances(secondMap(elementType).instances))
+    }
+    //todo add in the instances from second map
+    println("after initial merge, new map is "+newMap)
+    println(s"first map is $firstMap, second map is $secondMap")
+    newMap = addFields(firstMap, secondMap, newMap)
+    println("after adding fields, new map is "+newMap)
+    newMap
+  }
+
+  def copy(elementInfo: ElementInfo): ElementInfo ={
+    ElementInfo(elementInfo.transitions, elementInfo.states, elementInfo.methodToIndices, elementInfo.returnValueToIndice,
+      elementInfo.stateToAvailableMethods, copyInstances(elementInfo.instances))
+  }
+
+  def addFields(firstMap: mutable.Map[String, ElementInfo], secondMap: mutable.Map[String, ElementInfo],
+                newMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] = {
+    for((elementType, elementInfo) <- firstMap){
+      for(instance <- elementInfo.instances){
+        var newMapInstance = newMap(elementType).instances.filter(newInstance => newInstance == instance).last
+        for((field, instancesPointedTo) <- instance.fields){
+          if(secondMap(elementType).instances.contains(instance)) {
+            val secondMapInstance = secondMap(elementType).instances.filter(secondInstance => secondInstance == instance).last
+            //if the field exists in both maps, want to link all instances pointed to by both the maps
+            if (secondMapInstance.fields.contains(field)) {
+              println(s"second map contains field $field")
+              println(s"map are $firstMap and $secondMap")
+              val secondInstancesPointedTo = secondMapInstance.fields(field)
+              println("secondInstancePointedTo are "+secondInstancesPointedTo)
+              //get instances pointed to (in first map) from the newMap and same for second map pointed instances
+              var instancesToPointTo = Set[Instance]()
+              for (instance <- newMap(elementType).instances) {
+                if (instancesPointedTo.contains(instance) || secondInstancesPointedTo.contains(instance))
+                  instancesToPointTo += instance
+              }
+              println("instances to point to are "+instancesToPointTo)
+              newMapInstance.fields += (field -> instancesToPointTo)
+            }
+            //if not, want to add the instances pointed to from the first map and null from the second
+            else {
+              var instancesToPointTo = Set[Instance]()
+              for (instance <- newMap(elementType).instances)
+                if (instancesPointedTo.contains(instance))
+                  instancesToPointTo += instance
+              instancesToPointTo += Instance(null, Set(State(Undefined, -1)), null)
+              newMapInstance.fields += (field -> instancesToPointTo)
+            }
+          }
+        }
+      }
+    }
+    //todo add case for fields which are in second map but not first
+    newMap
   }
 
 
@@ -253,8 +316,10 @@ object Util {
       }
       println()
     }
-    println("current instance is:")
-    println(currentInstance.head)
+    if(currentInstance.nonEmpty) {
+      println("current instance is:")
+      println(currentInstance.head)
+    }
   }
 
 
@@ -271,12 +336,27 @@ object Util {
   }
 
   def getDataFromProtocol(protocolName:String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    println("in get data, user dir is "+sys.props.get("user.dir"))
+    println("protocol name is "+protocolName)
     val path = Paths.get("compiledProtocols")
-    if (!Files.exists(Paths.get(s"compiledProtocols/$protocolName.ser")))
+    println("path is "+path)
+    println("absolute path is "+path.toFile().getAbsolutePath())
+    println(getListOfFiles(path.toString))
+    println("userDirectory is "+userDirectory)
+    val protocolPath = if(userDirectory == "") s"compiledProtocols/$protocolName.ser" else s"$userDirectory/compiledProtocols/$protocolName.ser"
+    println("protocol path is "+protocolPath)
+    if (!Files.exists(Paths.get(protocolPath)))
       throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
         s"check that the protocol name is the same as the name of the object containing your protocol")
-    getDataFromFile(s"compiledProtocols/$protocolName.ser")
+    getDataFromFile(protocolPath)
+  }
+
+  def getListOfFiles(dir: String):List[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory) {
+      d.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
+    }
   }
 
 
