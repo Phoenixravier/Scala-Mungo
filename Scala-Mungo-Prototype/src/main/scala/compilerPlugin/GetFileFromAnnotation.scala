@@ -654,6 +654,12 @@ class MyComponent(val global: Global) extends PluginComponent {
           var returnValue = singleCase.pat.toString()
           if (returnValue.contains(".")) returnValue = returnValue.substring(returnValue.lastIndexOf('.') + 1)
           updateStateIfNeeded(mapBeforeFunction, expr, ":" + returnValue)
+          println("after updating state in match, tracked are")
+          printInstances()
+          println("currentInstance is "+currentInstance)
+          val previousCurInstance= currentInstance.pop()
+          currentInstance.push(getInstanceWithTypeId(previousCurInstance.alias.name, previousCurInstance.id))
+          println("after updating current instance, it is "+currentInstance)
         }
         checkInsideFunctionBody(singleCase.body)
         mapsToMerge += trackedElements
@@ -1524,7 +1530,7 @@ class MyComponent(val global: Global) extends PluginComponent {
           println("fields are " + fields)
           getRelevantInstancesAndTheirType(fields) match{
             case Some((instancesToUpdate, instancesType)) =>
-              println("found instances "+instancesToUpdate)
+              println("found instances to update "+instancesToUpdate)
               println(instancesType)
               println(trackedElements)
               if(!trackedElements.contains(instancesType) || trackedElements(instancesType).states == null) break()
@@ -1601,6 +1607,8 @@ class MyComponent(val global: Global) extends PluginComponent {
 
     def getRelevantInstancesAndTheirType(fields:mutable.Stack[(String, String)]): Option[(Set[Instance], String)] ={
       println("in get relevant, currentScope is "+currentScope)
+      println("tracked instances in relevant are ")
+      printInstances()
       println(currentInstance)
       if(currentInstance.isEmpty) return None
       var relevantInstances = Set(currentInstance.head)
@@ -1688,7 +1696,13 @@ class MyComponent(val global: Global) extends PluginComponent {
         }
         newSetOfStates = newSetOfStates ++ newStates
       }
+      for(instanceToChange <- trackedElements(elementType).instances){
+        if(instanceToChange == instance)
+          instanceToChange.currentStates = newSetOfStates
+      }
       instance.currentStates = newSetOfStates
+      println("after updating, tracked elements is ")
+      printInstances()
     }
 
     def formatMethods(methods: SortedSet[ReturnValue]): String = {
