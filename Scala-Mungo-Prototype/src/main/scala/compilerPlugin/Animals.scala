@@ -96,30 +96,36 @@ object Demonstration extends App {
 }
 */
 
-@Typestate("CatProtocol")
-class Cat(var name:String) {
-  var friend: Cat = _
-  var number = 0
 
-  def walk(): Boolean = {
-    println(name + " is walking")
-    true
+
+@Typestate("ATMProtocol")
+class ATM {
+  def takeCard(): Unit ={}
+
+  def authorise(): Boolean ={
+    var cardIsValid = false
+    //code which checks if the card is valid
+    cardIsValid
   }
 
-  def walkWithFriend() = {
-  }
+  def eject(): Unit ={}
 
-  def setFriend(f : Cat) = {
-    friend = f
-  }
+  def giveMoney(): Unit ={}
+
+  def beginNewTransaction(): Unit ={}
 }
 
-object oravaUsed extends App{
-  val cat = new Cat("Alice")
-  cat.walk() match{
-    case true =>
-    case false =>
-      cat.walkWithFriend()
+object ATMtest extends App{
+  val myATM = new ATM()
+  while(true) {
+    myATM.beginNewTransaction()
+    myATM.takeCard()
+    myATM.authorise() match {
+      case true =>
+        myATM.giveMoney()
+      case false =>
+    }
+    myATM.eject()
   }
 }
 

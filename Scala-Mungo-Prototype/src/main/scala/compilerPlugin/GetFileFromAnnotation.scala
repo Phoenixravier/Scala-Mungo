@@ -552,15 +552,7 @@ class MyComponent(val global: Global) extends PluginComponent {
             println("got past if statement")
             getRelevantInstancesAndTheirType(methodCallInfo.fields) match{
               case Some(instancesAndType) =>
-                if(instancesAndType._1.last.currentStates != null) return true
-              case None =>
-            }
-            val aliasNameAndType = methodCallInfo.fields.pop()
-            getClosestScopeAliasInfo(aliasNameAndType._1, aliasNameAndType._2) match{
-              case Some(aliasInfo) =>
-                println("found aliasinfo "+aliasInfo)
-                if(isProtocolMethod(methodCallInfo.name, aliasNameAndType._2))
-                  return true
+                if(isProtocolMethod(methodCallInfo.name, instancesAndType._2)) return true
               case None =>
             }
           }
@@ -577,7 +569,7 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return true if the method is part of element's protocol
      */
     def isProtocolMethod(methodName: String, elementType: String): Boolean = {
-      if(trackedElements(elementType).methodToIndices == null) return false
+      if(!trackedElements.contains(elementType) || trackedElements(elementType).methodToIndices == null) return false
       if (trackedElements(elementType).methodToIndices.contains(methodName))
         return true
       false
@@ -1654,8 +1646,10 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     def getPossibleMethods(elementType: String, states: Set[State]): Set[ReturnValue] = {
+      println("in get possible, elementType is "+elementType)
       if(trackedElements(elementType).stateToAvailableMethods ==null) return Set()
-      var possibleMethods = trackedElements(elementType).stateToAvailableMethods.values.last
+      println("getting past the first if in get possible")
+      var possibleMethods = trackedElements(elementType).stateToAvailableMethods(states.last)
       println("state map is " + trackedElements(elementType).stateToAvailableMethods)
       for (state <- states) {
         possibleMethods = possibleMethods.intersect(trackedElements(elementType).stateToAvailableMethods(state))

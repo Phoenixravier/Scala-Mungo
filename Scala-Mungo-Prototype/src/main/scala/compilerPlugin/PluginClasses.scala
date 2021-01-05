@@ -62,7 +62,9 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
     var fieldsString = ""
     for((name, instances) <- fields){
       if(instances != null && instances.nonEmpty) {
-        val instanceNames = for(instance <- instances if instance.alias != null) yield s"${instance.alias.name+"@"+instance.id} ${instance.currentStates}"
+        val instanceNames =
+          for(instance <- instances if instance.alias != null)
+            yield s"${instance.alias.name+"@"+instance.id} ${instance.currentStates}"
         fieldsString += s"  $name -> $instanceNames\n"
       } else
         fieldsString += s"  $name -> null\n"

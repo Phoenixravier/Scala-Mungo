@@ -242,14 +242,19 @@ object Util {
             //if the field exists in both maps, want to link all instances pointed to by both the maps
             if (secondMapInstance.fields.contains(field)) {
               println(s"second map contains field $field")
-              println(s"map are $firstMap and $secondMap")
+              println(s"maps are $firstMap and $secondMap")
               val secondInstancesPointedTo = secondMapInstance.fields(field)
               println("secondInstancePointedTo are "+secondInstancesPointedTo)
               //get instances pointed to (in first map) from the newMap and same for second map pointed instances
               var instancesToPointTo = Set[Instance]()
-              for (instance <- newMap(elementType).instances) {
-                if (instancesPointedTo.contains(instance) || secondInstancesPointedTo.contains(instance))
+              println("element type is "+elementType)
+              var fieldType = secondInstancesPointedTo.last.alias.name
+              for (instance <- newMap(fieldType).instances) {
+                println("instance to check for in map is "+instance)
+                if (instancesPointedTo.contains(instance) || secondInstancesPointedTo.contains(instance)) {
+                  println("matched instances")
                   instancesToPointTo += instance
+                }
               }
               println("instances to point to are "+instancesToPointTo)
               newMapInstance.fields += (field -> instancesToPointTo)

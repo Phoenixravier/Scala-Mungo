@@ -310,7 +310,6 @@ class ProtocolLang {
   }
 
   def reachableStates(state: State, foundReachableStates: mutable.Set[State] = mutable.Set()):mutable.Set[State] = {
-    printNicely(stateMachine)
     val immediatelyReachable = stateMachine(state.index)
     for(neighbour <- immediatelyReachable){
       if(neighbour.name != Undefined && !foundReachableStates.contains(neighbour)) {
