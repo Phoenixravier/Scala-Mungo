@@ -3,6 +3,9 @@
 
 ## Don't use this yet! It isn't finished
 
+### Tutorial
+View tutorial at https://aliceravier.github.io/
+
 ### Getting the tool
 Warnings:
 - only works on Windows unless you change the batch file to work on your computer.
