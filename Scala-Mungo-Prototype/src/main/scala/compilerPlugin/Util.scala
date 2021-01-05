@@ -70,14 +70,14 @@ object Util {
 
   /** Prints something easy to see while debugging, use above an interesting print statement */
   def printBanner(): Unit ={
-    println("------------------")
-    println("LOOK HERE")
-    println("------------------")
+    
+    
+    
   }
 
   /** Just a dummy function to check an object's type */
   def ckType(s:String): Unit ={
-    println("hi")
+    
   }
 
   /** Gets the length of a tree in nb of lines */
@@ -123,7 +123,7 @@ object Util {
     for(state <- states){
       var i = 0
       var methodIndicesForState:Set[Int] = Set()
-      println("next states row is "+stateMachine(state.index).mkString("Array(", ", ", ")"))
+      
       for(nextState <- stateMachine(state.index)) {
         if (nextState.name != Undefined)
           methodIndicesForState += i
@@ -134,7 +134,7 @@ object Util {
         possibleMethods += indiceToReturnValue(indice)
       stateToAvailableMethods += state -> possibleMethods
     }
-    println("state to av is "+stateToAvailableMethods)
+    
     stateToAvailableMethods
   }
 
@@ -186,7 +186,7 @@ object Util {
    * @return
    */
   def mergeInstanceStates(firstInstances: Set[Instance], secondInstances: Set[Instance]): Set[Instance] = {
-    println(s"merging $firstInstances with $secondInstances")
+    
     var mergedInstances: Set[Instance] = Set()
     for (firstInstance <- firstInstances ) {
       val alias = firstInstance.alias
@@ -202,7 +202,7 @@ object Util {
     for (secondInstance <- secondInstances) if(!firstInstances.exists(instance => instance.alias == secondInstance.alias)) {
       mergedInstances += Instance(secondInstance.alias, secondInstance.currentStates, mutable.Map[Alias, Set[Instance]]())
     }
-    println("merged instances are "+mergedInstances)
+    
     mergedInstances
   }
 
@@ -212,17 +212,17 @@ object Util {
    * @param secondMap second map to merge, order is not important
    */
   def mergeMaps(firstMap: mutable.Map[String, ElementInfo], secondMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] = {
-    println(s"at the top of merge maps, first map is $firstMap and second map is $secondMap")
+    
     var newMap = mutable.Map[String, ElementInfo]()
     for ((elementType, elementInfo) <- firstMap) {
       newMap += (elementType -> copy(elementInfo))
       newMap(elementType).instances = mergeInstanceStates(copyInstances(elementInfo.instances), copyInstances(secondMap(elementType).instances))
     }
     //todo add in the instances from second map
-    println("after initial merge, new map is "+newMap)
-    println(s"first map is $firstMap, second map is $secondMap")
+    
+    
     newMap = addFields(firstMap, secondMap, newMap)
-    println("after adding fields, new map is "+newMap)
+    
     newMap
   }
 
@@ -241,22 +241,22 @@ object Util {
             val secondMapInstance = secondMap(elementType).instances.filter(secondInstance => secondInstance == instance).last
             //if the field exists in both maps, want to link all instances pointed to by both the maps
             if (secondMapInstance.fields.contains(field)) {
-              println(s"second map contains field $field")
-              println(s"maps are $firstMap and $secondMap")
+              
+              
               val secondInstancesPointedTo = secondMapInstance.fields(field)
-              println("secondInstancePointedTo are "+secondInstancesPointedTo)
+              
               //get instances pointed to (in first map) from the newMap and same for second map pointed instances
               var instancesToPointTo = Set[Instance]()
-              println("element type is "+elementType)
+              
               var fieldType = secondInstancesPointedTo.last.alias.name
               for (instance <- newMap(fieldType).instances) {
-                println("instance to check for in map is "+instance)
+                
                 if (instancesPointedTo.contains(instance) || secondInstancesPointedTo.contains(instance)) {
-                  println("matched instances")
+                  
                   instancesToPointTo += instance
                 }
               }
-              println("instances to point to are "+instancesToPointTo)
+              
               newMapInstance.fields += (field -> instancesToPointTo)
             }
             //if not, want to add the instances pointed to from the first map and null from the second
@@ -289,14 +289,14 @@ object Util {
   def getClosestScopeAliasInfo(name: String, elementType:String): Option[(String, mutable.Stack[String])] = {
     if (elementType != null) {
       if (trackedElements.contains(elementType)) {
-        println("found element in tracked elements")
+        
         if (trackedElements(elementType).instances.isEmpty) return None
-        println("passed break")
+        
         val curScope = currentScope.clone()
         while (curScope.nonEmpty) {
           for (instance <- trackedElements(elementType).instances) {
              if (instance.alias.name == name && instance.alias.scope == curScope) {
-              println(s"returning ${instance.alias}")
+              
               return Some(instance.alias.name, instance.alias.scope)
             }
           }
@@ -312,18 +312,18 @@ object Util {
    *
    */
   def printInstances() = {
-    println("\nInstances:")
+    
     for((elementType, elementInfo) <- trackedElements){
       var classOrObject = if(elementInfo.objectName != null) "object" else "class"
-      println(s"For $classOrObject $elementType: ")
+      
       for(instance <- elementInfo.instances){
-        println(instance)
+        
       }
-      println()
+      
     }
     if(currentInstance.nonEmpty) {
-      println("current instance is:")
-      println(currentInstance.head)
+      
+      
     }
   }
 
@@ -332,7 +332,7 @@ object Util {
    * with name filename.
    * The state and return value arrays are needed to be able to index properly into the state machine.*/
   def sendDataToFile(data: (Array[Array[State]], Array[State], Array[ReturnValue]), filename:String): Unit ={
-    println("in send data, user dir is "+sys.props.get("user.dir"))
+    
     val path = Paths.get("compiledProtocols")
     Files.createDirectories(path)
     val oos = new ObjectOutputStream(new FileOutputStream(path+"/"+filename))
@@ -341,14 +341,14 @@ object Util {
   }
 
   def getDataFromProtocol(protocolName:String): (Array[Array[State]], Array[State], Array[ReturnValue]) ={
-    println("protocol name is "+protocolName)
+    
     val path = Paths.get("compiledProtocols")
-    println("path is "+path)
-    println("absolute path is "+path.toFile().getAbsolutePath())
-    println(getListOfFiles(path.toString))
-    println("userDirectory is "+userDirectory)
+    
+    
+    
+    
     val protocolPath = if(userDirectory == "") s"compiledProtocols/$protocolName.ser" else s"$userDirectory/compiledProtocols/$protocolName.ser"
-    println("protocol path is "+protocolPath)
+    
     if (!Files.exists(Paths.get(protocolPath)))
       throw new badlyDefinedProtocolException(s"The protocol $protocolName could not be processed, " +
         s"check that the protocol name is the same as the name of the object containing your protocol")

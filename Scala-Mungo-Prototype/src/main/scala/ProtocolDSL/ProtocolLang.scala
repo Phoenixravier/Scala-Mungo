@@ -277,8 +277,6 @@ class ProtocolLang {
    *
    */
   def end() = {
-    println("transitions are: "+transitions)
-    println("return values are: "+returnValues)
     checkWholeProtocolIsWellFormed()
     ended = true
     //create the array, print it and encode it into objectName.ser
@@ -286,11 +284,9 @@ class ProtocolLang {
     //checkEndHasNoOutgoingEdges()
     checkAllStatesLeadToEnd()
     checkInitReachesAllOtherStates()
-    println("return values array is: "+returnValues.toArray.mkString("Array(", ", ", ")"))
-    printNicely(arrayOfStates)
     val objectName = getClass.getSimpleName.stripSuffix("$")
-    println("raw is "+objectName)
     Util.sendDataToFile((arrayOfStates, sortSet(states).toArray, returnValues.toArray), objectName+".ser")
+    println(s"Protocol sucessfully ran, created $objectName.ser in compiledProtocols directory.")
   }
 
   def checkEndStateExistsOnce() = {
