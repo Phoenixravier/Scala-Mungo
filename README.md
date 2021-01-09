@@ -1,8 +1,6 @@
 # Scala-Mungo
 ## Fifth year six month MEng project at the University of Glasgow. Implementation of a typestate checking plugin for Scala.
 
-## Don't use this yet! It isn't finished
-
 ### Tutorial
 View tutorial at https://aliceravier.github.io/
 
