@@ -2033,7 +2033,7 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
         |  def getIsDashed: Boolean = this.isDashed
         |}
         |
-        |@Typestate("src\\main\\scala\\exampleProtocols\\SMTPCProtocol.scala") class CRole {
+        |@Typestate("SMTPCProtocol") class CRole {
         |  var socketSIn: BufferedReader = null
         |  var socketSOut: PrintWriter = null
         |  var socketS: Socket = null
@@ -2269,7 +2269,6 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
         |  }
         |}
         |
-        |import compilerPlugin.CRole
         |import sun.misc.BASE64Encoder
         |import javax.net.ssl.SSLSocket
         |import javax.net.ssl.SSLSocketFactory
@@ -2304,6 +2303,7 @@ class ExamplesTest extends FlatSpec with Matchers with BeforeAndAfterEach with B
         |    val Z2Inner = new Breaks
         |    val Z3 = new Breaks
         |    val Z3Inner = new Breaks
+        |
         |    val currentC = new CRole
         |    // readerC can be used to input strings, and then use them in send method invocation
         |    val readerC: BufferedReader = new BufferedReader(new InputStreamReader(System.in))

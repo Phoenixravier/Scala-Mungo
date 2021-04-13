@@ -12,7 +12,7 @@ cd classes
 jar cf ..\Scala-Mungo-Prototype_2.13.jar .
 cd..
 
-call scalac -Xplugin:Scala-Mungo-Prototype_2.13.jar src\main\scala\compilerPlugin\Animals.scala
+call scalac -Xplugin:Scala-Mungo-Prototype_2.13.jar src\main\scala\compilerPlugin\testCat.scala
 
 REM del "Scala-Mungo-Prototype_2.13.jar"
 

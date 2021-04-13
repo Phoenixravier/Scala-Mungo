@@ -4,7 +4,8 @@ import ProtocolDSL.{ReturnValue, State}
 import scala.collection.{SortedSet, mutable}
 
 /** Holds an alias' name and scope */
-case class Alias(var name:String, var scope: mutable.Stack[String]) extends Cloneable {
+@SerialVersionUID(131L)
+case class Alias(var name:String, var scope: mutable.Stack[String]) extends Serializable {
   override def clone(): Alias = super.clone().asInstanceOf[Alias]
 
   override def toString(): String={
@@ -25,7 +26,8 @@ case class Alias(var name:String, var scope: mutable.Stack[String]) extends Clon
 }
 
 /** Holds an instance classname, its aliases and its current possible states */
-case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]], var id:Int = 0){
+@SerialVersionUID(130L)
+case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutable.Map[Alias, Set[Instance]], var id:Int = 0) extends Serializable{
   def containsFieldName(fieldName: String):Boolean = {
     for(field <- fields.keys){
       if(field.name == fieldName)
@@ -44,7 +46,6 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
         this.hashCode == that.hashCode
       case _ => false
     }
-
   }
 
   def updateState(stateToRemove:State, stateToAdd:State): Unit ={
@@ -83,7 +84,7 @@ case class ElementInfo(transitions: Array[Array[State]], states: Array[State], m
                        returnValueToIndice: mutable.HashMap[String, Int], stateToAvailableMethods: mutable.HashMap[State, Set[ReturnValue]],
                        var instances: Set[Instance], var objectName: String=null){
   override def toString(): String={
-    if(transitions != null)
+    if(false)
       s"${transitions.foreach(_.mkString(", "))} ${states.mkString(", ")} $methodToIndices $instances $objectName"
     else
       s"$instances"

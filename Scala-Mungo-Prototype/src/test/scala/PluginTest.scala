@@ -4913,7 +4913,7 @@ class PluginTest extends FlatSpec with Matchers with BeforeAndAfterEach with Bef
       new compiler.Run() compileSources (sources)
     }
     val expectedException = new protocolViolatedException(sortSet(Set("cat")), "compilerPlugin.Cat",
-      sortSet(Set(State("end", 1))), "walk()", "<test>", 23, "No methods are available in this state.")
+      sortSet(Set(State("end", 1))), "walk()", "<test>", 25, "No methods are available in this state.")
     assert(actualException.getMessage == expectedException.getMessage)
   }
 
