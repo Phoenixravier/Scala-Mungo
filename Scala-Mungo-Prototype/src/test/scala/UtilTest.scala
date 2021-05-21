@@ -84,26 +84,48 @@ class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
   }
   //endregion
 
-  /*
-  //region<copyInstances>
-  "copying instances" should "create separate sets and editing one alias name should not edit the other" in {
-    var firstSet = Set(compilerPlugin.Instance(Set(compilerPlugin.Alias("cat", mutable.Stack("here"))),
-      Set(ProtocolDSL.State("state1", 1)), mutable.Map()))
-    var secondInstances= copyInstances(firstSet)
-    firstSet.last.aliases.last.name = "kitty"
-    assert(secondInstances.last.aliases.last.name == "cat")
+
+  //region<copyInstancesWithoutFields>
+  "copying instances without fields" should "create separate aliases and editing one alias name should not edit the other" in {
+    var firstSet = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var secondInstances= copyInstancesWithoutFields(firstSet)
+    firstSet.last.alias.name = "kitty"
+    assert(secondInstances.last.alias.name == "cat")
   }
 
-  "copying instances" should "create separate sets and editing one set should not edit the other" in {
-    var firstSet:Set[Instance] = Set(compilerPlugin.Instance(Set(compilerPlugin.Alias("cat", mutable.Stack("here"))),
-      Set(ProtocolDSL.State("state1", 1)), mutable.Map()))
-    var secondInstances= copyInstances(firstSet)
+  "copying instances without fields" should "create separate state sets and editing one set should not edit the other" in {
+    var firstSet:Set[Instance] = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var secondInstances= copyInstancesWithoutFields(firstSet)
     firstSet+= Instance(null,null, mutable.Map())
-    assert(secondInstances.last.aliases.last.name == "cat")
+    assert(secondInstances.last.alias.name == "cat")
     assert(secondInstances.size == 1)
   }
   //endregion
-  */
+
+  //region<copyMap>
+  "copying a map" should "create separate maps and editing one alias name should not edit the other" in {
+    var firstInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+    var map2 = copyMap(map1)
+    firstInstances.last.alias.name = "kitty"
+    assert(map2("someType").instances.last.alias.name == "cat")
+  }
+
+  "copying a map" should "create separate maps and editing one set of states should not edit the other" in {
+    var firstInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+    var map2 = copyMap(map1)
+    firstInstances.last.currentStates = Set(State("state2", 2))
+    assert(map2("someType").instances.last.currentStates.last.name == "state1")
+  }
+  //endregion
+
 
   //region<mergeInstanceStates>
   "merging two empty sets" should "create one empty set" in {

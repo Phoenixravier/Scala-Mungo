@@ -108,9 +108,6 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param unit : contains tree of the code in body
      */
     def apply(unit: CompilationUnit): Unit = {
-      
-      //
-      
       compilationUnit = unit
       functionTraverser.traverse(unit.body)
       ElementTraverser.traverse(unit.body)
@@ -507,16 +504,12 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @param assigned In val/var x = y, this is y.
      */
     def processNovelAssignment(assignee: String, assigned: Trees#Tree, instancesToAssign:Option[Set[Instance]] = null) = {
-      
-      
-      
       var returnedAssigned:Option[Set[Instance]] = None
       if(instancesToAssign != null)
         returnedAssigned = instancesToAssign
       else
         returnedAssigned = checkInsideFunctionBody(assigned)
-      
-      
+
       if(currentInstance.nonEmpty){
         val fieldToAssign = Alias(assignee, currentScope.clone())
         if(currentInstance.head.fields.contains(fieldToAssign)) //check if there is already a field with this exact alias (e.g. from a for loop) and remove it
@@ -753,7 +746,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         currentScope.pop()
         if (loopType == LoopType.dowhileLoop) checkInsideFunctionBody(cond)
         updateMap(instanceToInterimStates)
-        
       } while (!duplicatesInAllListsOfMap(instanceToInterimStates))
       if (loopType == LoopType.whileLoop)
         checkInsideFunctionBody(cond) //go through the while loop condition one more time after the body of the loop
@@ -1008,17 +1000,7 @@ class MyComponent(val global: Global) extends PluginComponent {
       }
     }
 
-    /** Checks if the cache contains the entry
-     *
-     * @param cache map with ((elementType, parameterNames, states) -> nextStates) entries
-     * @param entry entry of (elementType, parameterNames, states)
-     * @return
-     */
-    def cacheContainsEntry(cache: Map[mutable.Map[String, ElementInfo], mutable.Map[String, ElementInfo]],
-                           entry: (mutable.Map[String, ElementInfo])):
-    (Boolean) = {
-      (cache.contains(entry))
-    }
+
 
     /** Create a cache entry from the parameters given in the givenToFunctionParams.
      * For each of the parameters of the function, collects the states the instances are in and adds those to the entry.
@@ -1175,11 +1157,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         val cacheEntry = dealWithCache(function)
         
         if (cacheEntry == null) {
-          
           if(shouldPopCurrentInstanceAndScope) {
             currentInstance.pop()
             currentScope.pop()
-            
           }
           return getReturnedFromFunction(function.returned)
         }
@@ -1187,7 +1167,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         currentScope.push("body")
         
         val returned = checkInsideFunctionBody(function.body)
-        
         
         //todo figuring out what is returned PUT THIS INTO ITS OWN FUNCTION
         returned match {
@@ -1206,6 +1185,9 @@ class MyComponent(val global: Global) extends PluginComponent {
         removeAllFieldsInScope(currentScope)
         currentScope.pop()
         //update cache
+        println("Updating cache")
+        println(cacheEntry)
+        println(trackedElements)
         function.stateCache += cacheEntry -> copyMap(trackedElements)
         
         //delete aliases defined in the function
@@ -1214,7 +1196,6 @@ class MyComponent(val global: Global) extends PluginComponent {
         if(shouldPopCurrentInstanceAndScope) {
           currentInstance.pop()
           currentScope.pop()
-          
         }
         return getReturnedFromFunction(function.returned)
       }
@@ -1246,18 +1227,23 @@ class MyComponent(val global: Global) extends PluginComponent {
      * @return either a new entry for the cache or null if we should leave the function as a result of a cache hit
      */
     def dealWithCache(function: Function): (mutable.Map[String, ElementInfo]) = {
+      println("At the top of deal with cache, stateCache is ", function.stateCache)
+      println("The current state is ", trackedElements)
       val cacheEntry = copyMap(trackedElements)
       val cacheHit = cacheContainsEntry(function.stateCache, cacheEntry)
       //mutate state if possible and skip recursive call if needed
+      /*
       if (cacheHit && function.stateCache(trackedElements) == null) {
         removeTopLevelAliasesInScope(currentScope)
         currentScope.pop()
         return null
       }
+      */
+
       if (cacheHit) {
         trackedElements = copyMap(function.stateCache(cacheEntry))
         removeTopLevelAliasesInScope(currentScope)
-        println("cache entry is ",function.stateCache)
+        println("cache is ",function.stateCache)
         println("CACHE HIT, SKIPPING")
         currentScope.pop()
         return null
@@ -2000,40 +1986,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       true
     }
 
-    /** Makes a deepcopy of the trackedElements datastructure */
-    def copyMap(map: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] = {
-      var copiedMap = mutable.Map[String, ElementInfo]()
-      for ((elementType, elementInfo) <- map) {
-        copiedMap += (elementType -> ElementInfo(elementInfo.transitions, elementInfo.states,
-          elementInfo.methodToIndices, elementInfo.returnValueToIndice, elementInfo.stateToAvailableMethods,
-          copyInstancesWithoutFields(elementInfo.instances)))
-      }
-      copiedMap = addFields(copiedMap, map)
-      copiedMap
-    }
-
-    def addFields(newMap: mutable.Map[String, ElementInfo], oldMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] ={
-      for((elementType, elementInfo) <- oldMap){
-        for(instance <- elementInfo.instances){
-          var newMapInstance = newMap(elementType).instances.filter(newInstance => newInstance == instance).last
-          for((field, instancesPointedTo) <- instance.fields){
-            breakable {
-                //get instances pointed to (in first map) from the newMap and same for second map pointed instances
-                var instancesToPointTo = Set[Instance]()
-                if(instancesPointedTo.isEmpty || instancesPointedTo.last.alias == null) break()
-                var fieldType = instancesPointedTo.last.alias.name
-                for (instance <- newMap(fieldType).instances) {
-                  if (instancesPointedTo.contains(instance)) {
-                    instancesToPointTo += instance
-                  }
-                }
-                newMapInstance.fields += (field -> instancesToPointTo)
-              }
-          }
-        }
-      }
-      newMap
-    }
 
     def removeAllAliasesInScope(scope: mutable.Stack[String]): Unit ={
       removeAllFieldsInScope(scope)
@@ -2054,8 +2006,6 @@ class MyComponent(val global: Global) extends PluginComponent {
     }
 
     def removeScopedFromInstances(instances: Set[Instance], scope: mutable.Stack[String]): Set[Instance]={
-      
-      
       for(instance <- instances){
         for((fieldAlias, fieldInstances) <- instance.fields){
           

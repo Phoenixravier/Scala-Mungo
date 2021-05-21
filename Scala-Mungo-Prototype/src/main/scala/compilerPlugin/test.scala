@@ -1,5 +1,5 @@
 package compilerPlugin
-class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+//class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate(filename = "emailProtocol")
 class EmailClient{
@@ -10,7 +10,7 @@ class EmailClient{
   def stop(){}
 }
 
-object Main extends App{
+object Main2 extends App{
   val emailClient = new EmailClient
   emailClient.start()
   emailClient.checkEmail()

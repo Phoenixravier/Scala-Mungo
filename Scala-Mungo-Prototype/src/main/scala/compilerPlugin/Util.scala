@@ -170,30 +170,58 @@ object Util {
           else states += State(state.name.trim(), state.index)
         }
       }
-      newInstances += Instance(instance.alias, states, mutable.Map[Alias, Set[Instance]](), instance.id)
+      newInstances += Instance(Alias(instance.alias.name, instance.alias.scope), states, mutable.Map[Alias, Set[Instance]](), instance.id)
     }
     //println("before adding fields, copied instances are "+newInstances)
-    //addFields(newInstances, instances)
     newInstances
   }
 
-  def addFields(newInstances :Set[Instance], oldInstances:Set[Instance]): Unit ={
-    for(oldInstance <- oldInstances){
-      for(field <- oldInstance.fields){
-        val instancesPointedAt = field._2
-        //println("instances pointed at are "+instancesPointedAt)
-        var instancesToPointTo = Set[Instance]()
-        for(instancePointedAt <- instancesPointedAt) {
-          for (instance <- newInstances) {
-            if (instancePointedAt.alias != null && instancePointedAt.id == instance.id && instancePointedAt.alias.name == instance.alias.name)
-              instancesToPointTo += instance
+
+  /** Makes a deepcopy of the trackedElements datastructure */
+  def copyMap(map: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] = {
+    var copiedMap = mutable.Map[String, ElementInfo]()
+    for ((elementType, elementInfo) <- map) {
+      copiedMap += (elementType -> ElementInfo(elementInfo.transitions, elementInfo.states,
+        elementInfo.methodToIndices, elementInfo.returnValueToIndice, elementInfo.stateToAvailableMethods,
+        copyInstancesWithoutFields(elementInfo.instances)))
+    }
+    copiedMap = addFields(copiedMap, map)
+    copiedMap
+  }
+
+  def addFields(newMap: mutable.Map[String, ElementInfo], oldMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] ={
+    for((elementType, elementInfo) <- oldMap){
+      for(instance <- elementInfo.instances){
+        var newMapInstance = newMap(elementType).instances.filter(newInstance => newInstance == instance).last
+        for((field, instancesPointedTo) <- instance.fields){
+          breakable {
+            //get instances pointed to (in first map) from the newMap and same for second map pointed instances
+            var instancesToPointTo = Set[Instance]()
+            if(instancesPointedTo.isEmpty || instancesPointedTo.last.alias == null) break()
+            var fieldType = instancesPointedTo.last.alias.name
+            for (instance <- newMap(fieldType).instances) {
+              if (instancesPointedTo.contains(instance)) {
+                instancesToPointTo += instance
+              }
+            }
+            newMapInstance.fields += (Alias(field.name, field.scope) -> instancesToPointTo)
           }
         }
-        //println("instances to point to are "+instancesToPointTo)
-        for(instance <- newInstances if(instance == oldInstance))
-          instance.fields+= field._1 -> instancesToPointTo
       }
     }
+    newMap
+  }
+
+  /** Checks if the cache contains the entry
+   *
+   * @param cache map with ((elementType, parameterNames, states) -> nextStates) entries
+   * @param entry entry of (elementType, parameterNames, states)
+   * @return
+   */
+  def cacheContainsEntry(cache: Map[mutable.Map[String, ElementInfo], mutable.Map[String, ElementInfo]],
+                         entry: (mutable.Map[String, ElementInfo])):
+  (Boolean) = {
+    (cache.contains(entry))
   }
 
 
