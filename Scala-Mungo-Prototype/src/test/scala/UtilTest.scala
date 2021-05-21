@@ -126,6 +126,25 @@ class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
   }
   //endregion
 
+  //region<cacheContainsEntry>
+  "checking if a map contains a cache entry" should "not return true if the entry is a value instead of a key of the map" in {
+    var firstInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+
+
+    var secondInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state2", 2)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
+    var map2 = mutable.Map("someType" -> elemInfo2)
+
+    var ds = mutable.Map(map1 -> map2)
+
+    assert(!ds.contains(map2))
+  }
+  //endregion
+
 
   //region<mergeInstanceStates>
   "merging two empty sets" should "create one empty set" in {

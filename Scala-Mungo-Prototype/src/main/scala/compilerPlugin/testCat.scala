@@ -1,6 +1,6 @@
 package compilerPlugin
 
-class Typestate(filename:String) extends scala.annotation.StaticAnnotation
+//class Typestate(filename:String) extends scala.annotation.StaticAnnotation
 
 @Typestate("MoneyStashProtocol")
 class MoneyStash() {
