@@ -89,6 +89,16 @@ case class ElementInfo(transitions: Array[Array[State]], states: Array[State], m
     else
       s"$instances"
   }
+
+  override def equals(other: Any): Boolean = {
+    other match {
+      case (e2: ElementInfo) =>
+        false
+        // TODO: Implement equality checks for all fields
+        // FIXME: sameElements is not enough for transitions, it does a shallow compare on the arrays, so we need a deep compare instead
+      case _ => false
+    }
+  }
 }
 
 
