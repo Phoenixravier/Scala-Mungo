@@ -222,6 +222,27 @@ object Util {
                          entry: (mutable.Map[String, ElementInfo])):
   (Boolean) = {
     (cache.contains(entry))
+
+    for ((k,_) <- cache) {
+      if (isSameState(k, entry)) {
+        return true
+      }
+    }
+    return false
+  }
+
+
+  def isSameState(state1: mutable.Map[String, ElementInfo], state2: mutable.Map[String, ElementInfo]) : Boolean = {
+    for ((k, v1) <- state1) {
+      var v2 = state2.get(k)
+      if (v2.isEmpty) {
+        return false
+      }
+      if (v1.equals(v2.get)) {
+        return true
+      }
+    }
+    return false
   }
 
 
