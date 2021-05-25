@@ -325,7 +325,6 @@ class MyComponent(val global: Global) extends PluginComponent {
           updateStateIfNeeded(copiedMap, line)
           (getLengthOfTree(line) - 1, returned) //because we are processing the current one already
         case func@Apply(Select(instanceCalledOn, functionName), args) =>
-          
           var copiedMap = copyMap(trackedElements)
           val returned = dealWithFunction(func, functionName, args, instanceCalledOn)
           updateStateIfNeeded(copiedMap, line)
@@ -1231,14 +1230,6 @@ class MyComponent(val global: Global) extends PluginComponent {
       println("The current state is ", trackedElements)
       val cacheEntry = copyMap(trackedElements)
       val cacheHit = cacheContainsEntry(function.stateCache, cacheEntry)
-      //mutate state if possible and skip recursive call if needed
-      /*
-      if (cacheHit && function.stateCache(trackedElements) == null) {
-        removeTopLevelAliasesInScope(currentScope)
-        currentScope.pop()
-        return null
-      }
-      */
 
       if (cacheHit) {
         trackedElements = copyMap(function.stateCache(cacheEntry))

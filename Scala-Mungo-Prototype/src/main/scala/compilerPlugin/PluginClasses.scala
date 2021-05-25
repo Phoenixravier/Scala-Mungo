@@ -42,8 +42,17 @@ case class Instance(alias:Alias, var currentStates:Set[State], var fields:mutabl
 
   override def equals(that: Any): Boolean = {
     that match {
-      case that: Instance => that.canEqual(this) &&
-        this.hashCode == that.hashCode
+      case that: Instance =>
+        var equal = true
+        if(id != that.id)
+          equal = false
+        if(alias != that.alias)
+          equal = false
+        if(currentStates != that.currentStates)
+          equal = false
+        if(fields != that.fields)
+          equal = false
+        that.canEqual(this) && this.hashCode == that.hashCode && equal
       case _ => false
     }
   }
@@ -93,7 +102,10 @@ case class ElementInfo(transitions: Array[Array[State]], states: Array[State], m
   override def equals(other: Any): Boolean = {
     other match {
       case (e2: ElementInfo) =>
-        false
+        var equal = true
+        if(!instances.equals(e2.instances))
+          equal = false
+        equal
         // TODO: Implement equality checks for all fields
         // FIXME: sameElements is not enough for transitions, it does a shallow compare on the arrays, so we need a deep compare instead
       case _ => false

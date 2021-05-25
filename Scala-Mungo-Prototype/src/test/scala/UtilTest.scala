@@ -135,13 +135,84 @@ class UtilTest extends FlatSpec with Matchers with BeforeAndAfter{
 
 
     var secondInstances = Set(compilerPlugin.Instance(
-      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state2", 2)), mutable.Map[Alias, Set[Instance]](), 1))
+      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state2", 2)), mutable.Map[Alias, Set[Instance]](), 2))
     var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
     var map2 = mutable.Map("someType" -> elemInfo2)
 
-    var ds = mutable.Map(map1 -> map2)
+    var ds = Map(map1 -> map2)
 
-    assert(!ds.contains(map2))
+    assert(!cacheContainsEntry(ds, map2))
+  }
+
+  "checking if a map contains a cache entry" should "not return true if the entry has a different value for a field in instances" in {
+    var field1 = Instance(Alias("kat", mutable.Stack("scope")), Set(State("state3", 3)), mutable.Map[Alias, Set[Instance]](), 2)
+    var field2 = Instance(Alias("katze", mutable.Stack("scope")), Set(State("state3", 3)), mutable.Map[Alias, Set[Instance]](), 3)
+    var firstInstances = Set(
+      Instance(Alias("cat", mutable.Stack("here")), Set(State("state1", 1)),
+      mutable.Map(Alias("kitten", mutable.Stack("scope")) -> Set(field1)), 1),
+      field1,
+      field2
+    )
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+
+
+    var secondInstances = Set(
+      Instance(Alias("cat", mutable.Stack("here")), Set(State("state1", 1)),
+      mutable.Map(Alias("kitten", mutable.Stack("scope")) -> Set(field2)), 1),
+      field1,
+      field2
+    )
+    var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
+    var map2 = mutable.Map("someType" -> elemInfo2)
+
+    var ds = Map(map1 -> map2)
+
+    assert(!cacheContainsEntry(ds, map2))
+  }
+
+  "checking if a map contains a cache entry" should "not return true if the entry has a different state value for a field in instances" in {
+    var field1 = Instance(Alias("kat", mutable.Stack("scope")), Set(State("state3", 3)), mutable.Map[Alias, Set[Instance]](), 2)
+    var field2 = Instance(Alias("kat", mutable.Stack("scope")), Set(State("state4", 4)), mutable.Map[Alias, Set[Instance]](), 2)
+    var firstInstances = Set(
+      Instance(Alias("cat", mutable.Stack("here")), Set(State("state1", 1)),
+        mutable.Map(Alias("kitten", mutable.Stack("scope")) -> Set(field1)), 1),
+      field1,
+      field2
+    )
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+
+
+    var secondInstances = Set(
+      Instance(Alias("cat", mutable.Stack("here")), Set(State("state1", 1)),
+        mutable.Map(Alias("kitten", mutable.Stack("scope")) -> Set(field2)), 1),
+      field1,
+      field2
+    )
+    var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
+    var map2 = mutable.Map("someType" -> elemInfo2)
+
+    var ds = Map(map1 -> map2)
+
+    assert(!cacheContainsEntry(ds, map2))
+  }
+
+  "checking if a map contains a cache entry" should "return true if the entry corresponds to a key" in {
+    var firstInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo1 = ElementInfo(null, null, null, null, null, firstInstances)
+    var map1 = mutable.Map("someType" -> elemInfo1)
+
+
+    var secondInstances = Set(compilerPlugin.Instance(
+      compilerPlugin.Alias("cat", mutable.Stack("here")), Set(State("state1", 1)), mutable.Map[Alias, Set[Instance]](), 1))
+    var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
+    var map2 = mutable.Map("someType" -> elemInfo2)
+
+    var ds = Map(map1 -> map2)
+
+    assert(cacheContainsEntry(ds, map2))
   }
   //endregion
 

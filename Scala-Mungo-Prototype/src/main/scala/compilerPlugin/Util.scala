@@ -192,7 +192,7 @@ object Util {
   def addFields(newMap: mutable.Map[String, ElementInfo], oldMap: mutable.Map[String, ElementInfo]): mutable.Map[String, ElementInfo] ={
     for((elementType, elementInfo) <- oldMap){
       for(instance <- elementInfo.instances){
-        var newMapInstance = newMap(elementType).instances.filter(newInstance => newInstance == instance).last
+        var newMapInstance = newMap(elementType).instances.filter(newInstance => newInstance.id == instance.id).last
         for((field, instancesPointedTo) <- instance.fields){
           breakable {
             //get instances pointed to (in first map) from the newMap and same for second map pointed instances
@@ -228,13 +228,13 @@ object Util {
         return true
       }
     }
-    return false
+    false
   }
 
 
   def isSameState(state1: mutable.Map[String, ElementInfo], state2: mutable.Map[String, ElementInfo]) : Boolean = {
     for ((k, v1) <- state1) {
-      var v2 = state2.get(k)
+      val v2 = state2.get(k)
       if (v2.isEmpty) {
         return false
       }
@@ -242,7 +242,7 @@ object Util {
         return true
       }
     }
-    return false
+    false
   }
 
 

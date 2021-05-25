@@ -45,12 +45,14 @@ object Main extends App{
 
 
   var secondInstances = Set(compilerPlugin.Instance(
-    compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state2", 2)), mutable.Map[Alias, Set[Instance]](), 1))
+    compilerPlugin.Alias("cat", mutable.Stack("here")),Set(State("state2", 2)), mutable.Map[Alias, Set[Instance]](), 2))
   var elemInfo2 = ElementInfo(null, null, null, null, null, secondInstances)
   var map2 = mutable.Map("someType" -> elemInfo2)
 
   var ds = mutable.Map(map1 -> map2)
 
   println(ds.contains(map2))
+
+  println(firstInstances.equals(secondInstances))
 
 }
