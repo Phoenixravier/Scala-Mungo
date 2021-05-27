@@ -221,8 +221,6 @@ object Util {
   def cacheContainsEntry(cache: Map[mutable.Map[String, ElementInfo], mutable.Map[String, ElementInfo]],
                          entry: (mutable.Map[String, ElementInfo])):
   (Boolean) = {
-    (cache.contains(entry))
-
     for ((k,_) <- cache) {
       if (isSameState(k, entry)) {
         return true
@@ -233,16 +231,17 @@ object Util {
 
 
   def isSameState(state1: mutable.Map[String, ElementInfo], state2: mutable.Map[String, ElementInfo]) : Boolean = {
+    if(state1.size != state2.size) return false
     for ((k, v1) <- state1) {
       val v2 = state2.get(k)
       if (v2.isEmpty) {
         return false
       }
-      if (v1.equals(v2.get)) {
-        return true
+      if (!v1.equals(v2.get)) {
+        return false
       }
     }
-    false
+    true
   }
 
 
