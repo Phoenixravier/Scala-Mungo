@@ -24,7 +24,7 @@ make
 ```
 A jar file called `Scala-Mungo-Prototype_2.13.jar` should have been generated in the `Scala-Mungo/Scala-Mungo-Prototype` directory.
 
-Add these lines to your build.sbt:
+Add these lines to your build.sbt of the project you want to use Papaya in:
 ```
 scalacOptions += "-Xplugin:/path/to/jar/file.jar"
 
